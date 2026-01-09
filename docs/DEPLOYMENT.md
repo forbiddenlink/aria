@@ -306,7 +306,7 @@ aws ec2 request-spot-instances \
   --instance-count 1 \
   --type "one-time" \
   --launch-specification file://specification.json
-  
+
 # Typical cost: $0.15-$0.20/hour (vs $0.526 on-demand)
 ```
 
@@ -318,7 +318,7 @@ spec:
     spec:
       nodeSelector:
         cloud.google.com/gke-preemptible: "true"
-      
+
 # Cost: ~30% of regular price
 ```
 
@@ -417,7 +417,7 @@ def run_migrations_offline():
         dialect_opts={"paramstyle": "named"},
         render_as_batch=True  # Important for SQLite
     )
-    
+
     with context.begin_transaction():
         context.run_migrations()
 
@@ -475,7 +475,7 @@ def upgrade():
         sa.Column('technical_score', sa.Float(), nullable=True),
         sa.PrimaryKeyConstraint('id')
     )
-    
+
     op.create_index('ix_artworks_created_at', 'artworks', ['created_at'])
     op.create_index('ix_artworks_aesthetic_score', 'artworks', ['aesthetic_score'])
 
@@ -527,7 +527,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Check for pending migrations
         run: |
           alembic check || {
@@ -682,7 +682,7 @@ groups:
         annotations:
           summary: "High error rate detected"
           description: "Error rate is {{ $value }} errors/sec"
-      
+
       - alert: GenerationStalled
         expr: rate(ai_artist_generation_requests_total[10m]) == 0
         for: 30m
@@ -690,7 +690,7 @@ groups:
           severity: critical
         annotations:
           summary: "No generations in 30 minutes"
-      
+
       - alert: HighGPUMemory
         expr: ai_artist_gpu_memory_bytes > 15e9  # 15 GB
         for: 5m
@@ -723,7 +723,7 @@ structlog.configure(
 log = structlog.get_logger()
 
 # Usage
-log.info("generation_started", 
+log.info("generation_started",
          prompt="sunset landscape",
          model="sdxl",
          seed=42)
@@ -746,14 +746,14 @@ services:
       - discovery.type=single-node
     ports:
       - "9200:9200"
-  
+
   logstash:
     image: docker.elastic.co/logstash/logstash:8.11.0
     volumes:
       - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
     depends_on:
       - elasticsearch
-  
+
   kibana:
     image: docker.elastic.co/kibana/kibana:8.11.0
     ports:
@@ -832,21 +832,21 @@ def backup_to_s3():
     s3 = boto3.client('s3')
     bucket = 'ai-artist-backups'
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    
+
     # Upload database
     s3.upload_file(
         'data/ai_artist.db',
         bucket,
         f'backups/{timestamp}/ai_artist.db'
     )
-    
+
     # Upload models
     s3.upload_file(
         'models/lora_weights.safetensors',
         bucket,
         f'backups/{timestamp}/lora_weights.safetensors'
     )
-    
+
     print(f"Backup completed to s3://{bucket}/backups/{timestamp}/")
 ```
 
@@ -870,7 +870,7 @@ docker-compose restart ai-artist
 tar -xzf /backups/ai-artist/20260115_120000/models.tar.gz -C /app/
 
 # Verify model files
-python -c "from safetensors import safe_open; 
+python -c "from safetensors import safe_open;
            safe_open('models/lora_weights.safetensors', framework='pt')"
 ```
 
@@ -914,7 +914,7 @@ echo "Recovery completed. Application restarted."
 
 - **Recovery Point Objective (RPO)**: 24 hours
   - Daily backups ensure max 1 day of data loss
-  
+
 - **Recovery Time Objective (RTO)**: 1 hour
   - Automated recovery scripts enable quick restoration
 
@@ -947,14 +947,14 @@ def health_check():
         # Check GPU availability
         if not torch.cuda.is_available():
             return {"status": "unhealthy", "reason": "GPU not available"}
-        
+
         # Check database
         db.execute("SELECT 1")
-        
+
         # Check model loaded
         if model is None:
             return {"status": "unhealthy", "reason": "Model not loaded"}
-        
+
         return {"status": "healthy"}
     except Exception as e:
         return {"status": "unhealthy", "reason": str(e)}
