@@ -81,19 +81,35 @@ pip install -r requirements.txt
 cp config/config.example.yaml config/config.yaml
 # Edit config.yaml with your API keys
 
-# Run
+# Generate artwork
 python src/main.py
+
+# Launch web gallery
+ai-artist-web  # Browse at http://localhost:8000
+
+# Schedule automated creation
+ai-artist-schedule start daily
 ```
+
+## CLI Tools
+
+- **`ai-artist`** - Create artwork on-demand
+- **`ai-artist-web`** - Launch web gallery interface
+- **`ai-artist-schedule`** - Manage automated creation schedules
+- **`ai-artist-gallery`** - Terminal-based gallery viewer
 
 ## Development Roadmap
 
 See [ROADMAP.md](ROADMAP.md) for detailed development phases.
 
-- [x] Project setup and documentation
-- [ ] Phase 1: Basic Pipeline (Weeks 1-2)
-- [ ] Phase 2: Style Training (Weeks 3-4)
-- [ ] Phase 3: Automation (Week 5)
-- [ ] Phase 4: Advanced Features (Weeks 6-8)
+- [x] Phase 0: Foundation
+- [x] Phase 0.5: Quick Wins (CLIP curation, testing)
+- [x] Phase 1: Enhanced Logging & Observability
+- [x] Phase 1.5: Testing Improvements (58% coverage)
+- [x] Phase 2: LoRA Training Infrastructure
+- [x] Phase 3: Automation System
+- [x] Phase 5: Web Gallery Interface ✨ NEW!
+- [ ] Phase 6: Deployment & Production
 
 ## Configuration
 

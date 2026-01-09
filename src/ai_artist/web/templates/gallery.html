@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - AI Artist Gallery</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        input[type="search"] {
+            width: 100%;
+            padding: 12px 20px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="search"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .filter-btn {
+            padding: 12px 24px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .filter-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            color: white;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px 25px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .gallery-item {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+
+        .gallery-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.2);
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .gallery-item-info {
+            padding: 15px;
+        }
+
+        .gallery-item-prompt {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 10px;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .gallery-item-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .featured-badge {
+            background: #ffd700;
+            color: #333;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 11px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .load-more {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .load-more-btn {
+            padding: 15px 40px;
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+
+        .load-more-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            max-width: 90%;
+            max-height: 90%;
+            position: relative;
+        }
+
+        .modal-image {
+            max-width: 100%;
+            max-height: 80vh;
+            display: block;
+            margin: 0 auto;
+            border-radius: 8px;
+        }
+
+        .modal-info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            background: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .gallery {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 15px;
+            }
+
+            .controls-row {
+                flex-direction: column;
+            }
+
+            .search-box {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎨 AI Artist Gallery</h1>
+            <p class="subtitle">Explore beautiful AI-generated artwork</p>
+        </header>
+
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="total-images">-</div>
+                <div class="stat-label">Total Artworks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="featured-images">-</div>
+                <div class="stat-label">Featured</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="total-prompts">-</div>
+                <div class="stat-label">Unique Prompts</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="controls-row">
+                <div class="search-box">
+                    <input type="search" id="search" placeholder="Search artworks...">
+                </div>
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="featured">Featured</button>
+            </div>
+        </div>
+
+        <div class="gallery" id="gallery">
+            <div class="loading">Loading gallery...</div>
+        </div>
+
+        <div class="load-more" id="load-more" style="display: none;">
+            <button class="load-more-btn">Load More</button>
+        </div>
+    </div>
+
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">×</button>
+            <img class="modal-image" id="modal-image" src="" alt="">
+            <div class="modal-info" id="modal-info"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentFilter = null;
+        let currentSearch = '';
+        let currentOffset = 0;
+        const LIMIT = 20;
+        let allImages = [];
+
+        // Load statistics
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+                document.getElementById('total-images').textContent = stats.total_images;
+                document.getElementById('featured-images').textContent = stats.featured_images;
+                document.getElementById('total-prompts').textContent = stats.total_prompts;
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
+        // Load images
+        async function loadImages(append = false) {
+            const params = new URLSearchParams({
+                limit: LIMIT,
+                offset: append ? currentOffset : 0
+            });
+
+            if (currentFilter) params.append('featured', 'true');
+            if (currentSearch) params.append('search', currentSearch);
+
+            try {
+                const response = await fetch(`/api/images?${params}`);
+                const images = await response.json();
+
+                if (!append) {
+                    allImages = images;
+                    currentOffset = 0;
+                } else {
+                    allImages = [...allImages, ...images];
+                }
+
+                currentOffset += images.length;
+
+                renderGallery();
+
+                // Show/hide load more button
+                const loadMoreBtn = document.getElementById('load-more');
+                loadMoreBtn.style.display = images.length === LIMIT ? 'block' : 'none';
+            } catch (error) {
+                console.error('Failed to load images:', error);
+                document.getElementById('gallery').innerHTML = '<div class="loading">Failed to load gallery</div>';
+            }
+        }
+
+        // Render gallery
+        function renderGallery() {
+            const gallery = document.getElementById('gallery');
+
+            if (allImages.length === 0) {
+                gallery.innerHTML = '<div class="loading">No artworks found</div>';
+                return;
+            }
+
+            gallery.innerHTML = allImages.map((img, index) => `
+                <div class="gallery-item" onclick="openModal(${index})">
+                    <img src="${img.thumbnail_url}" alt="${img.prompt}" loading="lazy">
+                    <div class="gallery-item-info">
+                        <div class="gallery-item-prompt">${img.prompt}</div>
+                        <div class="gallery-item-meta">
+                            <span>${new Date(img.created_at).toLocaleDateString()}</span>
+                            ${img.featured ? '<span class="featured-badge">⭐ Featured</span>' : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                currentFilter = btn.dataset.filter === 'featured' ? true : null;
+                loadImages();
+            });
+        });
+
+        // Search
+        let searchTimeout;
+        document.getElementById('search').addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                currentSearch = e.target.value;
+                loadImages();
+            }, 500);
+        });
+
+        // Load more
+        document.querySelector('.load-more-btn').addEventListener('click', () => {
+            loadImages(true);
+        });
+
+        // Modal
+        function openModal(index) {
+            const img = allImages[index];
+            const modal = document.getElementById('modal');
+            const modalImage = document.getElementById('modal-image');
+            const modalInfo = document.getElementById('modal-info');
+
+            modalImage.src = img.full_url;
+            modalInfo.innerHTML = `
+                <h2 style="margin-bottom: 15px;">${img.featured ? '⭐ ' : ''}${img.prompt}</h2>
+                <p style="color: #666; margin-bottom: 10px;">Created: ${new Date(img.created_at).toLocaleString()}</p>
+                ${img.metadata.seed ? `<p style="color: #666;">Seed: ${img.metadata.seed}</p>` : ''}
+            `;
+
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        // Close modal on background click
+        document.getElementById('modal').addEventListener('click', (e) => {
+            if (e.target.id === 'modal') closeModal();
+        });
+
+        // Close modal on ESC key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // Initial load
+        loadStats();
+        loadImages();
+    </script>
+</body>
+</html>
