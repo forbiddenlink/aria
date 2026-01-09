@@ -50,28 +50,35 @@ class ImageGenerator:
 
         # Move to device
         self.pipeline = self.pipeline.to(self.device)
-        
+
         # Fix for MPS dtype issues: ensure VAE uses float32 entirely
         if self.device == "mps":
             logger.info("applying_mps_fixes", action="converting_vae_to_float32")
             # Convert entire VAE to float32 to avoid dtype mismatches on MPS
             self.pipeline.vae = self.pipeline.vae.to(dtype=torch.float32)
-            # Disable attention slicing on MPS as it can cause issues  
+            # Disable attention slicing on MPS as it can cause issues
             self.pipeline.disable_attention_slicing()
 
         logger.info("model_loaded", model=self.model_id)
 
     def load_lora(self, lora_path: Path, lora_scale: float = 0.8):
-        """Load LoRA weights."""
+        """Load LoRA weights from trained model."""
         if not self.pipeline:
             raise RuntimeError("Load model first using load_model()")
 
         logger.info("loading_lora", path=str(lora_path), scale=lora_scale)
 
-        self.pipeline.load_lora_weights(str(lora_path))
-        self.pipeline.fuse_lora(lora_scale=lora_scale)
+        try:
+            # Load LoRA weights using diffusers method
+            self.pipeline.load_lora_weights(str(lora_path))
 
-        logger.info("lora_loaded", path=str(lora_path))
+            # Apply LoRA scale
+            self.pipeline.fuse_lora(lora_scale=lora_scale)
+
+            logger.info("lora_loaded", path=str(lora_path), scale=lora_scale)
+        except Exception as e:
+            logger.error("lora_load_failed", path=str(lora_path), error=str(e))
+            raise
 
     def generate(
         self,
@@ -105,8 +112,12 @@ class ImageGenerator:
             progress_pct = int((step / num_inference_steps) * 100)
             bar_length = 30
             filled = int(bar_length * step // num_inference_steps)
-            bar = '\u2588' * filled + '\u2591' * (bar_length - filled)
-            print(f"\r   [{bar}] {progress_pct}% ({step}/{num_inference_steps} steps)", end="", flush=True)
+            bar = "\u2588" * filled + "\u2591" * (bar_length - filled)
+            print(
+                f"\r   [{bar}] {progress_pct}% ({step}/{num_inference_steps} steps)",
+                end="",
+                flush=True,
+            )
 
         result = self.pipeline(
             prompt=prompt,
@@ -121,11 +132,12 @@ class ImageGenerator:
             callback_steps=1,
         )
         print()  # New line after progress bar
-        
+
         # Check for NaN values in generated images (common MPS issue)
         images = result.images
         for i, img in enumerate(images):
             import numpy as np
+
             arr = np.array(img)
             if np.isnan(arr).any() or arr.max() == 0:
                 logger.warning(
@@ -133,7 +145,7 @@ class ImageGenerator:
                     index=i,
                     has_nan=np.isnan(arr).any(),
                     is_black=arr.max() == 0,
-                    device=self.device
+                    device=self.device,
                 )
 
         logger.info("images_generated", count=len(images))
@@ -148,4 +160,3 @@ class ImageGenerator:
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
             logger.info("model_unloaded")
-

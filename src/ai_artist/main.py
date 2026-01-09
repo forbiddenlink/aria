@@ -41,6 +41,18 @@ class AIArtist:
         )
         self.generator.load_model()
 
+        # Load LoRA if specified
+        if self.config.model.lora_path:
+            lora_path = Path(self.config.model.lora_path)
+            if lora_path.exists():
+                logger.info("loading_lora_from_config", path=str(lora_path))
+                self.generator.load_lora(
+                    lora_path=lora_path,
+                    lora_scale=self.config.model.lora_scale,
+                )
+            else:
+                logger.warning("lora_path_not_found", path=str(lora_path))
+
         # Initialize gallery
         self.gallery = GalleryManager(Path("gallery"))
 
@@ -68,6 +80,7 @@ class AIArtist:
         # Build enhanced prompt with artistic styles
         description = photo.get("description") or photo.get("alt_description") or query
         import random
+
         styles = [
             "masterpiece, highly detailed, professional photography",
             "artistic interpretation, vivid colors, detailed composition",
@@ -95,16 +108,18 @@ class AIArtist:
         print("\n🔍 Evaluating image quality...")
         best_image = images[0]
         best_score = 0.0
-        
+
         for idx, image in enumerate(images, 1):
             metrics = self.curator.evaluate(image, prompt)
             score = metrics.overall_score
-            print(f"   Image {idx}: score={score:.3f} (aesthetic={metrics.aesthetic_score:.2f}, clip={metrics.clip_score:.2f})")
-            
+            print(
+                f"   Image {idx}: score={score:.3f} (aesthetic={metrics.aesthetic_score:.2f}, clip={metrics.clip_score:.2f})"
+            )
+
             if score > best_score:
                 best_score = score
                 best_image = image
-        
+
         print(f"\n✨ Selected best image with score: {best_score:.3f}")
 
         # Save best image
@@ -229,4 +244,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

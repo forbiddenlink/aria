@@ -24,7 +24,7 @@ safetensors>=0.4.0
 
 # LoRA Training and PEFT
 peft>=0.7.0
-bitsandbytes>=0.42.0  # For AdamW8bit optimizer
+# bitsandbytes>=0.42.0  # For AdamW8bit optimizer - DISABLED: Not needed on Apple Silicon
 
 # CLIP for Curation
 ftfy==6.1.3

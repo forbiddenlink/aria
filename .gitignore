@@ -52,3 +52,4 @@ htmlcov/
 
 # Config (keep example)
 config/config.yaml
+.history/

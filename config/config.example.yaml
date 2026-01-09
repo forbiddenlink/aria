@@ -9,6 +9,9 @@ model:
   dtype: "float16"
   enable_attention_slicing: true
   enable_vae_slicing: true
+  # LoRA settings (optional)
+  lora_path: null  # Path to trained LoRA weights, e.g., "models/lora/my_style"
+  lora_scale: 0.8  # LoRA strength (0.0-1.0)
 
 # Generation parameters
 generation:

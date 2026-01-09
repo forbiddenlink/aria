@@ -1,0 +1,15 @@
+# Document your training data sources here
+# Format:
+#
+# Image: filename.jpg
+# Source: URL where image was obtained
+# License: License type (Public Domain, CC0, CC BY, etc.)
+# Artist/Photographer: Name
+# Date: Creation date
+#
+# Example:
+# Image: painting_001.jpg
+# Source: https://commons.wikimedia.org/wiki/File:Example.jpg
+# License: Public Domain
+# Artist: Vincent van Gogh
+# Date: 1890

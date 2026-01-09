@@ -17,6 +17,8 @@ class ModelConfig(BaseModel):
     dtype: Literal["float16", "float32"] = "float16"
     enable_attention_slicing: bool = True
     enable_vae_slicing: bool = True
+    lora_path: str | None = None  # Path to trained LoRA weights
+    lora_scale: float = 0.8  # LoRA strength (0.0-1.0)
 
 
 class GenerationConfig(BaseModel):
@@ -48,11 +50,7 @@ class DatabaseConfig(BaseModel):
 class Config(BaseSettings):
     """Main application configuration."""
 
-    model_config = ConfigDict(
-        extra='allow',
-        env_file='.env',
-        env_nested_delimiter='__'
-    )
+    model_config = ConfigDict(extra="allow", env_file=".env", env_nested_delimiter="__")
 
     model: ModelConfig = Field(default_factory=ModelConfig)
     generation: GenerationConfig = Field(default_factory=GenerationConfig)
@@ -70,4 +68,3 @@ def load_config(config_path: Path) -> Config:
 def get_torch_dtype(dtype_str: str) -> torch.dtype:
     """Convert dtype string to torch dtype."""
     return torch.float16 if dtype_str == "float16" else torch.float32
-
