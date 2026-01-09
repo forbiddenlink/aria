@@ -85,9 +85,8 @@ async def test_full_artwork_creation_workflow(
         mock_gallery.save_image.return_value = tmp_path / "test_image.png"
         mock_gallery_class.return_value = mock_gallery
 
-        # Create app instance
+        # Create app instance (initialization happens automatically in __init__)
         app = AIArtist(mock_config)
-        app.initialize()
 
         # Test artwork creation
         result = await app.create_artwork(theme="test landscape")
@@ -154,9 +153,8 @@ async def test_error_handling_api_failure(mock_config):
         mock_unsplash.get_random_photo.side_effect = Exception("API Error")
         mock_unsplash_class.return_value = mock_unsplash
 
-        # Create app instance
+        # Create app instance (initialization happens automatically in __init__)
         app = AIArtist(mock_config)
-        app.initialize()
 
         # Test that error is raised
         with pytest.raises(Exception, match="API Error"):

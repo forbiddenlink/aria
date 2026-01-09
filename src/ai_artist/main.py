@@ -200,7 +200,6 @@ async def async_main(config_path: Path, mode: str = "manual", theme: str | None 
         sys.exit(1)
 
     app = AIArtist(config)
-    app.initialize()
 
     try:
         if mode == "manual":
