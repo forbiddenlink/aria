@@ -108,6 +108,11 @@ async def list_images(
     # Build response
     results = []
     for img_path in image_paths:
+        # Skip test images
+        if "/test/" in str(img_path):
+            logger.debug("skipping_test_image", path=str(img_path))
+            continue
+
         metadata_path = img_path.with_suffix(".json")
         if not metadata_path.exists():
             continue
