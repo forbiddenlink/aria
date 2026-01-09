@@ -34,6 +34,7 @@ dependencies = [
 [project.scripts]
 ai-artist = "ai_artist.main:main"
 ai-artist-gallery = "ai_artist.gallery.viewer:main"
+ai-artist-schedule = "ai_artist.scheduling.cli:main"
 
 [project.optional-dependencies]
 dev = [
