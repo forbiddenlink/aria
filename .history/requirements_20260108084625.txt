@@ -1,0 +1,168 @@
+# AI Artist - Python Dependencies
+# Last Updated: 2026-01-08
+
+# ===================================
+# Core AI/ML Libraries
+# ===================================
+
+# Stable Diffusion and Image Generation
+diffusers==0.25.0
+transformers==4.36.0
+accelerate==0.25.0  # Required for LoRA training
+safetensors==0.4.1
+
+# PyTorch (Install separately based on your system)
+# For CUDA: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+# For Mac (MPS): pip install torch torchvision torchaudio
+torch>=2.1.0
+torchvision>=0.16.0
+
+# LoRA Training and PEFT
+peft==0.7.0
+bitsandbytes==0.41.3  # Optional: for 8-bit optimization
+
+# CLIP for Curation
+ftfy==6.1.3
+regex==2023.12.25
+
+# ===================================
+# Image Processing
+# ===================================
+
+Pillow==10.2.0
+opencv-python==4.9.0.80
+numpy>=1.24.0,<2.0.0
+imageio==2.33.1
+
+# ===================================
+# API Clients
+# ===================================
+
+# Unsplash
+unsplash-py==1.1.0
+
+# HTTP Requests
+requests==2.31.0
+aiohttp==3.9.1
+
+# ===================================
+# Automation & Scheduling
+# ===================================
+
+APScheduler==3.10.4
+python-crontab==3.0.0
+
+# ===================================
+# Data & Storage
+# ===================================
+
+# Configuration
+PyYAML==6.0.1
+python-dotenv==1.0.0
+
+# Database
+# SQLite is built-in to Python
+
+# ===================================
+# Utilities
+# ===================================
+
+# Progress bars
+tqdm==4.66.1
+
+# Date/Time
+python-dateutil==2.8.2
+
+# Logging
+colorlog==6.8.0
+structlog==24.1.0  # Structured logging for better observability
+
+# Error Handling & Resilience
+tenacity==8.2.3  # Retry logic with exponential backoff
+
+# ===================================
+# Development & Testing
+# ===================================
+
+# Testing Framework
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+pytest-asyncio==0.21.1
+
+# Code Quality
+black==23.12.1  # Code formatting
+ruff==0.1.9  # Fast linting
+pre-commit==3.6.0  # Git hooks
+
+# Security
+safety==3.0.1  # Check for vulnerable dependencies
+pip-audit==2.6.3  # Dependency vulnerability scanner
+
+# ===================================
+# Optional: Web Interface
+# ===================================
+
+# Gradio UI (uncomment if needed)
+# gradio==4.15.0
+
+# FastAPI (uncomment if building API)
+# fastapi==0.109.0
+# uvicorn==0.27.0
+# python-multipart==0.0.6
+
+# ===================================
+# Optional: Advanced Features
+# ===================================
+
+# CLIP for aesthetic scoring
+# clip @ git+https://github.com/openai/CLIP.git
+
+# Image quality assessment
+# pyiqa==0.1.10
+
+# Observability & Monitoring
+# opentelemetry-api==1.21.0  # OpenTelemetry for tracing
+# opentelemetry-sdk==1.21.0
+# prometheus-client==0.19.0  # Metrics collection
+
+# Experiment Tracking
+# wandb==0.16.1  # Weights & Biases for training tracking
+# mlflow==2.9.2  # ML experiment tracking
+
+# Metadata handling
+# piexif==1.1.3
+
+# ===================================
+# Development Tools (Optional)
+# ===================================
+
+# Testing
+# pytest==7.4.4
+# pytest-cov==4.1.0
+
+# Code Quality
+# black==24.1.1
+# flake8==7.0.0
+# isort==5.13.2
+
+# Type Checking
+# mypy==1.8.0
+
+# ===================================
+# Notes
+# ===================================
+
+# Installation Instructions:
+# 1. Create virtual environment: python -m venv venv
+# 2. Activate: source venv/bin/activate (Linux/Mac) or venv\Scripts\activate (Windows)
+# 3. Install PyTorch first (see commands above)
+# 4. Install requirements: pip install -r requirements.txt
+
+# GPU Requirements:
+# - Minimum: 6GB VRAM (SD 1.5)
+# - Recommended: 12GB+ VRAM (SDXL)
+# - Can run on CPU but very slow (not recommended)
+
+# Estimated install size: ~8-10GB
+# (includes models, dependencies, and cache)

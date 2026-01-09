@@ -1,0 +1,53 @@
+# AI Artist Configuration
+
+# Model settings
+model:
+  # Using SD 1.5 for better MPS compatibility (SDXL has issues with Apple Silicon)
+  base_model: "runwayml/stable-diffusion-v1-5"
+  # Options: "cuda" (NVIDIA GPU), "mps" (Apple Silicon), "cpu"
+  device: "mps"
+  # Use float32 on MPS to avoid dtype issues - slightly slower but works reliably
+  dtype: "float32"
+  enable_attention_slicing: true
+  enable_vae_slicing: true
+
+# Generation parameters
+generation:
+  width: 512  # SD 1.5 works best at 512x512
+  height: 512
+  num_inference_steps: 30
+  guidance_scale: 7.5
+  num_variations: 3
+  negative_prompt: "blurry, low quality, distorted, ugly, deformed, watermark, text"
+
+# API keys (can also be set via environment variables)
+api_keys:
+  unsplash_access_key: "kJG1kZhYMlhxFpXxS8Jpz5TOgzLgEG5TTpkiBpxtkJo"
+  unsplash_secret_key: "mofJ-v-c8yI3H_FWfiQLxPtSvmsNBqO96iaWP_8X4Ig"
+  pexels_api_key: "YOUR_PEXELS_API_KEY"  # Optional
+  hf_token: "YOUR_HUGGINGFACE_TOKEN"  # Optional
+
+# Database
+database:
+  url: "sqlite:///./data/ai_artist.db"
+
+# Scheduling (for automated mode)
+scheduling:
+  enabled: true
+  timezone: "America/Los_Angeles"
+  daily_creation:
+    enabled: true
+    hour: 9
+    minute: 0
+
+# Curation settings
+curation:
+  enabled: true
+  quality_threshold: 0.6
+  keep_top_n: 2
+
+# Gallery settings
+gallery:
+  path: "./gallery"
+  organize_by_date: true
+  save_metadata: true

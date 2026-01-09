@@ -1,0 +1,191 @@
+# AI Artist - Python Dependencies
+# Updated: 2026-01-08 with 2026 Best Practices
+# Based on research: SDXL, LoRA training, MLOps, Python 3.11+
+
+# ===================================
+# Core AI/ML Libraries
+# ===================================
+
+# PyTorch - Install separately based on your system:
+# CUDA 11.8: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+# CUDA 12.1: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+# Apple Silicon (MPS): pip install torch torchvision torchaudio
+# CPU: pip install torch torchvision torchaudio
+torch>=2.2.0
+torchvision>=0.17.0
+torchaudio>=2.2.0
+
+# Stable Diffusion and Image Generation
+diffusers>=0.27.0
+transformers>=4.38.0
+accelerate>=0.27.0  # Required for LoRA training
+safetensors>=0.4.0
+# xformers>=0.0.24  # Memory-efficient attention (optional, GPU only) - DISABLED: Doesn't build on Apple Silicon
+
+# LoRA Training and PEFT
+peft>=0.7.0
+bitsandbytes>=0.42.0  # For AdamW8bit optimizer
+
+# CLIP for Curation
+ftfy==6.1.3
+regex==2023.12.25
+# CLIP installed separately: pip install git+https://github.com/openai/CLIP.git
+
+# ===================================
+# Image Processing
+# ===================================
+
+Pillow>=10.2.0
+opencv-python>=4.9.0
+numpy>=1.24.0,<2.0.0
+imageio>=2.33.0
+imagehash>=4.3.0  # Perceptual hashing for deduplication
+
+# ===================================
+# API Clients (Modern HTTP)
+# ===================================
+
+# Modern async HTTP client (replaces requests)
+httpx>=0.27.0
+aiohttp>=3.9.0  # Alternative async HTTP
+
+# API wrappers
+# unsplash-py==1.1.0  # Deprecated, use httpx directly
+
+# ===================================
+# Automation & Scheduling
+# ===================================
+
+APScheduler>=3.10.4
+python-crontab>=3.0.0
+
+# ===================================
+# Data & Storage
+# ===================================
+
+# Configuration management
+PyYAML>=6.0.1
+python-dotenv>=1.0.0
+pydantic>=2.5.0  # Runtime validation
+pydantic-settings>=2.1.0
+
+# Database
+SQLAlchemy>=2.0.0  # ORM
+alembic>=1.13.0  # Migrations
+# SQLite is built into Python
+
+# ===================================
+# Utilities
+# ===================================
+
+# Progress bars
+tqdm>=4.66.1
+
+# Date/Time
+python-dateutil>=2.8.2
+
+# Structured Logging (2026 best practice)
+structlog>=24.1.0
+colorlog>=6.8.0
+
+# Error Handling & Resilience
+tenacity>=8.2.3  # Retry logic with exponential backoff
+
+# ===================================
+# Development & Testing
+# ===================================
+
+# Testing Framework
+pytest>=8.0.0
+pytest-cov>=4.1.0
+pytest-mock>=3.12.0
+pytest-asyncio>=0.23.0
+
+# Code Quality
+black>=24.1.0  # Code formatting
+ruff>=0.2.0  # Fast linting (replaces flake8, isort, pydocstyle)
+mypy>=1.8.0  # Type checking
+pre-commit>=3.6.0  # Git hooks
+
+# Security
+safety>=3.0.1  # Check for vulnerable dependencies
+pip-audit>=2.6.3  # Dependency vulnerability scanner
+
+# ===================================
+# MLOps & Experiment Tracking (Optional)
+# ===================================
+
+# Uncomment based on your choice:
+# wandb>=0.16.0  # Weights & Biases (recommended for image logging)
+# mlflow>=2.9.2  # MLflow (recommended for model registry)
+# dvc>=3.0.0  # Data Version Control
+
+# ===================================
+# Optional: Web Interface
+# ===================================
+
+# Uncomment if building web UI:
+# gradio>=4.15.0  # Simple UI
+# fastapi>=0.109.0  # API server
+# uvicorn>=0.27.0  # ASGI server
+# python-multipart>=0.0.6  # For file uploads
+
+# ===================================
+# Optional: Advanced Features
+# ===================================
+
+# Image quality assessment
+# pyiqa>=0.1.10  # Image Quality Assessment
+
+# Observability & Monitoring
+# opentelemetry-api>=1.21.0  # OpenTelemetry for tracing
+# opentelemetry-sdk>=1.21.0
+# prometheus-client>=0.19.0  # Metrics collection
+
+# Metadata handling
+# piexif>=1.1.3  # EXIF metadata
+
+# ===================================
+# Installation Notes
+# ===================================
+
+# Installation order (recommended):
+# 1. Create virtual environment: python -m venv venv
+# 2. Activate: source venv/bin/activate (Linux/Mac) or venv\Scripts\activate (Windows)
+# 3. Upgrade pip: pip install --upgrade pip
+# 4. Install PyTorch first (see commands above for your system)
+# 5. Install requirements: pip install -r requirements.txt
+# 6. Install optional dependencies as needed
+
+# Modern alternative using uv (10-100x faster):
+# pip install uv
+# uv pip install -r requirements.txt
+
+# GPU Requirements:
+# - Minimum: 6GB VRAM (SD 1.5)
+# - Recommended: 12GB+ VRAM (SDXL)
+# - Optimal: 16GB+ VRAM (SDXL with xformers)
+# - CPU fallback available but very slow
+
+# Estimated install size: ~8-12GB
+# (includes models, dependencies, and cache)
+
+# Python Version Requirements:
+# - Minimum: Python 3.11
+# - Recommended: Python 3.12
+# - Maximum tested: Python 3.12
+
+# Platform Support:
+# - ✅ Linux (Ubuntu 20.04+, Debian 11+)
+# - ✅ macOS (Intel & Apple Silicon M1/M2/M3)
+# - ✅ Windows 10/11 with WSL2 or native
+
+# Known Issues:
+# - xformers may require specific PyTorch version
+# - bitsandbytes requires CUDA on Linux, not supported on Windows natively
+# - Apple Silicon (MPS) works better with fp32 than fp16
+
+# Troubleshooting:
+# - CUDA out of memory: Reduce batch size, enable attention slicing
+# - Import errors: Ensure PyTorch installed before other packages
+# - Version conflicts: Use virtual environment, avoid global installs
