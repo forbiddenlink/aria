@@ -42,7 +42,6 @@ class ImageCurator:
         if self.model is None:
             try:
                 import clip
-                import torch
 
                 self.model, self.preprocess = clip.load("ViT-L/14", device=self.device)
                 logger.info("clip_model_loaded")
@@ -51,13 +50,19 @@ class ImageCurator:
                     "clip_not_installed",
                     message="Install with: pip install git+https://github.com/openai/CLIP.git",
                 )
-                raise
+                # Don't raise - allow graceful degradation
+                return False
+        return True
 
     def evaluate(self, image: Image.Image, prompt: str) -> QualityMetrics:
         """Evaluate image quality."""
-        # Load CLIP if not already loaded
-        if self.model is None:
-            self._load_clip()
+        # Load CLIP if not already loaded - if it fails, return default scores
+        if self.model is None and not self._load_clip():
+            return QualityMetrics(
+                aesthetic_score=0.5,
+                clip_score=0.5,
+                technical_score=0.5,
+            )
 
         # CLIP score (text-image alignment)
         clip_score = self._compute_clip_score(image, prompt)
@@ -126,4 +131,3 @@ class ImageCurator:
     def should_keep(self, metrics: QualityMetrics, threshold: float = 0.6) -> bool:
         """Determine if image should be kept."""
         return metrics.overall_score >= threshold
-

@@ -26,7 +26,10 @@ class AIArtist:
         self.scheduler = None
         self.curator = None
 
-    def initialize(self):
+        # Initialize all components
+        self._initialize()
+
+    def _initialize(self):
         """Initialize components."""
         logger.info("initializing_ai_artist")
 
