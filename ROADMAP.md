@@ -76,28 +76,41 @@ Build an autonomous AI artist that creates unique artwork with style consistency
 - JSON logs in production mode
 - Request IDs in all operations
 
+### Phase 1.5: Testing Improvements
+**Status**: Complete | **Completed**: January 2026
+
+**Goals**:
+- [x] Increase test coverage from 52% to 58%
+- [x] Add comprehensive tests for generator.py (19% → 84%)
+- [x] Add tests for main.py initialization (16% → 62%)
+- [x] Improve code quality and reliability
+
+**Results**:
+- Total test coverage: 58% (856 lines, 362 missing)
+- Generator coverage: 84% (was 19%)
+- Main coverage: 62% (was 16%)
+- 51 tests passing (1 skipped: CLIP download)
+
+**Files with High Coverage**:
+- models.py: 100%
+- gallery/manager.py: 100%
+- config.py: 100%
+- logging.py: 96%
+- scheduler.py: 88%
+- generator.py: 84%
+- unsplash.py: 83%
+
 ---
 
 ## 📋 Upcoming Phases
 
-### Phase 4: Social Media Integration
-**Duration**: 2 weeks | **Start**: Week 5
-
-**Goals**:
-- [ ] Instagram API integration
-- [ ] Twitter/X API integration
-- [ ] Automatic post scheduling
-- [ ] Caption generation
-- [ ] Attribution compliance (Unsplash)
-- [ ] Post performance tracking
-
-**Technical Stack**: Instagram Graph API, Twitter API v2, Celery, Redis
-
-### Phase 5: Web Gallery Interface
+### Phase 5: Web Gallery Interface (NEXT)
 **Duration**: 2 weeks | **Start**: Week 6
 
+**Note**: Skipping Phase 4 (Social Media) - moving directly to Web Gallery
+
 **Goals**:
-- [ ] FastAPI backend
+- [ ] FastAPI backend for artwork browsing
 - [ ] React/Vue frontend
 - [ ] Gallery grid with filtering
 - [ ] Responsive design
