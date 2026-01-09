@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 
 def create_db_engine(db_path: Path):
@@ -45,4 +45,3 @@ def get_db_session(session_factory: sessionmaker):
         raise
     finally:
         session.close()
-

@@ -1,14 +1,14 @@
 """SQLAlchemy database models."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import JSON, Boolean, Column, DateTime, Float, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
 
-class GeneratedImage(Base):
+class GeneratedImage(Base):  # type: ignore[misc, valid-type]
     """Model for generated artwork."""
 
     __tablename__ = "generated_images"
@@ -34,15 +34,13 @@ class GeneratedImage(Base):
     final_score = Column(Float, index=True)
 
     # Metadata
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
-    status = Column(
-        String, default="pending", index=True
-    )  # pending, curated, rejected
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC), index=True)
+    status = Column(String, default="pending", index=True)  # pending, curated, rejected
     is_featured = Column(Boolean, default=False)
     tags = Column(JSON, default=list)
 
 
-class TrainingSession(Base):
+class TrainingSession(Base):  # type: ignore[misc, valid-type]
     """Model for LoRA training sessions."""
 
     __tablename__ = "training_sessions"
@@ -61,13 +59,13 @@ class TrainingSession(Base):
     metrics = Column(JSON, default=dict)
 
     # Timestamps
-    started_at = Column(DateTime, default=datetime.utcnow)
+    started_at = Column(DateTime, default=lambda: datetime.now(UTC))
     completed_at = Column(DateTime)
 
     status = Column(String, default="running")  # running, completed, failed
 
 
-class CreationSession(Base):
+class CreationSession(Base):  # type: ignore[misc, valid-type]
     """Model for automated creation sessions."""
 
     __tablename__ = "creation_sessions"
@@ -77,6 +75,5 @@ class CreationSession(Base):
     images_created = Column(Integer, default=0)
     images_kept = Column(Integer, default=0)
     avg_score = Column(Float)
-    started_at = Column(DateTime, default=datetime.utcnow)
+    started_at = Column(DateTime, default=lambda: datetime.now(UTC))
     completed_at = Column(DateTime)
-

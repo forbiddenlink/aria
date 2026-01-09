@@ -173,10 +173,15 @@ class TestScheduledArtist:
         assert len(jobs) == 1
         assert jobs[0]["id"] == "daily_batch_3"
 
-    def test_start_and_shutdown(self, scheduled_artist):
+    async def test_start_and_shutdown(self, scheduled_artist):
         """Test starting and shutting down scheduler."""
+        import asyncio
+
+        # Start scheduler in background
         scheduled_artist.start()
+        await asyncio.sleep(0.1)  # Let scheduler start
         assert scheduled_artist.scheduler.scheduler.running
 
         scheduled_artist.shutdown()
+        await asyncio.sleep(0.2)  # Allow time for shutdown
         assert not scheduled_artist.scheduler.scheduler.running
