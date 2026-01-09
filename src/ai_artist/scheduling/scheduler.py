@@ -35,7 +35,7 @@ class CreationScheduler:
         topic = self.topics[self.current_topic_index]
         self.current_topic_index = (self.current_topic_index + 1) % len(self.topics)
         logger.info("topic_selected", topic=topic, index=self.current_topic_index)
-        return topic
+        return str(topic)
 
     def add_daily_job(
         self,
@@ -266,4 +266,5 @@ class ScheduledArtist:
 
     def list_jobs(self) -> list[dict]:
         """List all scheduled jobs."""
-        return self.scheduler.list_jobs()
+        jobs: list[dict] = self.scheduler.list_jobs()
+        return jobs

@@ -4,9 +4,9 @@ from pathlib import Path
 from typing import Literal
 
 import torch
-import yaml
-from pydantic import BaseModel, ConfigDict, Field
-from pydantic_settings import BaseSettings
+import yaml  # type: ignore[import-untyped]
+from pydantic import BaseModel, Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class ModelConfig(BaseModel):
@@ -50,12 +50,12 @@ class DatabaseConfig(BaseModel):
 class Config(BaseSettings):
     """Main application configuration."""
 
-    model_config = ConfigDict(extra="allow", env_file=".env", env_nested_delimiter="__")
+    model_config = SettingsConfigDict(extra="allow", env_file=".env", env_nested_delimiter="__")  # type: ignore[misc]
 
-    model: ModelConfig = Field(default_factory=ModelConfig)
-    generation: GenerationConfig = Field(default_factory=GenerationConfig)
+    model: ModelConfig = Field(default_factory=ModelConfig)  # type: ignore[arg-type]
+    generation: GenerationConfig = Field(default_factory=GenerationConfig)  # type: ignore[arg-type]
     api_keys: APIKeysConfig
-    database: DatabaseConfig = Field(default_factory=DatabaseConfig)
+    database: DatabaseConfig = Field(default_factory=DatabaseConfig)  # type: ignore[arg-type]
 
 
 def load_config(config_path: Path) -> Config:

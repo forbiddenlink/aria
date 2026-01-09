@@ -58,7 +58,8 @@ class UnsplashClient:
             raise RateLimitError("Rate limit exceeded")
 
         response.raise_for_status()
-        return response.json()
+        result: dict[str, Any] = response.json()
+        return result
 
     async def get_random_photo(self, query: str | None = None) -> dict[str, Any]:
         """Get a random photo."""
@@ -72,7 +73,8 @@ class UnsplashClient:
             raise RateLimitError("Rate limit exceeded")
 
         response.raise_for_status()
-        return response.json()
+        result: dict[str, Any] = response.json()
+        return result
 
     async def trigger_download(self, download_location: str):
         """Track download (required by Unsplash guidelines)."""
@@ -100,4 +102,3 @@ class UnsplashClient:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit."""
         await self.close()
-

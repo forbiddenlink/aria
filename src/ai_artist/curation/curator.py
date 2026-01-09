@@ -93,6 +93,7 @@ class ImageCurator:
         import clip
         import torch
 
+        assert self.model is not None and self.preprocess is not None
         with torch.no_grad():
             image_tensor = self.preprocess(image).unsqueeze(0).to(self.device)
             text_token = clip.tokenize([prompt]).to(self.device)
@@ -107,7 +108,7 @@ class ImageCurator:
             # Compute similarity
             similarity = (image_features @ text_features.T).item()
 
-        return max(0.0, similarity)  # Clip to [0, 1]
+        return float(max(0.0, similarity))  # Clip to [0, 1]
 
     def _estimate_aesthetic(self, image: Image.Image) -> float:
         """Estimate aesthetic score (placeholder)."""
@@ -116,7 +117,7 @@ class ImageCurator:
         width, height = image.size
         # Prefer images close to square aspect ratio
         aspect_ratio = min(width, height) / max(width, height)
-        return 0.5 + (aspect_ratio * 0.3)  # Range: 0.5-0.8
+        return float(0.5 + (aspect_ratio * 0.3))  # Range: 0.5-0.8
 
     def _compute_technical_score(self, image: Image.Image) -> float:
         """Compute technical quality score."""
@@ -126,7 +127,7 @@ class ImageCurator:
 
         # TODO: Add blur detection, artifact detection
 
-        return resolution_score
+        return float(resolution_score)
 
     def should_keep(self, metrics: QualityMetrics, threshold: float = 0.6) -> bool:
         """Determine if image should be kept."""

@@ -10,7 +10,12 @@ from .curation.curator import ImageCurator
 from .gallery.manager import GalleryManager
 from .scheduling.scheduler import CreationScheduler
 from .utils.config import Config, get_torch_dtype, load_config
-from .utils.logging import configure_logging, get_logger
+from .utils.logging import (
+    PerformanceTimer,
+    configure_logging,
+    get_logger,
+    set_request_id,
+)
 
 logger = get_logger(__name__)
 
@@ -31,10 +36,15 @@ class AIArtist:
 
     def _initialize(self):
         """Initialize components."""
-        logger.info("initializing_ai_artist")
+        # Setup logging with rotation
+        configure_logging(
+            log_level="INFO",
+            log_file=Path("logs/ai_artist.log"),
+            json_logs=False,  # Console-friendly for now
+            enable_rotation=True,
+        )
 
-        # Setup logging
-        configure_logging(log_level="INFO", log_file=Path("logs/ai_artist.log"))
+        logger.info("initializing_ai_artist")
 
         # Initialize generator
         self.generator = ImageGenerator(
@@ -74,71 +84,98 @@ class AIArtist:
 
     async def create_artwork(self, theme: str | None = None):
         """Create a single piece of artwork."""
-        logger.info("creating_artwork", theme=theme)
+        # Set unique request ID for this operation
+        request_id = set_request_id()
+        logger.info("creating_artwork", theme=theme, request_id=request_id)
 
-        # Get inspiration from Unsplash
-        query = theme or "art"
-        photo = await self.unsplash.get_random_photo(query=query)
+        with PerformanceTimer(logger, "artwork_creation"):
+            # Get inspiration from Unsplash
+            query = theme or "art"
+            assert self.unsplash is not None
+            photo = await self.unsplash.get_random_photo(query=query)
 
-        # Build enhanced prompt with artistic styles
-        description = photo.get("description") or photo.get("alt_description") or query
-        import random
+            # Build enhanced prompt with artistic styles
+            description = (
+                photo.get("description") or photo.get("alt_description") or query
+            )
+            import random
 
-        styles = [
-            "masterpiece, highly detailed, professional photography",
-            "artistic interpretation, vivid colors, detailed composition",
-            "beautiful artwork, intricate details, stunning visual",
-            "creative composition, high quality, aesthetically pleasing",
-        ]
-        style_modifier = random.choice(styles)
-        prompt = f"{description}, {style_modifier}"
+            styles = [
+                "masterpiece, highly detailed, professional photography",
+                "artistic interpretation, vivid colors, detailed composition",
+                "beautiful artwork, intricate details, stunning visual",
+                "creative composition, high quality, aesthetically pleasing",
+            ]
+            style_modifier = random.choice(styles)
+            prompt = f"{description}, {style_modifier}"
 
-        logger.info("got_inspiration", query=query, photo_id=photo["id"])
+            logger.info("got_inspiration", query=query, photo_id=photo["id"])
 
-        # Generate images with progress callback
-        print(f"\n🎨 Generating {self.config.generation.num_variations} variations...")
-        images = self.generator.generate(
-            prompt=prompt,
-            negative_prompt=self.config.generation.negative_prompt,
-            width=self.config.generation.width,
-            height=self.config.generation.height,
-            num_inference_steps=self.config.generation.num_inference_steps,
-            guidance_scale=self.config.generation.guidance_scale,
-            num_images=self.config.generation.num_variations,
-        )
-
-        # Evaluate and select best image
-        print("\n🔍 Evaluating image quality...")
-        best_image = images[0]
-        best_score = 0.0
-
-        for idx, image in enumerate(images, 1):
-            metrics = self.curator.evaluate(image, prompt)
-            score = metrics.overall_score
-            print(
-                f"   Image {idx}: score={score:.3f} (aesthetic={metrics.aesthetic_score:.2f}, clip={metrics.clip_score:.2f})"
+            # Generate images with performance tracking
+            logger.info(
+                "generation_started",
+                num_variations=self.config.generation.num_variations,
+                prompt=prompt[:100],  # Truncate for logs
             )
 
-            if score > best_score:
-                best_score = score
-                best_image = image
+            with PerformanceTimer(logger, "image_generation"):
+                assert self.generator is not None
+                images = self.generator.generate(
+                    prompt=prompt,
+                    negative_prompt=self.config.generation.negative_prompt,
+                    width=self.config.generation.width,
+                    height=self.config.generation.height,
+                    num_inference_steps=self.config.generation.num_inference_steps,
+                    guidance_scale=self.config.generation.guidance_scale,
+                    num_images=self.config.generation.num_variations,
+                )
 
-        print(f"\n✨ Selected best image with score: {best_score:.3f}")
+            # Evaluate and select best image
+            logger.info("curation_started", num_images=len(images))
+            best_image = images[0]
+            best_score = 0.0
+            scores = []
 
-        # Save best image
-        saved_path = self.gallery.save_image(
-            image=best_image,
-            prompt=prompt,
-            metadata={
-                "source_url": photo["urls"]["regular"],
-                "source_id": photo["id"],
-                "theme": theme,
-                "model": self.config.model.base_model,
-                "quality_score": float(best_score),
-            },
-        )
+            with PerformanceTimer(logger, "image_curation"):
+                assert self.curator is not None
+                for idx, image in enumerate(images, 1):
+                    metrics = self.curator.evaluate(image, prompt)
+                    score = metrics.overall_score
+                    scores.append(score)
+                    logger.debug(
+                        "image_evaluated",
+                        image_idx=idx,
+                        score=round(score, 3),
+                        aesthetic=round(metrics.aesthetic_score, 2),
+                        clip=round(metrics.clip_score, 2),
+                    )
+
+                    if score > best_score:
+                        best_score = score
+                        best_image = image
+
+            logger.info(
+                "best_image_selected",
+                best_score=round(best_score, 3),
+                scores=[round(s, 3) for s in scores],
+            )
+
+            # Save best image
+            assert self.gallery is not None
+            saved_path = self.gallery.save_image(
+                image=best_image,
+                prompt=prompt,
+                metadata={
+                    "source_url": photo["urls"]["regular"],
+                    "source_id": photo["id"],
+                    "theme": theme,
+                    "model": self.config.model.base_model,
+                    "quality_score": float(best_score),
+                },
+            )
 
         # Track download
+        assert self.unsplash is not None
         await self.unsplash.trigger_download(photo["links"]["download_location"])
 
         logger.info("artwork_created", path=str(saved_path))
@@ -191,12 +228,14 @@ async def async_main(config_path: Path, mode: str = "manual", theme: str | None 
         config = load_config(config_path)
     except FileNotFoundError:
         logger.error("config_not_found", path=str(config_path))
-        print(f"Error: Config file not found at {config_path}")
-        print("Please create config/config.yaml from config/config.example.yaml")
+        sys.stderr.write(f"Error: Config file not found at {config_path}\n")
+        sys.stderr.write(
+            "Please create config/config.yaml from config/config.example.yaml\n"
+        )
         sys.exit(1)
     except Exception as e:
         logger.error("config_load_error", error=str(e))
-        print(f"Error loading config: {e}")
+        sys.stderr.write(f"Error loading config: {e}\n")
         sys.exit(1)
 
     app = AIArtist(config)
