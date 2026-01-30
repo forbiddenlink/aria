@@ -173,6 +173,7 @@ class TestScheduledArtist:
         assert len(jobs) == 1
         assert jobs[0]["id"] == "daily_batch_3"
 
+    @pytest.mark.asyncio
     async def test_start_and_shutdown(self, scheduled_artist):
         """Test starting and shutting down scheduler."""
         import asyncio

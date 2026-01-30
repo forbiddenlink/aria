@@ -3,13 +3,15 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from pydantic import SecretStr
+
 from ai_artist.main import AIArtist
 from ai_artist.utils.config import Config
 
 
 @pytest.fixture
 def mock_config():
-    """Create a mock configuration."""
+    """Create a mock configuration with all required attributes."""
     config = MagicMock(spec=Config)
 
     # Configure model settings
@@ -17,6 +19,10 @@ def mock_config():
     model.base_model = "runwayml/stable-diffusion-v1-5"
     model.device = "cpu"
     model.dtype = "float32"
+    model.lora_path = None
+    model.lora_scale = 0.8
+    model.use_refiner = False
+    model.refiner_model = "stabilityai/stable-diffusion-xl-refiner-1.0"
     config.model = model
 
     # Configure generation settings
@@ -29,10 +35,20 @@ def mock_config():
     generation.negative_prompt = "blurry"
     config.generation = generation
 
-    # Configure API keys
+    # Configure API keys with SecretStr
     api_keys = MagicMock()
-    api_keys.unsplash_access_key = "test_key"
+    api_keys.unsplash_access_key = SecretStr("test_key")
+    api_keys.unsplash_secret_key = SecretStr("test_secret")
     config.api_keys = api_keys
+
+    # Configure optional features (disabled by default)
+    config.controlnet = MagicMock(enabled=False)
+    config.upscaling = MagicMock(enabled=False)
+    config.inpainting = MagicMock(enabled=False)
+    config.face_restoration = MagicMock(enabled=False)
+    config.autonomy = MagicMock(enabled=False, max_retries=0)
+    config.trends = MagicMock(enabled=False)
+    config.model_manager = MagicMock(enabled=False)
 
     return config
 
@@ -133,7 +149,7 @@ api_keys:
     assert config.model.device == "cpu"
     assert config.generation.width == 512
     assert config.generation.num_variations == 3
-    assert config.api_keys.unsplash_access_key == "test_access_key"
+    assert config.api_keys.unsplash_access_key.get_secret_value() == "test_access_key"
 
 
 @pytest.mark.integration

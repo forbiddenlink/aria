@@ -56,13 +56,8 @@ class TestImageGenerator:
         assert generator.pipeline is not None
 
     def test_load_model_mps_fixes(self, mock_pipeline):
-        """Test MPS-specific fixes are applied."""
+        """Test MPS-specific optimizations are applied."""
         mock_class, mock_instance = mock_pipeline
-
-        # Set up VAE mock to track calls
-        vae_mock = MagicMock()
-        vae_mock.to.return_value = vae_mock
-        mock_instance.vae = vae_mock
 
         with patch(
             "ai_artist.core.generator.DPMSolverMultistepScheduler"
@@ -77,10 +72,9 @@ class TestImageGenerator:
 
             generator.load_model()
 
-            # Should convert VAE to float32 for MPS
-            vae_mock.to.assert_called_with(dtype=torch.float32)
-            # Should disable attention slicing on MPS
-            mock_instance.disable_attention_slicing.assert_called_once()
+            # On MPS, attention slicing should NOT be enabled (it's slower)
+            mock_instance.enable_attention_slicing.assert_not_called()
+            mock_instance.enable_vae_slicing.assert_not_called()
 
     def test_generate_requires_loaded_model(self):
         """Test generate raises error if model not loaded."""
@@ -97,8 +91,10 @@ class TestImageGenerator:
         """Test image generation."""
         mock_class, mock_instance = mock_pipeline
 
-        # Mock the pipeline call to return images
-        mock_image = Image.new("RGB", (512, 512))
+        # Create a non-uniform image with noise (uniform images are filtered)
+        import numpy as np
+        noise = np.random.randint(50, 200, (512, 512, 3), dtype=np.uint8)
+        mock_image = Image.fromarray(noise, mode="RGB")
         mock_instance.return_value.images = [mock_image, mock_image, mock_image]
 
         generator = ImageGenerator(
@@ -124,7 +120,10 @@ class TestImageGenerator:
     def test_generate_with_negative_prompt(self, mock_pipeline):
         """Test generation with negative prompt."""
         mock_class, mock_instance = mock_pipeline
-        mock_image = Image.new("RGB", (512, 512))
+        # Create a non-uniform image with noise (uniform images are filtered)
+        import numpy as np
+        noise = np.random.randint(50, 200, (512, 512, 3), dtype=np.uint8)
+        mock_image = Image.fromarray(noise, mode="RGB")
         mock_instance.return_value.images = [mock_image]
 
         generator = ImageGenerator(
