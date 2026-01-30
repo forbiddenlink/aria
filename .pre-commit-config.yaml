@@ -14,16 +14,17 @@ repos:
       - id: detect-private-key
 
   - repo: https://github.com/psf/black
-    rev: 24.1.1
+    rev: 24.10.0
     hooks:
       - id: black
-        language_version: python3.13
+        language_version: python3
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.2.0
+    rev: v0.9.2
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
 
   - repo: https://github.com/PyCQA/isort
     rev: 5.13.2
@@ -32,10 +33,15 @@ repos:
         args: ["--profile", "black"]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
+    rev: v1.14.1
     hooks:
       - id: mypy
-        additional_dependencies: [pydantic, pydantic-settings, types-all]
+        additional_dependencies:
+          - pydantic>=2.0
+          - pydantic-settings>=2.0
+          - types-PyYAML
+          - types-requests
+          - types-Pillow
         args: [--ignore-missing-imports]
 
   - repo: https://github.com/PyCQA/bandit
@@ -50,4 +56,3 @@ repos:
     hooks:
       - id: markdownlint
         args: ["--fix", "--config", ".markdownlint.json"]
-
