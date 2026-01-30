@@ -1,0 +1,63 @@
+# AI Artist Docker Compose with GPU Support
+# Requires: NVIDIA Docker runtime / NVIDIA Container Toolkit
+# Usage: docker compose -f docker-compose.gpu.yml up -d
+
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./gallery:/app/gallery
+      - ./models:/app/models
+      - ./logs:/app/logs
+      - ./config:/app/config
+      - ./data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - HF_HOME=/app/models/cache
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+      - UNSPLASH_ACCESS_KEY=${UNSPLASH_ACCESS_KEY:-}
+      - UNSPLASH_SECRET_KEY=${UNSPLASH_SECRET_KEY:-}
+      - MODEL_DEVICE=cuda
+      - NVIDIA_VISIBLE_DEVICES=all
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+        reservations:
+          memory: 8G
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # Optional: PostgreSQL for production database
+  # postgres:
+  #   image: postgres:15
+  #   environment:
+  #     POSTGRES_DB: ai_artist
+  #     POSTGRES_USER: ai_artist
+  #     POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+  #   restart: unless-stopped
+
+# volumes:
+#   postgres_data:
