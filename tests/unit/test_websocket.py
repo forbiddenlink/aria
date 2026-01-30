@@ -38,13 +38,14 @@ class TestConnectionManager:
         assert mock_websocket in ws_manager.active_connections
         mock_websocket.accept.assert_called_once()
     
-    def test_disconnect(self, ws_manager):
+    @pytest.mark.asyncio
+    async def test_disconnect(self, ws_manager):
         """Test WebSocket disconnection."""
         mock_websocket = MagicMock()
         ws_manager.active_connections.append(mock_websocket)
-        
-        ws_manager.disconnect(mock_websocket, client_id="test-123")
-        
+
+        await ws_manager.disconnect(mock_websocket, client_id="test-123")
+
         assert mock_websocket not in ws_manager.active_connections
     
     @pytest.mark.asyncio
