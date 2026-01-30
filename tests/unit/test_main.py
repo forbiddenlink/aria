@@ -3,6 +3,8 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pydantic import SecretStr
+
 from ai_artist.main import AIArtist
 
 
@@ -15,7 +17,8 @@ def mock_config():
     config.model.dtype = "float32"
     config.model.lora_path = None
     config.model.lora_scale = 0.8
-    config.api_keys.unsplash_access_key = "test_key"
+    # Use SecretStr for API keys
+    config.api_keys.unsplash_access_key = SecretStr("test_key")
     config.generation.width = 512
     config.generation.height = 512
     config.generation.num_inference_steps = 10

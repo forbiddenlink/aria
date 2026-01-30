@@ -671,10 +671,10 @@ async def websocket_endpoint(websocket: WebSocket):
                 if session_id:
                     logger.info("client_subscribed", session_id=session_id)
     except WebSocketDisconnect:
-        ws_manager.disconnect(websocket, client_id)
+        await ws_manager.disconnect(websocket, client_id)
     except Exception as e:
         logger.error("websocket_error", error=str(e))
-        ws_manager.disconnect(websocket, client_id)
+        await ws_manager.disconnect(websocket, client_id)
 
 
 @app.get("/health")
