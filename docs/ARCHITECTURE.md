@@ -4,7 +4,7 @@
 
 The AI Artist is built as a modular pipeline with five core components:
 
-```
+```text
 ┌─────────────────┐
 │  Inspiration    │ ──> Fetches random images from APIs
 │     Engine      │
@@ -42,12 +42,14 @@ The AI Artist is built as a modular pipeline with five core components:
 **Purpose**: Autonomously discover interesting subjects to paint
 
 **Components**:
+
 - `UnsplashClient`: Fetches random high-quality images
 - `PexelsClient`: Alternative image source
 - `TopicGenerator`: Generates search queries (animals, landscapes, etc.)
 - `ImagePreprocessor`: Crops, resizes, enhances source images
 
 **Flow**:
+
 1. Generate random search query or use predefined topic
 2. Fetch image from API with retry logic (3 attempts)
 3. Handle rate limits gracefully (fallback to Pexels)
@@ -56,6 +58,7 @@ The AI Artist is built as a modular pipeline with five core components:
 6. Log all operations for debugging
 
 **Error Handling**:
+
 ```python
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -71,6 +74,7 @@ def fetch_image(query: str) -> Dict:
 ```
 
 **APIs Used**:
+
 - Unsplash API (Free: 50 requests/hour)
 - Pexels API (Free: 200 requests/hour)
 
@@ -79,13 +83,15 @@ def fetch_image(query: str) -> Dict:
 **Purpose**: Transform inspiration into unique artwork
 
 **Components**:
+
 - `StableDiffusionPipeline`: Core image generation
 - `LoRAManager`: Loads and applies style weights
 - `PromptBuilder`: Constructs effective prompts
 - `ControlNetProcessor`: Preserves structure (optional)
 
 **Model Architecture**:
-```
+
+```text
 Base Model: Stable Diffusion 1.5 or SDXL
     ↓
 + LoRA Weights (trained style)
@@ -96,6 +102,7 @@ Base Model: Stable Diffusion 1.5 or SDXL
 ```
 
 **Generation Process**:
+
 1. Load base SD model + LoRA weights
 2. Analyze source image (color palette, composition)
 3. Build prompt: "[subject] in the style of [artist name], [style keywords]"
@@ -107,11 +114,13 @@ Base Model: Stable Diffusion 1.5 or SDXL
 **Purpose**: Create unique artistic voice through LoRA fine-tuning
 
 **Training Data Sources**:
+
 - Curated art datasets (WikiArt, OpenImages)
 - Hand-selected reference images
 - AI-generated training set with specific style
 
 **Training Pipeline**:
+
 ```python
 # LoRA Training Parameters (Updated Best Practices)
 {
@@ -128,12 +137,14 @@ Base Model: Stable Diffusion 1.5 or SDXL
 ```
 
 **Important Notes**:
+
 - Use `accelerate` library for distributed training
 - Validate during training to catch overfitting
 - **Legal Compliance**: Only use public domain or CC-licensed training data
 - Document all training data sources (see LEGAL.md)
 
 **Style Consistency**:
+
 - Train on 20-50 carefully selected images
 - Use regularization images to prevent overfitting
 - Test style transfer on diverse subjects
@@ -146,7 +157,7 @@ Base Model: Stable Diffusion 1.5 or SDXL
 **Evaluation Metrics** (Multi-dimensional):
 
 1. **Aesthetic Score**: CLIP-based aesthetic predictor (0-100)
-2. **Technical Quality**: 
+2. **Technical Quality**:
    - Blur detection
    - Artifact detection
    - Resolution quality
@@ -159,6 +170,7 @@ Base Model: Stable Diffusion 1.5 or SDXL
 6. **Human Feedback** (Optional): Thumbs up/down ratings
 
 **CLIP-Based Rating**:
+
 ```python
 # Encode image and style description
 image_features = clip.encode_image(artwork)
@@ -169,6 +181,7 @@ aesthetic_score = cosine_similarity(image_features, style_features) * 100
 ```
 
 **Multi-Metric Evaluation**:
+
 ```python
 final_score = (
     aesthetic_score * 0.35 +
@@ -180,6 +193,7 @@ final_score = (
 ```
 
 **Selection Process**:
+
 - Generate 3-5 variations per session
 - Rate all outputs with multiple metrics
 - Keep only top 1-2 (score > threshold)
@@ -191,6 +205,7 @@ final_score = (
 **Purpose**: Organize and track artwork portfolio
 
 **Database Schema** (SQLite):
+
 ```sql
 CREATE TABLE artworks (
     id INTEGER PRIMARY KEY,
@@ -266,7 +281,8 @@ CREATE INDEX idx_style_name ON artworks(style_name);
 ```
 
 **File Organization**:
-```
+
+```plaintext
 gallery/
 ├── 2026/
 │   ├── 01-January/
@@ -284,12 +300,14 @@ gallery/
 **Purpose**: Automate creation on regular basis
 
 **Schedule Types**:
+
 - **Daily**: One art piece per day at specific time
 - **Weekly**: Multiple pieces on certain days
 - **Session-based**: Burst creation (e.g., 10 pieces per session)
 - **Event-triggered**: Create on external triggers
 
 **Job Configuration**:
+
 ```yaml
 schedules:
   daily_creation:
@@ -307,7 +325,7 @@ schedules:
 
 ### Complete Creation Cycle
 
-```
+```text
 1. SCHEDULER triggers creation job
         ↓
 2. INSPIRATION finds source image
@@ -328,24 +346,28 @@ schedules:
 ## Technology Choices
 
 ### Why Stable Diffusion?
+
 - Open source and highly customizable
 - Excellent LoRA support for style transfer
 - Large community and resources
 - Can run locally (privacy, cost)
 
 ### Why LoRA over DreamBooth?
+
 - **Faster training**: 1-2 hours vs 8-12 hours
 - **Smaller files**: 3-50MB vs 2-4GB
 - **Better flexibility**: Switch styles easily
 - **Less overfitting**: More generalizable
 
 ### Why Unsplash?
+
 - High-quality curated images
 - Free tier sufficient for project
 - Good API documentation
 - Diverse subject matter
 
 ### Why SQLite?
+
 - No server setup required
 - Fast for this use case
 - Built into Python
@@ -356,14 +378,17 @@ schedules:
 ### GPU Requirements
 
 **Minimum**:
+
 - 6GB VRAM (RTX 2060, M1 Max)
 - SD 1.5 at 512x512
 
 **Recommended**:
+
 - 12GB+ VRAM (RTX 3060, RTX 4070)
 - SDXL at 1024x1024
 
 **Optimization Techniques**:
+
 - Half-precision (fp16) for memory
 - Attention slicing for large images
 - Model offloading to CPU when needed
@@ -372,11 +397,13 @@ schedules:
 ### Speed Estimates
 
 **Per Image Generation**:
+
 - SD 1.5 (512px): 5-15 seconds
 - SDXL (1024px): 20-60 seconds
 - With LoRA: +10-20% time
 
 **Training**:
+
 - LoRA training: 1-3 hours (2000-5000 steps)
 - Dataset preparation: 30-60 minutes
 
@@ -393,17 +420,20 @@ schedules:
 ### Adding New Features
 
 **New Image Sources**:
+
 1. Implement `ImageSourceInterface`
 2. Add client to `inspiration/sources/`
 3. Register in config
 
 **New Styles**:
+
 1. Collect training images
 2. Run training script
 3. Save LoRA weights to `models/lora/`
 4. Update config
 
 **New Curation Metrics**:
+
 1. Implement scorer in `curation/scorers/`
 2. Register in evaluation pipeline
 3. Configure weight in settings

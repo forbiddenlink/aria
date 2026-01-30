@@ -4,6 +4,8 @@ Comprehensive guide for deploying AI Artist in production environments.
 
 ## Table of Contents
 
+- [Quick Deploy: Vercel (Gallery Only)](#quick-deploy-vercel-gallery-only)
+- [Quick Deploy: Railway](#quick-deploy-railway)
 - [Deployment Options](#deployment-options)
 - [Containerization](#containerization)
 - [Cloud Deployment](#cloud-deployment)
@@ -11,6 +13,57 @@ Comprehensive guide for deploying AI Artist in production environments.
 - [Database Migrations](#database-migrations)
 - [Monitoring & Alerting](#monitoring--alerting)
 - [Disaster Recovery](#disaster-recovery)
+
+---
+
+## Quick Deploy: Vercel (Gallery Only)
+
+Deploy your gallery to Vercel in minutes. Note: Image generation requires GPU support, which Vercel doesn't provide. Use this for showcasing your artwork online.
+
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy (from project root)
+vercel
+
+# Set environment variables (optional)
+vercel env add GALLERY_ONLY_MODE true
+```
+
+**What works on Vercel:**
+- Viewing gallery images
+- API endpoints for listing/filtering images
+- Health checks
+
+**What doesn't work on Vercel:**
+- Image generation (no GPU)
+- Long-running processes
+- Large model files
+
+For full functionality, use Railway, Render, or Docker deployment.
+
+---
+
+## Quick Deploy: Railway
+
+Railway supports full web applications with persistent storage.
+
+```bash
+# Install Railway CLI
+npm i -g @railway/cli
+
+# Login and deploy
+railway login
+railway init
+railway up
+
+# Add environment variables in Railway dashboard:
+# - UNSPLASH_ACCESS_KEY
+# - UNSPLASH_SECRET_KEY
+```
+
+**For GPU support:** Use Railway's GPU compute add-on or deploy to a GPU-enabled cloud provider.
 
 ---
 
