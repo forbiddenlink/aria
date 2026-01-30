@@ -17,7 +17,7 @@ torchaudio>=2.5.0,<3.0.0
 
 # Stable Diffusion and Image Generation
 diffusers>=0.32.0,<0.36.0  # Stable version range
-transformers>=4.53.0,<5.0.0  # CVE fixes, compatible version range
+transformers>=4.53.0,<6.0.0  # CVE fixes, compatible version range
 accelerate>=0.34.0,<2.0.0  # Required for LoRA training (latest is 1.x)
 safetensors>=0.5.0,<1.0.0
 # xformers>=0.0.24  # Memory-efficient attention (optional, GPU only) - DISABLED: Doesn't build on Apple Silicon
