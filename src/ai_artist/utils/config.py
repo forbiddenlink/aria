@@ -19,6 +19,8 @@ class ModelConfig(BaseModel):
     enable_vae_slicing: bool = True
     lora_path: str | None = None  # Path to trained LoRA weights
     lora_scale: float = 0.8  # LoRA strength (0.0-1.0)
+    use_refiner: bool = False
+    refiner_model: str = "stabilityai/stable-diffusion-xl-refiner-1.0"
 
 
 class GenerationConfig(BaseModel):
@@ -30,6 +32,66 @@ class GenerationConfig(BaseModel):
     guidance_scale: float = Field(7.5, ge=1.0, le=20.0)
     num_variations: int = Field(3, ge=1, le=10)
     negative_prompt: str = "blurry, low quality, distorted, ugly, deformed"
+
+
+class UpscalingConfig(BaseModel):
+    """Upscaling configuration."""
+
+    enabled: bool = False
+    model_id: str = "stabilityai/stable-diffusion-x4-upscaler"
+    noise_level: int = 20  # 0-100 (20 is good for faithful upscaling)
+
+
+class ControlNetConfig(BaseModel):
+    """ControlNet configuration."""
+
+    enabled: bool = False
+    model_id: str = "lllyasviel/sd-controlnet-canny"
+    conditioning_scale: float = 1.0
+    low_threshold: int = 100  # Canny edge detection low threshold
+    high_threshold: int = 200  # Canny edge detection high threshold
+
+
+class InpaintingConfig(BaseModel):
+    """Inpainting configuration."""
+
+    enabled: bool = False
+    model_id: str = "runwayml/stable-diffusion-inpainting"
+
+
+class FaceRestorationConfig(BaseModel):
+    """Face restoration configuration."""
+
+    enabled: bool = False
+    model: Literal["gfpgan", "codeformer"] = "gfpgan"
+    model_path: str | None = None  # Custom model path (optional)
+
+
+class AutonomyConfig(BaseModel):
+    """Autonomy / Feedback Loop configuration."""
+
+    enabled: bool = False
+    min_score_threshold: float = 0.22  # Minimum CLIP score (0.22 is decent for pure CLIP)
+    max_retries: int = 2
+    feedback_mode: Literal["simple_retry", "refine_prompt"] = "simple_retry"
+
+
+class TrendsConfig(BaseModel):
+    """Trend analysis configuration."""
+
+    enabled: bool = False
+    update_interval_hours: int = 24
+    sources: list[str] = ["civitai", "artstation"]
+
+
+class ModelManagerConfig(BaseModel):
+    """Model management configuration."""
+
+    enabled: bool = False
+    base_path: str = "models"
+    auto_download_trending: bool = False
+    max_models: int = 50
+    civitai_api_key: str | None = None
 
 
 class APIKeysConfig(BaseModel):
@@ -54,6 +116,13 @@ class Config(BaseSettings):
 
     model: ModelConfig = Field(default_factory=ModelConfig)  # type: ignore[arg-type]
     generation: GenerationConfig = Field(default_factory=GenerationConfig)  # type: ignore[arg-type]
+    upscaling: UpscalingConfig = Field(default_factory=UpscalingConfig)  # type: ignore[arg-type]
+    controlnet: ControlNetConfig = Field(default_factory=ControlNetConfig)  # type: ignore[arg-type]
+    inpainting: InpaintingConfig = Field(default_factory=InpaintingConfig)  # type: ignore[arg-type]
+    face_restoration: FaceRestorationConfig = Field(default_factory=FaceRestorationConfig)  # type: ignore[arg-type]
+    autonomy: AutonomyConfig = Field(default_factory=AutonomyConfig)  # type: ignore[arg-type]
+    trends: TrendsConfig = Field(default_factory=TrendsConfig)  # type: ignore[arg-type]
+    model_manager: ModelManagerConfig = Field(default_factory=ModelManagerConfig)  # type: ignore[arg-type]
     api_keys: APIKeysConfig
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)  # type: ignore[arg-type]
 
