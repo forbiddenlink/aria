@@ -16,7 +16,7 @@ torchvision>=0.20.0,<1.0.0
 torchaudio>=2.5.0,<3.0.0
 
 # Stable Diffusion and Image Generation
-diffusers>=0.32.0,<0.36.0  # Stable version range
+diffusers>=0.32.0,<0.37.0  # Stable version range
 transformers>=4.53.0,<5.0.0  # CVE fixes, compatible version range
 accelerate>=0.34.0,<2.0.0  # Required for LoRA training (latest is 1.x)
 safetensors>=0.5.0,<1.0.0
