@@ -34,7 +34,12 @@ class DreamBoothDataset(Dataset):
         self.center_crop = center_crop
         self.tokenizer = tokenizer
 
-        self.instance_images_path = list(Path(instance_data_root).iterdir())
+        # Filter for image files only
+        valid_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+        self.instance_images_path = [
+            p for p in Path(instance_data_root).iterdir()
+            if p.suffix.lower() in valid_extensions
+        ]
         self.num_instance_images = len(self.instance_images_path)
 
         self._length = self.num_instance_images

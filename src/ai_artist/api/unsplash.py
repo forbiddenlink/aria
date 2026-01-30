@@ -61,6 +61,14 @@ class UnsplashClient:
         result: dict[str, Any] = response.json()
         return result
 
+    async def download_image(self, url: str) -> bytes:
+        """Download image data from URL."""
+        # Use a temporary client for external URLs
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, follow_redirects=True)
+            response.raise_for_status()
+            return response.content
+
     async def get_random_photo(self, query: str | None = None) -> dict[str, Any]:
         """Get a random photo."""
         params = {}

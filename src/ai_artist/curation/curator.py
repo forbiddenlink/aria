@@ -2,11 +2,60 @@
 
 from dataclasses import dataclass
 
+import numpy as np
 from PIL import Image
 
 from ..utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def is_black_or_blank(image: Image.Image, threshold: float = 0.02) -> tuple[bool, str]:
+    """Detect if an image is black, blank, or contains NaN values.
+
+    Args:
+        image: PIL Image to check
+        threshold: Maximum allowed mean pixel value ratio for "black" detection (0-1)
+
+    Returns:
+        Tuple of (is_invalid, reason) where is_invalid is True if image should be rejected
+    """
+    try:
+        arr = np.array(image)
+
+        # Check for NaN values (common MPS issue)
+        if np.isnan(arr).any():
+            logger.warning("detected_nan_image", has_nan=True)
+            return True, "contains_nan_values"
+
+        # Check for completely black image (max value is 0 or very low)
+        if arr.max() == 0:
+            logger.warning("detected_black_image", max_value=0)
+            return True, "completely_black"
+
+        # Check for nearly black image (mean is very low)
+        mean_value = arr.mean() / 255.0  # Normalize to 0-1
+        if mean_value < threshold:
+            logger.warning("detected_nearly_black_image", mean_normalized=mean_value)
+            return True, "nearly_black"
+
+        # Check for uniform color (no variation - likely failed generation)
+        std_value = arr.std()
+        if std_value < 1.0:  # Very low standard deviation
+            logger.warning("detected_uniform_image", std=std_value)
+            return True, "uniform_color"
+
+        # Check for mostly white/blown out
+        white_ratio = np.sum(arr > 250) / arr.size
+        if white_ratio > 0.95:
+            logger.warning("detected_blown_out_image", white_ratio=white_ratio)
+            return True, "blown_out"
+
+        return False, "valid"
+
+    except Exception as e:
+        logger.error("image_validation_failed", error=str(e))
+        return True, f"validation_error: {e}"
 
 
 @dataclass
@@ -119,15 +168,113 @@ class ImageCurator:
         aspect_ratio = min(width, height) / max(width, height)
         return float(0.5 + (aspect_ratio * 0.3))  # Range: 0.5-0.8
 
+    def _detect_blur(self, image: Image.Image) -> float:
+        """Detect image blur using Laplacian variance.
+        
+        Returns:
+            float: Blur score (0-1, higher is sharper)
+        """
+        try:
+            import cv2
+
+            # Convert PIL to numpy array (grayscale for blur detection)
+            img_array = np.array(image.convert('L'))
+            
+            # Calculate Laplacian variance
+            laplacian = cv2.Laplacian(img_array, cv2.CV_64F)
+            variance = laplacian.var()
+            
+            # Normalize: >100 is sharp, <50 is blurry
+            # Scale to 0-1 range
+            blur_score = min(variance / 100.0, 1.0)
+            
+            logger.debug(
+                "blur_detection",
+                variance=variance,
+                score=blur_score,
+                assessment="sharp" if blur_score > 0.7 else "moderate" if blur_score > 0.5 else "blurry"
+            )
+            
+            return float(blur_score)
+        except ImportError:
+            logger.warning("opencv_not_installed", message="Install opencv-python for blur detection")
+            return 0.8  # Default to moderate score if opencv not available
+        except Exception as e:
+            logger.error("blur_detection_failed", error=str(e))
+            return 0.8
+    
+    def _detect_artifacts(self, image: Image.Image) -> float:
+        """Detect compression artifacts and anomalies.
+        
+        Returns:
+            float: Artifact score (0-1, higher is better/fewer artifacts)
+        """
+        try:
+            img_array = np.array(image)
+            
+            # Check for extreme values (blown highlights/crushed shadows)
+            # Images with >30% extreme pixels likely have issues
+            extremes = np.sum((img_array < 10) | (img_array > 245))
+            extreme_ratio = extremes / img_array.size
+            
+            # Check for color diversity (banding/posterization detection)
+            # More unique colors = better (less banding)
+            unique_colors = len(np.unique(img_array.reshape(-1, img_array.shape[-1]), axis=0))
+            total_pixels = img_array.shape[0] * img_array.shape[1]
+            color_diversity = min(unique_colors / (total_pixels * 0.1), 1.0)  # Expect 10% unique
+            
+            # Combine metrics (penalize extremes and low diversity)
+            artifact_score = (1.0 - min(extreme_ratio * 3, 1.0)) * 0.5 + color_diversity * 0.5
+            
+            logger.debug(
+                "artifact_detection",
+                extreme_ratio=extreme_ratio,
+                color_diversity=color_diversity,
+                unique_colors=unique_colors,
+                score=artifact_score,
+                assessment="clean" if artifact_score > 0.7 else "moderate" if artifact_score > 0.5 else "artifacts"
+            )
+            
+            return float(artifact_score)
+        except Exception as e:
+            logger.error("artifact_detection_failed", error=str(e))
+            return 0.8  # Default to moderate score on error
+    
     def _compute_technical_score(self, image: Image.Image) -> float:
-        """Compute technical quality score."""
+        """Compute technical quality score with blur and artifact detection.
+        
+        Combines multiple technical metrics:
+        - Resolution quality (40%)
+        - Sharpness/blur (40%)
+        - Artifact detection (20%)
+        """
         # Check resolution
         width, height = image.size
-        resolution_score = min(1.0, (width * height) / (1024 * 1024))
-
-        # TODO: Add blur detection, artifact detection
-
-        return float(resolution_score)
+        resolution = width * height
+        resolution_score = min(1.0, resolution / (1024 * 1024))
+        
+        # Detect blur
+        blur_score = self._detect_blur(image)
+        
+        # Detect artifacts
+        artifact_score = self._detect_artifacts(image)
+        
+        # Weighted combination
+        technical_score = (
+            resolution_score * 0.4 +
+            blur_score * 0.4 +
+            artifact_score * 0.2
+        )
+        
+        logger.debug(
+            "technical_score_calculated",
+            resolution=resolution_score,
+            blur=blur_score,
+            artifacts=artifact_score,
+            total=technical_score
+        )
+        
+        return float(technical_score)
 
     def should_keep(self, metrics: QualityMetrics, threshold: float = 0.6) -> bool:
         """Determine if image should be kept."""
