@@ -39,11 +39,14 @@ class FaceRestorer:
             # Download model if not exists
             if not Path(model_path).exists():
                 logger.info("downloading_gfpgan_model")
-                import urllib.request
+                import httpx
 
                 Path(model_path).parent.mkdir(parents=True, exist_ok=True)
                 url = "https://github.com/TencentARC/GFPGAN/releases/download/v1.3.4/GFPGANv1.4.pth"
-                urllib.request.urlretrieve(url, model_path)
+                with httpx.Client(timeout=120.0, follow_redirects=True) as client:
+                    response = client.get(url)
+                    response.raise_for_status()
+                    Path(model_path).write_bytes(response.content)
 
             self.restorer = GFPGANer(
                 model_path=model_path,

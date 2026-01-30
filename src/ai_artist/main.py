@@ -125,7 +125,7 @@ class AIArtist:
 
         # Initialize Unsplash
         self.unsplash = UnsplashClient(
-            access_key=self.config.api_keys.unsplash_access_key,
+            access_key=self.config.api_keys.unsplash_access_key.get_secret_value(),
         )
 
         # Initialize curator
@@ -142,7 +142,7 @@ class AIArtist:
         if self.config.model_manager.enabled:
             self.model_manager = ModelManager(
                 base_path=self.config.model_manager.base_path,
-                api_key=self.config.model_manager.civitai_api_key
+                api_key=self.config.model_manager.civitai_api_key,
             )
 
         logger.info("ai_artist_initialized")
@@ -156,58 +156,85 @@ class AIArtist:
         with PerformanceTimer(logger, "artwork_creation"):
             # Get inspiration from Unsplash
             query = theme or "art"
-            assert self.unsplash is not None
+            if self.unsplash is None:
+                raise RuntimeError("Unsplash client not initialized")
             photo = await self.unsplash.get_random_photo(query=query)
 
             # Build enhanced prompt with artistic styles using PromptEngine
             description = (
                 photo.get("description") or photo.get("alt_description") or query
             )
-            
+
             # Use dynamic prompt template
             # If description matches query exactly, it might mean no description was found
             if description.lower() == query.lower():
                 # Fallback to a rich template
-                template = "{masterpiece|best quality}, __styles__, __lighting__, __composition__, " + query
+                template = (
+                    "{masterpiece|best quality}, __styles__, __lighting__, __composition__, "
+                    + query
+                )
             else:
                 template = f"{description}, __styles__, __lighting__, {{detailed|intricate|complex}}"
-            
-            assert self.prompt_engine is not None
-            
+
+            if self.prompt_engine is None:
+                raise RuntimeError("Prompt engine not initialized")
+
             # Autonomy Loop
             attempt = 0
-            max_retries = self.config.autonomy.max_retries if self.config.autonomy.enabled else 0
+            max_retries = (
+                self.config.autonomy.max_retries if self.config.autonomy.enabled else 0
+            )
             best_image = None
             best_score = -1.0
-            
+
             while attempt <= max_retries:
                 # Process prompt (fresh variation each time if retrying)
                 prompt = self.prompt_engine.process(template)
-                
-                if attempt > 0:
-                    logger.info("autonomy_retry", attempt=attempt, max_retries=max_retries, new_prompt=prompt[:100])
 
-                logger.info("got_inspiration", query=query, photo_id=photo["id"], final_prompt=prompt)
+                if attempt > 0:
+                    logger.info(
+                        "autonomy_retry",
+                        attempt=attempt,
+                        max_retries=max_retries,
+                        new_prompt=prompt[:100],
+                    )
+
+                logger.info(
+                    "got_inspiration",
+                    query=query,
+                    photo_id=photo["id"],
+                    final_prompt=prompt,
+                )
 
                 # Prepare ControlNet image if enabled
                 control_image = None
-                if self.config.controlnet.enabled and attempt == 0: # Only load once usually, but keeping it simple
+                if (
+                    self.config.controlnet.enabled and attempt == 0
+                ):  # Only load once usually, but keeping it simple
                     try:
-                        logger.info("downloading_control_image", url=photo["urls"]["regular"])
-                        assert self.unsplash is not None
-                        image_data = await self.unsplash.download_image(photo["urls"]["regular"])
-                        
+                        logger.info(
+                            "downloading_control_image", url=photo["urls"]["regular"]
+                        )
+                        if self.unsplash is None:
+                            raise RuntimeError("Unsplash client not initialized")
+                        image_data = await self.unsplash.download_image(
+                            photo["urls"]["regular"]
+                        )
+
                         source_image = Image.open(io.BytesIO(image_data))
-                        
+
                         with PerformanceTimer(logger, "controlnet_preprocessing"):
                             control_image = ControlNetPreprocessor.get_canny_image(
                                 source_image,
                                 low_threshold=self.config.controlnet.low_threshold,
-                                high_threshold=self.config.controlnet.high_threshold
+                                high_threshold=self.config.controlnet.high_threshold,
                             )
                             # Resize to target generation size
                             control_image = control_image.resize(
-                                (self.config.generation.width, self.config.generation.height)
+                                (
+                                    self.config.generation.width,
+                                    self.config.generation.height,
+                                )
                             )
                     except Exception as e:
                         logger.error("control_image_preparation_failed", error=str(e))
@@ -220,7 +247,8 @@ class AIArtist:
                 )
 
                 with PerformanceTimer(logger, "image_generation"):
-                    assert self.generator is not None
+                    if self.generator is None:
+                        raise RuntimeError("Generator not initialized")
                     images = self.generator.generate(
                         prompt=prompt,
                         negative_prompt=self.config.generation.negative_prompt,
@@ -236,13 +264,14 @@ class AIArtist:
 
                 # Evaluate and select best image
                 logger.info("curation_started", num_images=len(images))
-                
+
                 current_batch_best_image = images[0]
                 current_batch_best_score = 0.0
                 scores = []
 
                 with PerformanceTimer(logger, "image_curation"):
-                    assert self.curator is not None
+                    if self.curator is None:
+                        raise RuntimeError("Curator not initialized")
                     for idx, image in enumerate(images, 1):
                         metrics = self.curator.evaluate(image, prompt)
                         score = metrics.overall_score
@@ -273,16 +302,25 @@ class AIArtist:
                 # Check autonomy threshold
                 if self.config.autonomy.enabled:
                     if best_score >= self.config.autonomy.min_score_threshold:
-                        logger.info("autonomy_threshold_met", score=best_score, threshold=self.config.autonomy.min_score_threshold)
+                        logger.info(
+                            "autonomy_threshold_met",
+                            score=best_score,
+                            threshold=self.config.autonomy.min_score_threshold,
+                        )
                         break
                     else:
-                        logger.warning("autonomy_threshold_not_met", score=best_score, threshold=self.config.autonomy.min_score_threshold)
+                        logger.warning(
+                            "autonomy_threshold_not_met",
+                            score=best_score,
+                            threshold=self.config.autonomy.min_score_threshold,
+                        )
                         attempt += 1
                 else:
-                    break # Not enabled, just run once
+                    break  # Not enabled, just run once
 
             # Fallback if we exhausted retries
-            assert best_image is not None
+            if best_image is None:
+                raise RuntimeError("No valid image generated after all retries")
 
             # Upscale best image if enabled
             if self.config.upscaling.enabled and self.upscaler:
@@ -295,7 +333,9 @@ class AIArtist:
                             noise_level=self.config.upscaling.noise_level,
                         )
                     except Exception as e:
-                        logger.error("upscaling_failed_outputting_original", error=str(e))
+                        logger.error(
+                            "upscaling_failed_outputting_original", error=str(e)
+                        )
 
             # Apply face restoration if enabled
             if self.config.face_restoration.enabled and self.face_restorer:
@@ -307,7 +347,8 @@ class AIArtist:
                         logger.error("face_restoration_failed", error=str(e))
 
             # Save best image
-            assert self.gallery is not None
+            if self.gallery is None:
+                raise RuntimeError("Gallery not initialized")
             saved_path = self.gallery.save_image(
                 image=best_image,
                 prompt=prompt,
@@ -321,7 +362,8 @@ class AIArtist:
             )
 
         # Track download
-        assert self.unsplash is not None
+        if self.unsplash is None:
+            raise RuntimeError("Unsplash client not initialized")
         await self.unsplash.trigger_download(photo["links"]["download_location"])
 
         logger.info("artwork_created", path=str(saved_path))
@@ -338,16 +380,22 @@ class AIArtist:
             await self.trend_manager.update_wildcard_file()
             if self.prompt_engine:
                 self.prompt_engine.reload()
-                
+
             # Auto-download models for new trends if enabled
-            if self.config.model_manager.enabled and self.config.model_manager.auto_download_trending and self.model_manager:
+            if (
+                self.config.model_manager.enabled
+                and self.config.model_manager.auto_download_trending
+                and self.model_manager
+            ):
                 logger.info("checking_models_for_trends")
-                trends = await self.trend_manager.get_combined_trends(limit=5) # Top 5 only
+                trends = await self.trend_manager.get_combined_trends(
+                    limit=5
+                )  # Top 5 only
                 for tag in trends:
                     # Async download in background essentially, or await if we want to ensure they are there
                     # For now await one by one
                     await self.model_manager.download_top_lora(tag)
-                    
+
             logger.info("trends_updated_successfully")
         except Exception as e:
             logger.error("trend_update_failed", error=str(e))
@@ -357,7 +405,7 @@ class AIArtist:
         # Optional: Update trends on manual run if enabled
         if self.config.trends.enabled:
             await self.update_trends()
-            
+
         await self.create_artwork(theme=theme)
 
     async def run_automated(self):
@@ -376,9 +424,10 @@ class AIArtist:
 
         # Schedule trend updates if enabled
         if self.config.trends.enabled:
+
             def trend_job():
                 asyncio.create_task(self.update_trends())
-            
+
             # Use interval scheduling for trends
             # Note: Scheduler wrapper might need update for interval, using daily for now
             # or just add another job.

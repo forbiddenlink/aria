@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(~/.local/bin/squirrel init:*)",
+      "Bash(~/.local/bin/squirrel audit:*)",
+      "Bash(tree:*)",
+      "Bash(grep:*)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__query-docs",
+      "Bash(python -c:*)",
+      "Bash(python -m ai_artist.main:*)",
+      "Bash(git commit:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

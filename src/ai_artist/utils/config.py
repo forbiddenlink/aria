@@ -5,7 +5,7 @@ from typing import Literal
 
 import torch
 import yaml  # type: ignore[import-untyped]
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -71,7 +71,9 @@ class AutonomyConfig(BaseModel):
     """Autonomy / Feedback Loop configuration."""
 
     enabled: bool = False
-    min_score_threshold: float = 0.22  # Minimum CLIP score (0.22 is decent for pure CLIP)
+    min_score_threshold: float = (
+        0.22  # Minimum CLIP score (0.22 is decent for pure CLIP)
+    )
     max_retries: int = 2
     feedback_mode: Literal["simple_retry", "refine_prompt"] = "simple_retry"
 
@@ -95,12 +97,17 @@ class ModelManagerConfig(BaseModel):
 
 
 class APIKeysConfig(BaseModel):
-    """API keys configuration."""
+    """API keys configuration.
 
-    unsplash_access_key: str
-    unsplash_secret_key: str
-    pexels_api_key: str | None = None
-    hf_token: str | None = None
+    Uses SecretStr to prevent accidental logging of sensitive values.
+    Access the actual value with .get_secret_value() method.
+    """
+
+    unsplash_access_key: SecretStr
+    unsplash_secret_key: SecretStr
+    pexels_api_key: SecretStr | None = None
+    hf_token: SecretStr | None = None
+    civitai_api_key: SecretStr | None = None
 
 
 class DatabaseConfig(BaseModel):
@@ -112,14 +119,18 @@ class DatabaseConfig(BaseModel):
 class Config(BaseSettings):
     """Main application configuration."""
 
-    model_config = SettingsConfigDict(extra="allow", env_file=".env", env_nested_delimiter="__")  # type: ignore[misc]
+    model_config = SettingsConfigDict(
+        extra="allow", env_file=".env", env_nested_delimiter="__"
+    )  # type: ignore[misc]
 
     model: ModelConfig = Field(default_factory=ModelConfig)  # type: ignore[arg-type]
     generation: GenerationConfig = Field(default_factory=GenerationConfig)  # type: ignore[arg-type]
     upscaling: UpscalingConfig = Field(default_factory=UpscalingConfig)  # type: ignore[arg-type]
     controlnet: ControlNetConfig = Field(default_factory=ControlNetConfig)  # type: ignore[arg-type]
     inpainting: InpaintingConfig = Field(default_factory=InpaintingConfig)  # type: ignore[arg-type]
-    face_restoration: FaceRestorationConfig = Field(default_factory=FaceRestorationConfig)  # type: ignore[arg-type]
+    face_restoration: FaceRestorationConfig = Field(
+        default_factory=FaceRestorationConfig
+    )  # type: ignore[arg-type]
     autonomy: AutonomyConfig = Field(default_factory=AutonomyConfig)  # type: ignore[arg-type]
     trends: TrendsConfig = Field(default_factory=TrendsConfig)  # type: ignore[arg-type]
     model_manager: ModelManagerConfig = Field(default_factory=ModelManagerConfig)  # type: ignore[arg-type]
@@ -128,10 +139,23 @@ class Config(BaseSettings):
 
 
 def load_config(config_path: Path) -> Config:
-    """Load configuration from YAML file."""
+    """Load configuration from YAML file.
+
+    Raises:
+        FileNotFoundError: If config file doesn't exist
+        ValueError: If required configuration is missing
+    """
     with open(config_path) as f:
         data = yaml.safe_load(f)
-    return Config(**data)
+    config = Config(**data)
+
+    # Validate required fields
+    if not config.api_keys.unsplash_access_key.get_secret_value():
+        raise ValueError("unsplash_access_key is required in config")
+    if not config.api_keys.unsplash_secret_key.get_secret_value():
+        raise ValueError("unsplash_secret_key is required in config")
+
+    return config
 
 
 def get_torch_dtype(dtype_str: str) -> torch.dtype:
