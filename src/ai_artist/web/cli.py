@@ -30,6 +30,7 @@ def main():
             port=8000,
             log_level="info",
             reload=False,
+            ws="websockets",  # Explicitly force websockets
         )
     except KeyboardInterrupt:
         logger.info("web_gallery_stopped")

@@ -1,18 +1,52 @@
-"""FastAPI web gallery application."""
+"""FastAPI web gallery application with modern best practices."""
 
+import asyncio
 import json
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
-import numpy as np
-from fastapi import FastAPI, HTTPException, Query, Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi import (
+    FastAPI,
+    HTTPException,
+    Query,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+)
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, Response
 from fastapi.templating import Jinja2Templates
-from PIL import Image
 from pydantic import BaseModel
 
 from ..gallery.manager import GalleryManager
 from ..utils.logging import get_logger
+
+# Concurrency control for image generation
+# Only allow 1 concurrent generation to prevent VRAM exhaustion
+_generation_semaphore = asyncio.Semaphore(1)
+_generation_timeout_seconds = 300  # 5 minute timeout for generation
+_generation_queue_size = 0  # Track queue depth
+from .dependencies import GalleryManagerDep, GalleryPathDep, set_gallery_manager
+from .exception_handlers import (
+    general_exception_handler,
+    http_exception_handler,
+    validation_exception_handler,
+)
+from .health import router as health_router
+from .helpers import (
+    calculate_gallery_stats,
+    filter_by_search,
+    is_valid_image,
+    load_image_metadata,
+)
+from .middleware import (
+    ErrorHandlingMiddleware,
+    RequestLoggingMiddleware,
+    SecurityHeadersMiddleware,
+    add_cors_middleware,
+)
+from .websocket import manager as ws_manager
 
 logger = get_logger(__name__)
 
@@ -39,129 +73,228 @@ class GalleryStats(BaseModel):
     date_range: dict
 
 
-# Initialize FastAPI app
+class PromptTemplate(BaseModel):
+    """Prompt template model."""
+
+    id: str
+    name: str
+    prompt: str
+    negative_prompt: str = ""
+    width: int = 1024
+    height: int = 1024
+    num_inference_steps: int = 30
+    guidance_scale: float = 7.5
+    created_at: str
+    tags: list[str] = []
+
+
+class CreateTemplateRequest(BaseModel):
+    """Create template request model."""
+
+    name: str
+    prompt: str
+    negative_prompt: str = ""
+    width: int = 1024
+    height: int = 1024
+    num_inference_steps: int = 30
+    guidance_scale: float = 7.5
+    tags: list[str] = []
+
+
+class GenerationRequest(BaseModel):
+    """Image generation request model."""
+
+    prompt: str
+    negative_prompt: str = ""
+    width: int = 1024
+    height: int = 1024
+    num_inference_steps: int = 30
+    guidance_scale: float = 7.5
+    num_images: int = 1
+    seed: int | None = None
+
+
+class GenerationResponse(BaseModel):
+    """Image generation response model."""
+
+    session_id: str
+    message: str
+    status: str
+
+
+def validate_generation_request(request: GenerationRequest) -> None:
+    """Validate generation request parameters.
+
+    Args:
+        request: The generation request to validate
+
+    Raises:
+        HTTPException: If validation fails
+    """
+    if not request.prompt or not request.prompt.strip():
+        raise HTTPException(status_code=422, detail="Prompt cannot be empty")
+
+    if request.width < 512 or request.width > 2048 or request.height < 512 or request.height > 2048:
+        raise HTTPException(status_code=422, detail="Dimensions must be between 512 and 2048")
+
+    if request.width % 8 != 0 or request.height % 8 != 0:
+        raise HTTPException(status_code=422, detail="Dimensions must be multiples of 8")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan - startup and shutdown events."""
+    from .dependencies import _gallery_manager
+
+    # Only initialize if not already set (e.g., by tests)
+    if _gallery_manager is None:
+        # Startup
+        gallery_path = Path("gallery")
+        gallery_manager_instance = GalleryManager(gallery_path)
+        set_gallery_manager(gallery_manager_instance, str(gallery_path))
+        logger.info("web_gallery_started", gallery_path=str(gallery_path))
+
+    yield
+
+    # Shutdown
+    logger.info("web_gallery_shutdown")
+    # Cleanup resources here if needed
+
+
+# Initialize FastAPI app with lifespan
 app = FastAPI(
     title="AI Artist Gallery",
     description="Browse and explore AI-generated artwork",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
-# Gallery manager (will be initialized on startup)
-gallery_manager: GalleryManager | None = None
-gallery_path: Path | None = None
+# Add exception handlers
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, general_exception_handler)
+
+# Add middleware (added in reverse order of execution)
+# CORS must be added last so it processes requests first
+add_cors_middleware(app)
+app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(ErrorHandlingMiddleware)
+
+# Include health check router
+app.include_router(health_router)
 
 # Templates directory
 templates_dir = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(templates_dir))
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize gallery on startup."""
-    global gallery_manager, gallery_path
-    gallery_path = Path("gallery")
-    gallery_manager = GalleryManager(gallery_path)
-    logger.info("web_gallery_started", gallery_path=str(gallery_path))
-
-
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
-    """Serve gallery homepage."""
+    """Serve modern gallery homepage."""
+    return templates.TemplateResponse(
+        "gallery_modern.html",
+        {"request": request, "title": "AI Artist Gallery"},
+    )
+
+
+@app.get("/robots.txt", response_class=PlainTextResponse)
+async def robots_txt(request: Request):
+    """Serve robots.txt for search engine crawlers."""
+    base_url = str(request.base_url).rstrip("/")
+    robots_content = f"""# AI Artist Gallery robots.txt
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /test/
+
+# Sitemap
+Sitemap: {base_url}/sitemap.xml
+"""
+    return PlainTextResponse(content=robots_content, media_type="text/plain")
+
+
+@app.get("/sitemap.xml")
+async def sitemap_xml(request: Request):
+    """Serve XML sitemap for search engine indexing."""
+    base_url = str(request.base_url).rstrip("/")
+
+    # Build sitemap with main pages
+    sitemap_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>{base_url}/</loc>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+    </url>
+    <url>
+        <loc>{base_url}/classic</loc>
+        <changefreq>daily</changefreq>
+        <priority>0.8</priority>
+    </url>
+</urlset>
+"""
+    return Response(content=sitemap_content, media_type="application/xml")
+
+
+@app.get("/classic", response_class=HTMLResponse)
+async def classic_gallery(request: Request):
+    """Serve classic gallery page."""
     return templates.TemplateResponse(
         "gallery.html",
-        {"request": request, "title": "AI Artist Gallery"},
+        {"request": request, "title": "AI Artist Gallery - Classic"},
+    )
+
+
+@app.get("/test/websocket", response_class=HTMLResponse)
+async def test_websocket(request: Request):
+    """Serve WebSocket test page."""
+    return templates.TemplateResponse(
+        "test_websocket.html",
+        {"request": request, "title": "WebSocket Test"},
     )
 
 
 @app.get("/api/images", response_model=list[ImageMetadata])
 async def list_images(
+    gallery_manager: GalleryManagerDep,
+    gallery_path: GalleryPathDep,
     featured: bool | None = Query(None, description="Filter by featured status"),
     limit: int = Query(50, ge=1, le=500, description="Number of images to return"),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
     search: str | None = Query(None, description="Search in prompts"),
 ):
     """List all images with metadata."""
-    if not gallery_manager:
-        raise HTTPException(status_code=503, detail="Gallery not initialized")
-
     # Get image paths
     image_paths = gallery_manager.list_images(featured_only=bool(featured))
+    total_images = len(image_paths)
 
-    # Filter by search term
+    # Filter by search term if provided
     if search:
-        filtered_paths = []
-        for img_path in image_paths:
-            metadata_path = img_path.with_suffix(".json")
-            if metadata_path.exists():
-                try:
-                    metadata = json.loads(metadata_path.read_text())
-                    if search.lower() in metadata.get("prompt", "").lower():
-                        filtered_paths.append(img_path)
-                except Exception:
-                    continue
-        image_paths = filtered_paths
+        image_paths = filter_by_search(image_paths, search)
 
     # Apply pagination
-    total = len(image_paths)
     image_paths = image_paths[offset : offset + limit]
 
-    # Build response
+    # Build response with validation
     results = []
     for img_path in image_paths:
-        # Skip test images
-        if "/test/" in str(img_path):
-            logger.debug("skipping_test_image", path=str(img_path))
+        # Validate image
+        is_valid, reason = is_valid_image(img_path, Path(gallery_path))
+        if not is_valid:
+            logger.debug("skipping_invalid_image", path=str(img_path), reason=reason)
             continue
 
-        metadata_path = img_path.with_suffix(".json")
-        if not metadata_path.exists():
-            continue
-
-        try:
-            metadata = json.loads(metadata_path.read_text())
-            if gallery_path is None:
-                continue
-            relative_path = img_path.relative_to(gallery_path)
-
-            # Skip images without prompts (blank/incomplete metadata)
-            prompt = metadata.get("prompt", "")
-            if not prompt or not prompt.strip():
-                logger.debug("skipping_image_without_prompt", path=str(img_path))
-                continue
-
-            # Skip black or corrupted images
-            try:
-                with Image.open(img_path) as img:
-                    img_array = np.array(img.convert("RGB"))
-                    # Check if image is mostly black (mean brightness < 10)
-                    if img_array.mean() < 10:
-                        logger.debug("skipping_black_image", path=str(img_path))
-                        continue
-            except Exception as e:
-                logger.debug(
-                    "skipping_corrupted_image", path=str(img_path), error=str(e)
-                )
-                continue
-
-            results.append(
-                ImageMetadata(
-                    path=str(relative_path),
-                    filename=img_path.name,
-                    prompt=prompt,
-                    created_at=metadata.get("created_at", ""),
-                    featured=metadata.get("featured", False),
-                    metadata=metadata.get("metadata", {}),
-                    thumbnail_url=f"/api/images/file/{relative_path}",
-                    full_url=f"/api/images/file/{relative_path}",
-                )
-            )
-        except Exception as e:
-            logger.warning("failed_to_load_metadata", path=str(img_path), error=str(e))
-            continue
+        # Load metadata
+        metadata = load_image_metadata(img_path, Path(gallery_path))
+        if metadata:
+            results.append(ImageMetadata(**metadata))
+        else:
+            logger.debug("skipping_image_no_metadata", path=str(img_path))
 
     logger.info(
         "images_listed",
-        total=total,
+        total=total_images,
         returned=len(results),
         featured=featured,
         search=search,
@@ -171,19 +304,26 @@ async def list_images(
 
 
 @app.get("/api/images/file/{file_path:path}")
-async def get_image_file(file_path: str):
+async def get_image_file(file_path: str, gallery_path: GalleryPathDep):
     """Serve image file."""
-    if not gallery_path:
+    gallery_path_obj = Path(gallery_path)
+    if not gallery_path_obj:
         raise HTTPException(status_code=503, detail="Gallery not initialized")
 
-    full_path = gallery_path / file_path
+    # Validate file extension
+    allowed_extensions = {".png", ".jpg", ".jpeg", ".webp"}
+    file_ext = Path(file_path).suffix.lower()
+    if file_ext not in allowed_extensions:
+        raise HTTPException(status_code=400, detail="Invalid file type")
+
+    full_path = gallery_path_obj / file_path
 
     if not full_path.exists() or not full_path.is_file():
         raise HTTPException(status_code=404, detail="Image not found")
 
     # Security: ensure path is within gallery
     try:
-        full_path.resolve().relative_to(gallery_path.resolve())
+        full_path.resolve().relative_to(gallery_path_obj.resolve())
     except ValueError as e:
         raise HTTPException(status_code=403, detail="Access denied") from e
 
@@ -191,51 +331,367 @@ async def get_image_file(file_path: str):
 
 
 @app.get("/api/stats", response_model=GalleryStats)
-async def get_stats():
+async def get_stats(gallery_manager: GalleryManagerDep):
     """Get gallery statistics."""
-    if not gallery_manager:
-        raise HTTPException(status_code=503, detail="Gallery not initialized")
-
-    all_images = gallery_manager.list_images(featured_only=False)
     featured_images = gallery_manager.list_images(featured_only=True)
 
-    # Collect unique prompts and date range
-    prompts = set()
-    dates = []
-
-    for img_path in all_images:
-        metadata_path = img_path.with_suffix(".json")
-        if metadata_path.exists():
-            try:
-                metadata = json.loads(metadata_path.read_text())
-                prompts.add(metadata.get("prompt", ""))
-                created_at = metadata.get("created_at", "")
-                if created_at:
-                    dates.append(created_at)
-            except Exception as e:
-                logger.debug("failed_to_parse_metadata", error=str(e))
-                continue
-
-    date_range = {}
-    if dates:
-        dates.sort()
-        date_range = {"earliest": dates[0], "latest": dates[-1]}
+    # Calculate stats using helper function
+    stats = calculate_gallery_stats(gallery_manager)
 
     return GalleryStats(
-        total_images=len(all_images),
+        total_images=stats["total_images"],
         featured_images=len(featured_images),
-        total_prompts=len(prompts),
-        date_range=date_range,
+        total_prompts=stats["total_prompts"],
+        date_range=stats["date_range"],
     )
+
+
+@app.delete("/api/images/{file_path:path}")
+async def delete_image(file_path: str, gallery_path: GalleryPathDep):
+    """Delete an image and its metadata."""
+    gallery_path_obj = Path(gallery_path)
+
+    # Validate and resolve full paths
+    full_image_path = gallery_path_obj / file_path
+    metadata_path = full_image_path.with_suffix('.json')
+
+    # Security check
+    try:
+        full_image_path.resolve().relative_to(gallery_path_obj.resolve())
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail="Access denied") from e
+
+    # Delete image file
+    if full_image_path.exists():
+        full_image_path.unlink()
+        logger.info("image_deleted", path=str(file_path))
+    else:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    # Delete metadata file if exists
+    if metadata_path.exists():
+        metadata_path.unlink()
+
+    return {"message": "Image deleted successfully", "path": file_path}
+
+
+@app.put("/api/images/{file_path:path}/featured")
+async def toggle_featured(file_path: str, featured: bool, gallery_path: GalleryPathDep):
+    """Toggle featured status of an image."""
+    gallery_path_obj = Path(gallery_path)
+    full_image_path = gallery_path_obj / file_path
+    metadata_path = full_image_path.with_suffix('.json')
+
+    # Security check
+    try:
+        full_image_path.resolve().relative_to(gallery_path_obj.resolve())
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail="Access denied") from e
+
+    # Check image exists
+    if not full_image_path.exists():
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    # Load or create metadata
+    if metadata_path.exists():
+        with open(metadata_path) as f:
+            metadata = json.load(f)
+    else:
+        metadata = {"prompt": "Unknown", "created_at": full_image_path.stat().st_mtime}
+
+    # Update featured status
+    metadata["featured"] = featured
+
+    # Save metadata
+    with open(metadata_path, 'w') as f:
+        json.dump(metadata, f, indent=2)
+
+    logger.info("image_featured_toggled", path=str(file_path), featured=featured)
+
+    return {"message": "Featured status updated", "path": file_path, "featured": featured}
+
+
+# Prompt Templates Storage
+TEMPLATES_FILE = Path("config/prompt_templates.json")
+
+def load_templates() -> list[dict]:
+    """Load templates from JSON file."""
+    if not TEMPLATES_FILE.exists():
+        TEMPLATES_FILE.parent.mkdir(parents=True, exist_ok=True)
+        return []
+    try:
+        with open(TEMPLATES_FILE) as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        return []
+
+def save_templates(templates: list[dict]):
+    """Save templates to JSON file."""
+    TEMPLATES_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(TEMPLATES_FILE, 'w') as f:
+        json.dump(templates, f, indent=2)
+
+
+@app.get("/api/templates", response_model=list[PromptTemplate])
+async def get_templates():
+    """Get all prompt templates."""
+    templates = load_templates()
+    return templates
+
+
+@app.post("/api/templates", response_model=PromptTemplate)
+async def create_template(request: CreateTemplateRequest):
+    """Create a new prompt template."""
+    import uuid
+
+    templates = load_templates()
+
+    new_template = {
+        "id": str(uuid.uuid4()),
+        "name": request.name,
+        "prompt": request.prompt,
+        "negative_prompt": request.negative_prompt,
+        "width": request.width,
+        "height": request.height,
+        "num_inference_steps": request.num_inference_steps,
+        "guidance_scale": request.guidance_scale,
+        "created_at": datetime.now().isoformat(),
+        "tags": request.tags,
+    }
+
+    templates.append(new_template)
+    save_templates(templates)
+
+    logger.info("template_created", template_id=new_template["id"], name=new_template["name"])
+
+    return new_template
+
+
+@app.delete("/api/templates/{template_id}")
+async def delete_template(template_id: str):
+    """Delete a prompt template."""
+    templates = load_templates()
+    templates = [t for t in templates if t["id"] != template_id]
+    save_templates(templates)
+
+    logger.info("template_deleted", template_id=template_id)
+
+    return {"message": "Template deleted", "id": template_id}
+
+
+@app.post("/api/gallery/cleanup")
+async def cleanup_gallery(
+    gallery_manager: GalleryManagerDep,
+    dry_run: bool = Query(True, description="If true, only report without deleting"),
+):
+    """Scan and remove black/blank/invalid images from the gallery.
+
+    Args:
+        dry_run: If true (default), only report what would be deleted
+    """
+    stats = gallery_manager.cleanup_invalid_images(dry_run=dry_run)
+
+    return {
+        "message": "Cleanup complete" if not dry_run else "Dry run complete",
+        "dry_run": dry_run,
+        "stats": stats,
+    }
+
+
+@app.post("/api/generate", response_model=GenerationResponse)
+async def generate_artwork(request: GenerationRequest):
+    """Start an artwork generation job.
+
+    Returns a session ID that can be used to track progress via WebSocket.
+    Uses a semaphore to limit concurrent generations and prevent VRAM exhaustion.
+    """
+    import uuid
+
+    from ..core.generator import ImageGenerator
+    from ..curation.curator import is_black_or_blank
+    from ..utils.config import load_config
+
+    global _generation_queue_size
+
+    # Validate request
+    validate_generation_request(request)
+
+    # Generate unique session ID
+    session_id = str(uuid.uuid4())
+
+    # Start generation in background with concurrency control
+    async def generate_task():
+        global _generation_queue_size
+        _generation_queue_size += 1
+
+        try:
+            # Acquire semaphore with timeout to prevent indefinite waiting
+            try:
+                async with asyncio.timeout(_generation_timeout_seconds):
+                    async with _generation_semaphore:
+                        await _run_generation()
+            except TimeoutError:
+                logger.error(
+                    "generation_timeout",
+                    session_id=session_id,
+                    timeout_seconds=_generation_timeout_seconds,
+                )
+                await ws_manager.send_generation_error(
+                    session_id=session_id,
+                    error=f"Generation timed out after {_generation_timeout_seconds}s"
+                )
+        finally:
+            _generation_queue_size -= 1
+
+    async def _run_generation():
+        generator = None
+        try:
+            gallery_path_local = Path("gallery")
+            config_path = Path("config/config.yaml")
+            config = load_config(config_path)
+
+            # Use context manager for automatic cleanup
+            generator = ImageGenerator(
+                model_id=config.model.base_model,
+                device=config.model.device
+            )
+            generator.load_model()
+
+            # Send progress update
+            await ws_manager.broadcast({
+                "type": "progress",
+                "session_id": session_id,
+                "status": "generating",
+                "message": "Model loaded, generating images...",
+            })
+
+            # Generate images
+            images = generator.generate(
+                prompt=request.prompt,
+                negative_prompt=request.negative_prompt,
+                width=request.width,
+                height=request.height,
+                num_inference_steps=request.num_inference_steps,
+                guidance_scale=request.guidance_scale,
+                num_images=request.num_images,
+                seed=request.seed
+            )
+
+            # Save only valid images (black/blank already filtered by generator)
+            image_paths = []
+            from datetime import datetime as dt
+            now = dt.now()
+            for i, img in enumerate(images):
+                # Double-check validity before saving
+                is_invalid, reason = is_black_or_blank(img)
+                if is_invalid:
+                    logger.warning(
+                        "skipping_invalid_image_on_save",
+                        session_id=session_id,
+                        index=i,
+                        reason=reason,
+                    )
+                    continue
+
+                filename = f"{session_id}_{i}.png"
+                save_path = (
+                    gallery_path_local
+                    / str(now.year)
+                    / f"{now.month:02d}"
+                    / "archive"
+                    / filename
+                )
+                save_path.parent.mkdir(parents=True, exist_ok=True)
+                img.save(save_path)
+                image_paths.append(str(save_path))
+
+                # Save metadata
+                metadata_path = save_path.with_suffix(".json")
+                metadata_path.write_text(json.dumps({
+                    "prompt": request.prompt,
+                    "negative_prompt": request.negative_prompt,
+                    "width": request.width,
+                    "height": request.height,
+                    "steps": request.num_inference_steps,
+                    "guidance_scale": request.guidance_scale,
+                    "seed": request.seed,
+                    "created_at": now.isoformat(),
+                    "session_id": session_id,
+                }, indent=2))
+
+            if image_paths:
+                await ws_manager.send_generation_complete(
+                    session_id=session_id,
+                    image_paths=image_paths,
+                    metadata={"prompt": request.prompt}
+                )
+            else:
+                await ws_manager.send_generation_error(
+                    session_id=session_id,
+                    error="All generated images were invalid (black/blank). Try different settings."
+                )
+
+        except Exception as e:
+            logger.error("generation_failed", session_id=session_id, error=str(e))
+            await ws_manager.send_generation_error(
+                session_id=session_id,
+                error=str(e)
+            )
+        finally:
+            # Cleanup generator resources
+            if generator:
+                generator.unload()
+
+    # Start background task
+    asyncio.create_task(generate_task())
+
+    return GenerationResponse(
+        session_id=session_id,
+        message="Generation started. Connect to WebSocket to track progress.",
+        status="started"
+    )
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for real-time updates."""
+    client_id = f"client_{id(websocket)}"
+    await ws_manager.connect(websocket, client_id)
+    try:
+        while True:
+            # Receive messages from client (for subscriptions, etc.)
+            data = await websocket.receive_json()
+
+            # Handle different message types
+            if data.get("type") == "ping":
+                await websocket.send_json({"type": "pong"})
+            elif data.get("type") == "subscribe":
+                # Client wants to subscribe to specific events
+                session_id = data.get("session_id")
+                if session_id:
+                    logger.info("client_subscribed", session_id=session_id)
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket, client_id)
+    except Exception as e:
+        logger.error("websocket_error", error=str(e))
+        ws_manager.disconnect(websocket, client_id)
 
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
+    from .dependencies import _gallery_manager
+
     return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
-        "gallery_initialized": gallery_manager is not None,
+        "gallery_initialized": _gallery_manager is not None,
+        "websocket_connections": len(ws_manager.active_connections),
+        "generation_queue": {
+            "active": _generation_queue_size,
+            "max_concurrent": 1,
+            "timeout_seconds": _generation_timeout_seconds,
+        },
     }
 
 

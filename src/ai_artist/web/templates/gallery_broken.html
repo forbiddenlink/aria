@@ -4,27 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta name="description" content="Classic view of the AI Artist Gallery. Browse and explore our curated collection of AI-generated digital artwork in a simple, elegant dark interface.">
-    <meta name="robots" content="index, follow">
-    <link rel="canonical" href="{{ request.url }}">
-
-    <!-- Open Graph / Social Media -->
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="{{ title }} - AI Artist Gallery">
-    <meta property="og:description" content="Classic view of the AI Artist Gallery. Browse and explore AI-generated digital artwork in a simple, elegant interface.">
-    <meta property="og:url" content="{{ request.url }}">
-    <meta property="og:image" content="{{ request.url.scheme }}://{{ request.url.netloc }}/api/images/og-preview.png">
-    <meta property="og:site_name" content="AI Artist Gallery">
-
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="{{ title }} - AI Artist Gallery">
-    <meta name="twitter:description" content="Classic view of the AI Artist Gallery. Browse AI-generated artwork in an elegant interface.">
-    <meta name="twitter:image" content="{{ request.url.scheme }}://{{ request.url.netloc }}/api/images/og-preview.png">
-
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
-
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>{{ title }} - AI Artist Gallery</title>
     <style>
         * {
@@ -33,34 +14,22 @@
             box-sizing: border-box;
         }
 
-        /* Accessibility: Screen reader only class */
-        .sr-only {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border: 0;
-        }
-
-        /* Focus visible for keyboard users */
-        :focus-visible {
-            outline: 2px solid #ffffff;
-            outline-offset: 2px;
-        }
-
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #0a0a0a;
             min-height: 100vh;
+            padding: 0;
+            margin: 0;
             color: #fff;
         }
 
@@ -71,8 +40,10 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: radial-gradient(circle at 20% 50%, rgba(20, 20, 22, 0.9) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 80%, rgba(18, 18, 20, 0.9) 0%, transparent 50%);
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(18, 18, 18, 0.8) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(28, 28, 30, 0.8) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(15, 15, 17, 0.9) 0%, transparent 40%);
             z-index: -1;
         }
 
@@ -85,67 +56,35 @@
 
         header {
             text-align: center;
-            margin-bottom: 60px;
+            margin-bottom: 70px;
+            animation: slideIn 0.8s ease-out;
         }
 
         h1 {
-            font-size: 3rem;
-            margin-bottom: 10px;
+            font-size: 3.5rem;
+            margin-bottom: 12px;
             font-weight: 700;
-            letter-spacing: -1.5px;
+            letter-spacing: -2px;
             color: #ffffff;
             text-transform: lowercase;
+            font-family: 'SF Pro Display', -apple-system, sans-serif;
         }
 
         .subtitle {
-            font-size: 1rem;
+            font-size: 1.1rem;
             color: #8e8e93;
             font-weight: 400;
-        }
-
-        .stats {
-            display: flex;
-            gap: 16px;
-            justify-content: center;
-            margin-bottom: 40px;
-            flex-wrap: wrap;
-        }
-
-        .stat-card {
-            background: rgba(28, 28, 30, 0.5);
-            padding: 20px 32px;
-            border-radius: 12px;
-            backdrop-filter: blur(30px);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            transition: all 0.3s ease;
-        }
-
-        .stat-card:hover {
-            background: rgba(38, 38, 40, 0.6);
-            transform: translateY(-2px);
-        }
-
-        .stat-number {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #ffffff;
-        }
-
-        .stat-label {
-            margin-top: 6px;
-            font-size: 0.8rem;
-            color: #8e8e93;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.3px;
         }
 
         .controls {
             background: rgba(28, 28, 30, 0.6);
             padding: 20px;
             border-radius: 16px;
-            margin-bottom: 40px;
-            backdrop-filter: blur(40px);
+            margin-bottom: 50px;
+            backdrop-filter: blur(40px) saturate(180%);
             border: 1px solid rgba(255, 255, 255, 0.06);
+            animation: fadeIn 1s ease-out 0.2s both;
         }
 
         .controls-row {
@@ -162,13 +101,14 @@
 
         input[type="search"] {
             width: 100%;
-            padding: 12px 18px;
+            padding: 14px 22px;
+            border: 2px sol0px;
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 10px;
-            font-size: 14px;
+            font-size: 15px;
+            transition: all 0.3s ease;
             background: rgba(44, 44, 46, 0.8);
             color: #ffffff;
-            transition: all 0.3s ease;
         }
 
         input[type="search"]::placeholder {
@@ -177,12 +117,7 @@
 
         input[type="search"]:focus {
             outline: none;
-            border-color: rgba(255, 255, 255, 0.2);
-            background: rgba(54, 54, 56, 0.9);
-        }
-
-        .filter-btn {
-            padding: 12px 24px;
+            border-col2px 24px;
             border: 1px solid rgba(255, 255, 255, 0.1);
             background: rgba(44, 44, 46, 0.8);
             color: #8e8e93;
@@ -190,25 +125,95 @@
             cursor: pointer;
             font-size: 14px;
             font-weight: 500;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            letter-spacing: 0.3px;
         }
 
         .filter-btn:hover {
             background: rgba(54, 54, 56, 0.9);
             color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.15);
         }
 
         .filter-btn.active {
             background: rgba(255, 255, 255, 0.95);
             color: #000000;
-            font-weight: 600;
+            border-color: transparent;
+            font-weight: 600
+
+        .filter-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
         }
 
-        .gallery {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 24px;
+        .stats {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            color: white;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.25);
+            padding: 20px 35px;
+            border-radius: 16px;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+            anima16px;
+            justify-content: center;
             margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: rgba(28, 28, 30, 0.5);
+            padding: 20px 32px;
+            border-radius: 12px;
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: fadeIn 1s ease-out 0.4s both;
+        }
+
+        .stat-card:hover {
+            background: rgba(38, 38, 40, 0.6);
+            border-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .stat-number {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -1px;
+        }
+
+        .stat-label {
+            margin-top: 6px;
+            font-size: 0.85rem;
+            color: #8e8e93;
+            text-transform: uppercase;
+            letter-spacing: 1.2
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            position: relative;
+            animation: fadeIn 0.6s ease-out both;
+        }
+
+        .gallery-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;40px, 1fr));
+            gap: 24px;
+            margin-bottom: 50px;
         }
 
         .gallery-item {
@@ -216,70 +221,81 @@
             border-radius: 12px;
             overflow: hidden;
             border: 1px solid rgba(255, 255, 255, 0.06);
-            transition: all 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
+            position: relative;
+            animation: fadeIn 0.6s ease-out both;
         }
 
         .gallery-item:hover {
             transform: translateY(-4px);
             border-color: rgba(255, 255, 255, 0.12);
+            background: rgba(38, 38, 40, 0.5);
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
         }
 
         .gallery-item img {
             width: 100%;
-            height: 360px;
+            height: 380px;
             object-fit: cover;
             display: block;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .gallery-item-info {
-            padding: 16px;
+        .gallery-item:hover img {
+            transform: scale(1.02);
+            filter: brightness
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: #718096;
+        }
+
+        .featured-badge {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #2d3748;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+        }
+
+        .loading {18px 20px;
             background: rgba(18, 18, 18, 0.6);
         }
 
         .gallery-item-prompt {
-            font-size: 13px;
+            font-size: 14px;
             color: #e5e5e7;
             margin-bottom: 10px;
-            line-height: 1.4;
+            line-height: 1.5;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
+            font-weight: 400;
         }
 
         .gallery-item-meta {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 11px;
+            font-size: 12px;
             color: #8e8e93;
-        }
-
-        .featured-badge {
-            background: rgba(255, 255, 255, 0.95);
-            color: #000000;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-weight: 600;
-            font-size: 9px;
-            text-transform: uppercase;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 60px 20px;
-            color: #8e8e93;
+            font-size: 1.2rem;
+            font-weight: 400;
         }
 
         .load-more {
             text-align: center;
-            margin: 40px 0;
+            margin: 50px 0;
         }
 
         .load-more-btn {
-            padding: 12px 32px;
+            padding: 14px 40px;
             background: rgba(255, 255, 255, 0.95);
             color: #000000;
             border: none;
@@ -287,24 +303,37 @@
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            letter-spacing: 0.3px;
         }
 
         .load-more-btn:hover {
             background: #ffffff;
             transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(255, 255, 255, 0.15);
         }
 
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.96);
+        .load-more-btn:active {
+            transform: translateY(0
+
+        .modal-content {
+            max-width: 95%;
+            max-height: 95%;
+            position: relative;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .modal-image {
+            max-width: 100%;
+            max-height: 85vh;
+            display: block;
+            margin: 0 auto;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        } 0, 0, 0.96);
             z-index: 1000;
             padding: 40px;
+            animation: fadeIn 0.2s ease;
             backdrop-filter: blur(20px);
         }
 
@@ -315,9 +344,10 @@
         }
 
         .modal-content {
-            max-width: 90%;
-            max-height: 90%;
+            max-width: 95%;
+            max-height: 95%;
             position: relative;
+            animation: fadeIn 0.3s ease;
         }
 
         .modal-image {
@@ -330,96 +360,87 @@
 
         .modal-info {
             background: rgba(28, 28, 30, 0.95);
-            padding: 20px;
+            padding: 24px;
             border-radius: 10px;
-            margin-top: 16px;
+            margin-top: 20px;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(40px);
         }
 
         .modal-info h3 {
             color: #ffffff;
-            margin-bottom: 10px;
-            font-size: 1rem;
+            margin-bottom: 12px;
+            font-weight: 600;
+            font-size: 1.1rem;
         }
 
         .modal-info p {
             color: #8e8e93;
-            font-size: 0.85rem;
-            margin: 4px 0;
+            font-size: 0.9rem;
+            margin: 6px 0;
         }
 
         .modal-close {
             position: absolute;
-            top: -45px;
+            top: -50px;
             right: 0;
             background: rgba(255, 255, 255, 0.95);
-            border: none;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 20px;
-            color: #000000;
-            transition: all 0.2s ease;
-        }
+            .container {
+                padding: 40px 24px;
+            }
 
-        .modal-close:hover {
-            background: #ffffff;
-            transform: scale(1.05);
-        }
+            h1 {
+                font-size: 2.5rem;
+            }
 
-        .modal-actions {
-            position: absolute;
-            top: -45px;
-            right: 50px;
-            display: flex;
-            gap: 10px;
-        }
+            .subtitle {
+                font-size: 1rem;
+            }
 
-        .modal-btn {
-            background: rgba(28, 28, 30, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #ffffff;
-            padding: 8px 16px;
-            border-radius: 18px;
-            cursor: pointer;
-            font-size: 13px;
-            transition: all 0.2s ease;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
+            .gallery {
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                gap: 16px;
+            }
 
-        .modal-btn:hover {
-            background: rgba(38, 38, 40, 0.95);
-            border-color: rgba(255, 255, 255, 0.2);
-            transform: translateY(-1px);
-        }
+            .controls-row {
+                flex-direction: column;
+            }
 
-        @media (max-width: 768px) {
-            .container { padding: 40px 24px; }
-            h1 { font-size: 2.2rem; }
-            .gallery { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-            .controls-row { flex-direction: column; }
-            .search-box { width: 100%; }
+            .search-box {
+                width: 100%;
+            }
+
+            .stat-number {
+                font-size: 1.8rem;
+            }
         }
 
         @media (max-width: 480px) {
-            .container { padding: 30px 20px; }
-            h1 { font-size: 1.8rem; }
-            .gallery { grid-template-columns: 1fr; }
+            .container {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .gallery {
+                grid-template-columns: 1fr;
+                gap: 14px;
+            }
+
+            .modal {
+                padding: 20px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>AI Artist Gallery</h1>
+            <h1>ai artist gallery</h1>
             <p class="subtitle">curated collection of ai-generated artwork</p>
         </header>
-
-        <main id="main-content">
 
         <div class="stats" id="stats">
             <div class="stat-card">
@@ -436,11 +457,10 @@
             </div>
         </div>
 
-        <div class="controls" role="search">
+        <div class="controls">
             <div class="controls-row">
                 <div class="search-box">
-                    <label for="search" class="sr-only">Search artworks</label>
-                    <input type="search" id="search" placeholder="Search artworks..." aria-label="Search artworks by prompt">
+                    <input type="search" id="search" placeholder="Search artworks...">
                 </div>
                 <button class="filter-btn active" data-filter="all">All</button>
                 <button class="filter-btn" data-filter="featured">Featured</button>
@@ -454,17 +474,11 @@
         <div class="load-more" id="load-more" style="display: none;">
             <button class="load-more-btn">Load More</button>
         </div>
-        </main>
     </div>
 
-    <div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="Image detail view">
+    <div class="modal" id="modal">
         <div class="modal-content">
-            <div class="modal-actions">
-                <a class="modal-btn" id="download-btn" download>
-                    <span>⬇</span> download
-                </a>
-            </div>
-            <button class="modal-close" onclick="closeModal()" aria-label="Close image detail view">×</button>
+            <button class="modal-close" onclick="closeModal()">×</button>
             <img class="modal-image" id="modal-image" src="" alt="">
             <div class="modal-info" id="modal-info"></div>
         </div>
@@ -474,9 +488,10 @@
         let currentFilter = null;
         let currentSearch = '';
         let currentOffset = 0;
-        const LIMIT = 500;  // Show all images
+        const LIMIT = 20;
         let allImages = [];
 
+        // Load statistics
         async function loadStats() {
             try {
                 const response = await fetch('/api/stats');
@@ -489,6 +504,7 @@
             }
         }
 
+        // Load images
         async function loadImages(append = false) {
             const params = new URLSearchParams({
                 limit: LIMIT,
@@ -512,6 +528,7 @@
 
                 renderGallery(append);
 
+                // Show/hide load more button
                 const loadMoreDiv = document.getElementById('load-more');
                 loadMoreDiv.style.display = images.length === LIMIT ? 'block' : 'none';
             } catch (error) {
@@ -520,6 +537,7 @@
             }
         }
 
+        // Render gallery
         function renderGallery(append = false) {
             const gallery = document.getElementById('gallery');
             
@@ -538,6 +556,7 @@
             imagesToRender.forEach((image, idx) => {
                 const item = document.createElement('div');
                 item.className = 'gallery-item';
+                item.style.animationDelay = `${(idx % 20) * 0.05}s`;
                 item.onclick = () => openModal(image);
 
                 const img = document.createElement('img');
@@ -575,30 +594,28 @@
             });
         }
 
+        // Open modal
         function openModal(image) {
             const modal = document.getElementById('modal');
             const modalImage = document.getElementById('modal-image');
             const modalInfo = document.getElementById('modal-info');
-            const downloadBtn = document.getElementById('download-btn');
 
-            const imagePath = `/api/images/file/${image.path}`;
-            modalImage.src = imagePath;
-            downloadBtn.href = imagePath;
-            downloadBtn.download = image.filename;
-
+            modalImage.src = `/api/images/file/${image.path}`;
             modalInfo.innerHTML = `
-                <h3>${image.prompt}</h3>
-                <p><strong>Created:</strong> ${new Date(image.created_at).toLocaleString()}</p>
-                <p><strong>File:</strong> ${image.filename}</p>
+                <h3 style="margin-bottom: 10px; color: #2d3748;">${image.prompt}</h3>
+                <p style="color: #718096;"><strong>Created:</strong> ${new Date(image.created_at).toLocaleString()}</p>
+                <p style="color: #718096;"><strong>File:</strong> ${image.filename}</p>
             `;
 
             modal.classList.add('active');
         }
 
+        // Close modal
         function closeModal() {
             document.getElementById('modal').classList.remove('active');
         }
 
+        // Close modal on escape or click outside
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') closeModal();
         });
@@ -607,6 +624,7 @@
             if (e.target.id === 'modal') closeModal();
         });
 
+        // Filter buttons
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -618,6 +636,7 @@
             });
         });
 
+        // Search
         let searchTimeout;
         document.getElementById('search').addEventListener('input', (e) => {
             clearTimeout(searchTimeout);
@@ -628,10 +647,12 @@
             }, 500);
         });
 
+        // Load more button
         document.querySelector('.load-more-btn').addEventListener('click', () => {
             loadImages(true);
         });
 
+        // Initial load
         loadStats();
         loadImages();
     </script>
