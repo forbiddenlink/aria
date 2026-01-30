@@ -1,5 +1,5 @@
 # AI Artist - Python Dependencies
-# Updated: 2026-01-08 with 2026 Best Practices
+# Updated: 2026-01-09 with 2026 Best Practices
 # Based on research: SDXL, LoRA training, MLOps, Python 3.11+
 
 # ===================================
@@ -11,34 +11,34 @@
 # CUDA 12.1: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 # Apple Silicon (MPS): pip install torch torchvision torchaudio
 # CPU: pip install torch torchvision torchaudio
-torch>=2.2.0
-torchvision>=0.17.0
-torchaudio>=2.2.0
+torch>=2.5.0,<3.0.0  # CVE fixes, compatible with diffusers
+torchvision>=0.20.0,<1.0.0
+torchaudio>=2.5.0,<3.0.0
 
 # Stable Diffusion and Image Generation
-diffusers>=0.27.0
-transformers>=4.38.0
-accelerate>=0.27.0  # Required for LoRA training
-safetensors>=0.4.0
+diffusers>=0.32.0,<0.36.0  # Stable version range
+transformers>=4.53.0,<5.0.0  # CVE fixes, compatible version range
+accelerate>=0.34.0,<2.0.0  # Required for LoRA training (latest is 1.x)
+safetensors>=0.5.0,<1.0.0
 # xformers>=0.0.24  # Memory-efficient attention (optional, GPU only) - DISABLED: Doesn't build on Apple Silicon
 
 # LoRA Training and PEFT
-peft>=0.7.0
+peft>=0.15.0,<1.0.0  # Latest stable version
 # bitsandbytes>=0.42.0  # For AdamW8bit optimizer - DISABLED: Not needed on Apple Silicon
 
 # CLIP for Curation
-ftfy==6.1.3
-regex==2023.12.25
+ftfy>=6.3.1  # Latest stable version
+regex>=2025.11.3  # Latest stable version
 # CLIP installed separately: pip install git+https://github.com/openai/CLIP.git
 
 # ===================================
 # Image Processing
 # ===================================
 
-Pillow>=10.2.0
-opencv-python>=4.9.0
-numpy>=1.24.0,<2.0.0
-imageio>=2.33.0
+Pillow>=12.1.0  # CVE-2024-28219 fix + latest features
+opencv-python>=4.12.0
+numpy>=1.24.0,<2.0.0  # Keep <2.0 for compatibility
+imageio>=2.37.0
 imagehash>=4.3.0  # Perceptual hashing for deduplication
 clip @ git+https://github.com/openai/CLIP.git  # For aesthetic evaluation
 
@@ -47,18 +47,24 @@ clip @ git+https://github.com/openai/CLIP.git  # For aesthetic evaluation
 # ===================================
 
 # Modern async HTTP client (replaces requests)
-httpx>=0.27.0
+httpx>=0.28.0,<1.0.0  # Latest stable version
 
 # ===================================
 # Web Framework (for Gallery)
 # ===================================
 
 # FastAPI for web gallery interface
-fastapi>=0.109.0
-uvicorn[standard]>=0.27.0  # ASGI server
-python-multipart>=0.0.9  # For form data
-jinja2>=3.1.3  # Template engine
-aiohttp>=3.9.0  # Alternative async HTTP
+fastapi>=0.128.0  # Latest stable version
+uvicorn[standard]>=0.40.0  # ASGI server - latest stable
+python-multipart>=0.0.21  # CVE-2024-53981 fix + latest features
+jinja2>=3.1.6  # CVE-2024-34064, CVE-2024-56201, CVE-2024-56326, CVE-2025-27516 fixes
+aiohttp>=3.13.3  # CVE-2024-23334, CVE-2024-23829, CVE-2024-27306, CVE-2024-30251, CVE-2024-52304, CVE-2025-53643, CVE-2025-69223, CVE-2025-69224, CVE-2025-69225, CVE-2025-69226, CVE-2025-69227, CVE-2025-69228, CVE-2025-69229, CVE-2025-69230 fixes
+
+# Security and rate limiting
+slowapi>=0.1.9  # Rate limiting for FastAPI
+python-jose[cryptography]>=3.4.0  # CVE-2024-33663 (CRITICAL), CVE-2024-33664 fixes
+passlib[bcrypt]>=1.7.4  # Password hashing (future authentication)
+itsdangerous>=2.1.2  # Secure session management
 
 # API wrappers
 # unsplash-py==1.1.0  # Deprecated, use httpx directly
@@ -67,22 +73,22 @@ aiohttp>=3.9.0  # Alternative async HTTP
 # Automation & Scheduling
 # ===================================
 
-APScheduler>=3.10.4
-python-crontab>=3.0.0
+APScheduler>=3.11.0  # Latest stable version
+python-crontab>=3.3.0  # Latest stable version
 
 # ===================================
 # Data & Storage
 # ===================================
 
 # Configuration management
-PyYAML>=6.0.1
-python-dotenv>=1.0.0
-pydantic>=2.5.0  # Runtime validation
-pydantic-settings>=2.1.0
+PyYAML>=6.0.3  # Latest stable version
+python-dotenv>=1.2.1  # Latest stable version
+pydantic>=2.12.5  # Runtime validation - latest stable
+pydantic-settings>=2.12.0  # Latest stable version
 
 # Database
-SQLAlchemy>=2.0.0  # ORM
-alembic>=1.13.0  # Migrations
+SQLAlchemy>=2.0.45  # ORM - latest stable
+alembic>=1.18.0  # Migrations - latest stable
 # SQLite is built into Python
 
 # ===================================
@@ -90,7 +96,7 @@ alembic>=1.13.0  # Migrations
 # ===================================
 
 # Progress bars
-tqdm>=4.66.1
+tqdm>=4.66.3  # CVE-2024-34062 fix
 
 # Date/Time
 python-dateutil>=2.8.2
@@ -107,20 +113,21 @@ tenacity>=8.2.3  # Retry logic with exponential backoff
 # ===================================
 
 # Testing Framework
-pytest>=8.0.0
-pytest-cov>=4.1.0
-pytest-mock>=3.12.0
-pytest-asyncio>=0.23.0
+pytest>=9.0.2  # Latest stable version
+pytest-cov>=6.0.0  # Latest stable version
+pytest-mock>=3.14.0  # Latest stable version
+pytest-asyncio>=0.25.0  # Latest stable version
 
 # Code Quality
-black>=24.1.0  # Code formatting
-ruff>=0.2.0  # Fast linting (replaces flake8, isort, pydocstyle)
-mypy>=1.8.0  # Type checking
-pre-commit>=3.6.0  # Git hooks
+black>=25.12.0  # CVE-2024-21503 fix + latest features
+ruff>=0.14.11  # Fast linting (replaces flake8, isort, pydocstyle) - latest stable
+mypy>=1.19.1  # Type checking - latest stable
+pre-commit>=4.0.1  # Git hooks - latest stable
 
 # Security
-safety>=3.0.1  # Check for vulnerable dependencies
-pip-audit>=2.6.3  # Dependency vulnerability scanner
+safety>=3.5.0  # Check for vulnerable dependencies - latest stable
+pip-audit>=2.10.0  # Dependency vulnerability scanner - latest stable
+bandit>=1.8.0  # Security linting - latest stable
 
 # ===================================
 # MLOps & Experiment Tracking (Optional)

@@ -13,3 +13,22 @@
 # License: Public Domain
 # Artist: Vincent van Gogh
 # Date: 1890
+
+# ============================================
+# Training Dataset - January 9, 2026
+# ============================================
+
+Source: Lorem Picsum (https://picsum.photos/)
+Images: training_image_001.jpg through training_image_030.jpg (30 images total)
+License: Unsplash License - Free for commercial and non-commercial use, including AI training
+Date Downloaded: January 9, 2026
+
+Description:
+- High-quality photographs from Unsplash library via Lorem Picsum service
+- Diverse content including landscapes, nature, urban scenes, and abstract compositions
+- All images 1024x1024 resolution, suitable for Stable Diffusion training
+- Individual photographer credits available at: https://picsum.photos/images
+
+Usage:
+These images are being used to train a custom LoRA model for artistic style transfer
+in the AI Artist system.
