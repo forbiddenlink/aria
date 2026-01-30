@@ -2,21 +2,26 @@
 
 import asyncio
 from collections.abc import Callable
+from typing import Literal
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
+from ..inspiration.autonomous import AutonomousInspiration, WikipediaInspiration
 from ..utils.logging import get_logger
 
 logger = get_logger(__name__)
 
 
 class CreationScheduler:
-    """Schedule automated artwork creation."""
+    """Schedule automated artwork creation with full autonomy!"""
 
-    def __init__(self):
+    def __init__(self, autonomous_mode: bool = True):
         self.scheduler = AsyncIOScheduler()
+        self.autonomous_mode = autonomous_mode
+
+        # Traditional topic rotation (for legacy mode)
         self.topics = [
             "nature landscape",
             "abstract art",
@@ -28,14 +33,61 @@ class CreationScheduler:
             "sunset sky",
         ]
         self.current_topic_index = 0
-        logger.info("scheduler_initialized")
 
-    def get_next_topic(self) -> str:
-        """Get next topic from rotation."""
-        topic = self.topics[self.current_topic_index]
-        self.current_topic_index = (self.current_topic_index + 1) % len(self.topics)
-        logger.info("topic_selected", topic=topic, index=self.current_topic_index)
-        return str(topic)
+        # Autonomous inspiration generators
+        self.autonomous = AutonomousInspiration()
+        self.wikipedia = WikipediaInspiration()
+
+        logger.info(
+            "scheduler_initialized",
+            autonomous_mode=autonomous_mode,
+            traditional_topics=len(self.topics),
+        )
+
+    def get_next_topic(
+        self,
+        mode: Literal[
+            "traditional", "surprise", "exploration", "fusion", "mashup", "auto"
+        ] = "auto",
+    ) -> str:
+        """Get next topic - autonomous or traditional.
+
+        Modes:
+            - traditional: Rotate through predefined topics
+            - surprise: Completely random AI-chosen prompt
+            - exploration: AI explores random concepts
+            - fusion: Mix multiple styles
+            - mashup: Combine unexpected subjects
+            - auto: AI picks the mode randomly!
+        """
+        if mode == "traditional":
+            # Original behavior
+            topic = self.topics[self.current_topic_index]
+            self.current_topic_index = (self.current_topic_index + 1) % len(self.topics)
+            logger.info(
+                "topic_selected",
+                topic=topic,
+                mode="traditional",
+                index=self.current_topic_index,
+            )
+            return str(topic)
+
+        # Autonomous mode!
+        if mode == "auto":
+            # Let the AI pick the mode!
+            mode = self.autonomous.get_random_mode()
+            logger.info("auto_mode_selected", chosen_mode=mode)
+
+        # Generate autonomous prompt
+        prompt = self.autonomous.generate_from_mode(mode)
+        logger.info("autonomous_topic_generated", prompt=prompt, mode=mode)
+        return prompt
+
+    async def get_wikipedia_topic(self) -> str:
+        """Get topic from random Wikipedia article."""
+        topic = await self.wikipedia.generate_from_article()
+        logger.info("wikipedia_topic_generated", topic=topic)
+        return topic
 
     def add_daily_job(
         self,

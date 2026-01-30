@@ -20,16 +20,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 # Import the main app but modify for serverless
-from ai_artist.web.app import (
-    app as main_app,
-    list_images,
-    get_image_file,
-    get_stats,
-    delete_image,
-    toggle_featured,
-    get_templates,
-    health_check,
-)
 
 # Create a lightweight app for Vercel
 app = FastAPI(
@@ -39,11 +29,18 @@ app = FastAPI(
 )
 
 # Add CORS
+# Configure CORS - restrict in production!
+allowed_origins = [
+    "http://localhost:3000",
+    "http://localhost:8000",
+    "https://aria-gallery.vercel.app",  # Update with your actual domain
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 

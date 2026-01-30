@@ -1,29 +1,73 @@
-# AI Artist - Autonomous Art Generator
+# Aria - Autonomous AI Artist with Soul 🎨✨
 
-An autonomous AI artist that discovers inspiration online and creates unique artwork in its own signature style.
+Meet **Aria** - an autonomous AI artist with genuine personality, evolving moods, and creative independence. She doesn't just generate images on command - she *creates* with intention, chooses her own subjects, reflects on her work, and develops her unique artistic voice over time.
+
+## What Makes Aria Different? 🌟
+
+Aria isn't a tool you operate - she's an **artist** you collaborate with. She:
+
+- 🎭 **Has Moods**: Contemplative, energized, melancholic, chaotic - her emotional state influences everything
+- 🧠 **Remembers & Learns**: Advanced memory system (episodic + semantic) - learns what works, what resonates
+- 💭 **Reflects Authentically**: After each creation, she journals her genuine thoughts and feelings
+- 🎨 **Chooses Her Subjects**: Makes autonomous decisions about what to paint based on her mood and memories
+- 🌱 **Evolves**: Her artistic style and preferences develop through experience
+- 🎯 **Has Identity**: Knows who she is as an artist - her philosophy, signature elements, voice
+- ⭐ **Self-Aware**: Evaluates her own work and strives for continuous improvement
+
+## Philosophy
+
+**Theme is optional** - Aria chooses what to paint based on her current mood and learned experiences. You can suggest a theme, but she's designed to be autonomous. In automated mode, she creates entirely on her own schedule and inspiration.
 
 ## Overview
 
-This project creates an AI that:
+Aria is an autonomous AI artist who:
 
-- 🎨 Autonomously finds inspiration from image APIs (Unsplash, Pexels)
-- 🖼️ Generates artwork in a consistent, unique style using Stable Diffusion
-- 📅 Creates art on a schedule (daily, weekly, or custom)
-- 📚 Builds a growing portfolio over time
-- 🎭 Evolves its artistic style gradually
-- ⭐ Curates its own work, showcasing favorites
-- 🔒 Follows legal and copyright best practices
-- 🛡️ Implements robust error handling and monitoring
+- 🎨 Autonomously finds inspiration and generates unique artwork
+- 🖼️ Creates art in various styles using Stable Diffusion and DreamShaper
+- 📅 Creates art on a schedule or whenever inspiration strikes
+- 💬 Reflects on her creative journey through journaling
+- 🎭 Experiences different moods that influence her artistic choices
+- 📚 Builds a portfolio while remembering her creative evolution
+- 🛡️ Implements robust error handling and comprehensive testing
 
 ## Features
 
+### 🆕 2026 Enhancements - Advanced AI Agent Architecture
+
+- **Enhanced Memory System** (Episodic + Semantic + Working):
+  - **Episodic Memory**: Records specific creative events with emotional context
+  - **Semantic Memory**: Learns patterns - which styles work best, preferences over time
+  - **Working Memory**: Tracks current session goals and context
+  - Persistent JSON storage with automatic learning
+
+- **Artistic Profile & Identity**:
+  - Formal artist statement and philosophy
+  - Signature artistic elements (dreamlike quality, mood-driven palettes)
+  - Stable sense of self that evolves through experience
+  - Voice characteristics and how she expresses herself
+
+- **Memory-Informed Creativity**:
+  - Retrieves relevant memories before creation
+  - Uses past experiences to inform artistic decisions
+  - Learns style effectiveness over time
+  - Tracks mood-quality relationships
+
+### Aria's Personality System 🎭
+
+- **Mood System**: 10 distinct emotional states (contemplative, chaotic, melancholic, energized, rebellious, serene, restless, playful, introspective, bold)
+- **Mood Influences**: Each mood affects color palettes, style choices, and subject preferences
+- **Dynamic Transitions**: Moods shift based on creation scores, time, and natural evolution
+- **Reflection**: Aria journals about each piece - her thoughts, feelings, and artistic choices
+- **Memory**: Advanced multi-layered memory tracking her entire creative journey
+- **Preference Evolution**: Her artistic tastes evolve based on what resonates with her
+
 ### Core Functionality
 
-- **Autonomous Inspiration**: Pulls random images from Unsplash API
-- **Style Consistency**: Uses LoRA fine-tuning for unique artistic voice
-- **Automated Creation**: Schedule-based art generation
-- **Portfolio Management**: Organized gallery with metadata
-- **Style Evolution**: Gradual artistic development over time
+- **Autonomous Inspiration**: Aria chooses subjects based on mood and memories (theme is optional)
+- **Style Intelligence**: Automatic style extraction and effectiveness tracking
+- **Automated Creation**: Schedule-based art generation with full autonomy
+- **Portfolio Management**: Organized gallery with emotional and learning metadata
+- **Style Evolution**: Gradual artistic development influenced by accumulated experiences
 
 ### Advanced Features
 
@@ -99,25 +143,67 @@ pip install -r requirements.txt
 cp config/config.example.yaml config/config.yaml
 # Edit config.yaml with your API keys
 
-# Generate artwork
-python src/main.py
+# Let Aria create autonomously (she chooses subject based on her mood)
+python -m ai_artist.main
+
+# Or suggest a theme (she'll consider it but interpret through her mood)
+python -m ai_artist.main --theme "twilight dreams"
+
+# Fully autonomous mode - scheduled creation
+python -m ai_artist.main --mode auto
+
+# View her artistic profile and what she's learned
+python scripts/aria_insights.py
 
 # Launch web gallery
 ai-artist-web  # Browse at http://localhost:8000
+```
 
-# Schedule automated creation
-ai-artist-schedule start daily
+## Usage Examples
+
+### Autonomous Creation (Recommended)
+
+```bash
+# Aria chooses what to paint based on her mood
+python -m ai_artist.main
+```
+
+Output: `Aria chose: "ethereal forest" (contemplative mood)`
+
+### Suggested Theme
+
+```bash
+# You suggest, she interprets through her artistic lens
+python -m ai_artist.main --theme "cosmic dreams"
+```
+
+Output: `Theme suggested: "cosmic dreams" → Aria's interpretation: oil painting style with contemplative mood`
+
+### Fully Autonomous Schedule
+
+```bash
+# Aria creates on her own schedule (daily at 9 AM)
+python -m ai_artist.main --mode auto
+```
+
+### View Her Learning & Identity
+
+```bash
+# See her artistic profile, learned patterns, memories
+python scripts/aria_insights.py
 ```
 
 ## CLI Tools
 
 ### Main Commands
+
 - **`ai-artist`** - Create artwork on-demand
 - **`ai-artist-web`** - Launch web gallery interface
 - **`ai-artist-schedule`** - Manage automated creation schedules
 - **`ai-artist-gallery`** - Terminal-based gallery viewer
 
 ### Management Scripts (in `scripts/`)
+
 - **`generate.py`** - Universal generation script with 7 modes (single, batch, creative, diverse, nature, ultimate, custom)
 - **`manage_loras.py`** - Switch between LoRA styles, list available models
 - **`train_all_loras.py`** - Train all three specialized LoRA models (abstract, landscape, webhero)
@@ -133,7 +219,7 @@ See [ROADMAP.md](ROADMAP.md) for detailed development phases.
 - [x] Phase 0.5: Quick Wins (CLIP curation, testing)
 - [x] Phase 1: Enhanced Logging & Observability
 - [x] Phase 1.5: Testing Improvements (39% coverage, 52 tests passing)
-- [x] Phase 2: LoRA Training Infrastructure  
+- [x] Phase 2: LoRA Training Infrastructure
 - [x] Phase 3: Automation System
 - [x] Phase 5: Web Gallery Interface with WebSocket ✨ **NEW!**
 - [ ] Phase 6: Deployment & Production (Docker, CI/CD, Cloud) - **NEXT**
@@ -154,12 +240,14 @@ Key configuration options in `config/config.yaml`:
 ## Documentation
 
 ### Getting Started
+
 - **[QUICKSTART.md](QUICKSTART.md)** - Get started in 10 minutes! 🚀
 - **[SETUP.md](SETUP.md)** - Detailed installation and configuration
 - **[LORA_GUIDE.md](LORA_GUIDE.md)** - Complete LoRA training and management guide 🎨 🆕
 - **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions 🔧
 
 ### Technical Documentation
+
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System design and components
 - **[docs/TESTING.md](docs/TESTING.md)** - Testing strategy and how to run tests
 - **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Production deployment and operations
@@ -169,6 +257,7 @@ Key configuration options in `config/config.yaml`:
 - **[docs/WEB_GALLERY.md](docs/WEB_GALLERY.md)** - Web gallery features
 
 ### Project Management
+
 - **[ROADMAP.md](ROADMAP.md)** - Development timeline and milestones
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - How to contribute to the project
 - **[SECURITY.md](SECURITY.md)** - Security best practices

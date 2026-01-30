@@ -170,7 +170,7 @@ class ImageCurator:
 
     def _detect_blur(self, image: Image.Image) -> float:
         """Detect image blur using Laplacian variance.
-        
+
         Returns:
             float: Blur score (0-1, higher is sharper)
         """
@@ -178,71 +178,92 @@ class ImageCurator:
             import cv2
 
             # Convert PIL to numpy array (grayscale for blur detection)
-            img_array = np.array(image.convert('L'))
-            
+            img_array = np.array(image.convert("L"))
+
             # Calculate Laplacian variance
             laplacian = cv2.Laplacian(img_array, cv2.CV_64F)
             variance = laplacian.var()
-            
+
             # Normalize: >100 is sharp, <50 is blurry
             # Scale to 0-1 range
             blur_score = min(variance / 100.0, 1.0)
-            
+
             logger.debug(
                 "blur_detection",
                 variance=variance,
                 score=blur_score,
-                assessment="sharp" if blur_score > 0.7 else "moderate" if blur_score > 0.5 else "blurry"
+                assessment=(
+                    "sharp"
+                    if blur_score > 0.7
+                    else "moderate"
+                    if blur_score > 0.5
+                    else "blurry"
+                ),
             )
-            
+
             return float(blur_score)
         except ImportError:
-            logger.warning("opencv_not_installed", message="Install opencv-python for blur detection")
+            logger.warning(
+                "opencv_not_installed",
+                message="Install opencv-python for blur detection",
+            )
             return 0.8  # Default to moderate score if opencv not available
         except Exception as e:
             logger.error("blur_detection_failed", error=str(e))
             return 0.8
-    
+
     def _detect_artifacts(self, image: Image.Image) -> float:
         """Detect compression artifacts and anomalies.
-        
+
         Returns:
             float: Artifact score (0-1, higher is better/fewer artifacts)
         """
         try:
             img_array = np.array(image)
-            
+
             # Check for extreme values (blown highlights/crushed shadows)
             # Images with >30% extreme pixels likely have issues
             extremes = np.sum((img_array < 10) | (img_array > 245))
             extreme_ratio = extremes / img_array.size
-            
+
             # Check for color diversity (banding/posterization detection)
             # More unique colors = better (less banding)
-            unique_colors = len(np.unique(img_array.reshape(-1, img_array.shape[-1]), axis=0))
+            unique_colors = len(
+                np.unique(img_array.reshape(-1, img_array.shape[-1]), axis=0)
+            )
             total_pixels = img_array.shape[0] * img_array.shape[1]
-            color_diversity = min(unique_colors / (total_pixels * 0.1), 1.0)  # Expect 10% unique
-            
+            color_diversity = min(
+                unique_colors / (total_pixels * 0.1), 1.0
+            )  # Expect 10% unique
+
             # Combine metrics (penalize extremes and low diversity)
-            artifact_score = (1.0 - min(extreme_ratio * 3, 1.0)) * 0.5 + color_diversity * 0.5
-            
+            artifact_score = (
+                1.0 - min(extreme_ratio * 3, 1.0)
+            ) * 0.5 + color_diversity * 0.5
+
             logger.debug(
                 "artifact_detection",
                 extreme_ratio=extreme_ratio,
                 color_diversity=color_diversity,
                 unique_colors=unique_colors,
                 score=artifact_score,
-                assessment="clean" if artifact_score > 0.7 else "moderate" if artifact_score > 0.5 else "artifacts"
+                assessment=(
+                    "clean"
+                    if artifact_score > 0.7
+                    else "moderate"
+                    if artifact_score > 0.5
+                    else "artifacts"
+                ),
             )
-            
+
             return float(artifact_score)
         except Exception as e:
             logger.error("artifact_detection_failed", error=str(e))
             return 0.8  # Default to moderate score on error
-    
+
     def _compute_technical_score(self, image: Image.Image) -> float:
         """Compute technical quality score with blur and artifact detection.
-        
+
         Combines multiple technical metrics:
         - Resolution quality (40%)
         - Sharpness/blur (40%)
@@ -252,28 +273,26 @@ class ImageCurator:
         width, height = image.size
         resolution = width * height
         resolution_score = min(1.0, resolution / (1024 * 1024))
-        
+
         # Detect blur
         blur_score = self._detect_blur(image)
-        
+
         # Detect artifacts
         artifact_score = self._detect_artifacts(image)
-        
+
         # Weighted combination
         technical_score = (
-            resolution_score * 0.4 +
-            blur_score * 0.4 +
-            artifact_score * 0.2
+            resolution_score * 0.4 + blur_score * 0.4 + artifact_score * 0.2
         )
-        
+
         logger.debug(
             "technical_score_calculated",
             resolution=resolution_score,
             blur=blur_score,
             artifacts=artifact_score,
-            total=technical_score
+            total=technical_score,
         )
-        
+
         return float(technical_score)
 
     def should_keep(self, metrics: QualityMetrics, threshold: float = 0.6) -> bool:

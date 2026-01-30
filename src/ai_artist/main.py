@@ -1,4 +1,4 @@
-"""Main application entry point."""
+"""Aria - Autonomous AI Artist with personality and soul."""
 
 import asyncio
 import io
@@ -16,6 +16,10 @@ from .core.upscaler import ImageUpscaler
 from .curation.curator import ImageCurator
 from .gallery.manager import GalleryManager
 from .models.manager import ModelManager
+from .personality.enhanced_memory import EnhancedMemorySystem
+from .personality.memory import ArtistMemory
+from .personality.moods import MoodSystem
+from .personality.profile import ArtisticProfile
 from .scheduling.scheduler import CreationScheduler
 from .trends.manager import TrendManager
 from .utils.config import Config, get_torch_dtype, load_config
@@ -31,10 +35,11 @@ logger = get_logger(__name__)
 
 
 class AIArtist:
-    """Main AI Artist application."""
+    """Aria - An autonomous AI artist with personality, moods, and memory."""
 
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, name: str = "Aria"):
         self.config = config
+        self.name = name
         self.generator = None
         self.upscaler = None
         self.inpainter = None
@@ -47,6 +52,15 @@ class AIArtist:
         self.trend_manager = None
         self.model_manager = None
 
+        # Aria's personality - the core of who she is
+        self.mood_system = MoodSystem()
+        # Simple memory for backward compatibility
+        self.memory = ArtistMemory()
+        # Advanced episodic/semantic memory
+        self.enhanced_memory = EnhancedMemorySystem()
+        # Artistic identity and voice
+        self.profile = ArtisticProfile(name=name)
+
         # Initialize all components
         self._initialize()
 
@@ -55,12 +69,18 @@ class AIArtist:
         # Setup logging with rotation
         configure_logging(
             log_level="INFO",
-            log_file=Path("logs/ai_artist.log"),
+            log_file=Path("logs/aria.log"),
             json_logs=False,  # Console-friendly for now
             enable_rotation=True,
         )
 
-        logger.info("initializing_ai_artist")
+        logger.info(
+            "aria_awakening",
+            name=self.name,
+            mood=self.mood_system.current_mood,
+            feeling=self.mood_system.describe_feeling(),
+            identity=self.profile.artist_statement[:100],
+        )
 
         # Initialize prompt engine
         self.prompt_engine = PromptEngine()
@@ -148,14 +168,42 @@ class AIArtist:
         logger.info("ai_artist_initialized")
 
     async def create_artwork(self, theme: str | None = None):
-        """Create a single piece of artwork."""
+        """Create a single piece of artwork with Aria's personality."""
         # Set unique request ID for this operation
         request_id = set_request_id()
-        logger.info("creating_artwork", theme=theme, request_id=request_id)
+
+        # Update Aria's mood
+        self.mood_system.update_mood()
+
+        # Get relevant context from enhanced memory to inform creation
+        memory_context = self.enhanced_memory.get_relevant_context(
+            current_mood=self.mood_system.current_mood.value, limit=3
+        )
+
+        logger.info(
+            "aria_creating",
+            theme=theme,
+            mood=self.mood_system.current_mood.value,
+            feeling=self.mood_system.describe_feeling(),
+            request_id=request_id,
+            memory_context_available=len(memory_context) > 0,
+        )
 
         with PerformanceTimer(logger, "artwork_creation"):
-            # Get inspiration from Unsplash
-            query = theme or "art"
+            # Aria chooses what to paint (autonomous decision)
+            if theme:
+                query = theme
+                logger.info("theme_suggested", theme=theme, source="human_suggestion")
+            else:
+                # Aria makes her own choice based on mood & memory
+                query = self.mood_system.get_mood_based_subject()
+                logger.info(
+                    "aria_chose_subject",
+                    subject=query,
+                    mood=self.mood_system.current_mood.value,
+                    source="autonomous_choice",
+                )
+
             if self.unsplash is None:
                 raise RuntimeError("Unsplash client not initialized")
             photo = await self.unsplash.get_random_photo(query=query)
@@ -166,15 +214,19 @@ class AIArtist:
             )
 
             # Use dynamic prompt template
-            # If description matches query exactly, it might mean no description was found
+            # If description matches query exactly,
+            # it might mean no description was found
             if description.lower() == query.lower():
                 # Fallback to a rich template
                 template = (
-                    "{masterpiece|best quality}, __styles__, __lighting__, __composition__, "
-                    + query
+                    "{masterpiece|best quality}, __styles__, "
+                    "__lighting__, __composition__, " + query
                 )
             else:
-                template = f"{description}, __styles__, __lighting__, {{detailed|intricate|complex}}"
+                template = (
+                    f"{description}, __styles__, __lighting__, "
+                    "{detailed|intricate|complex}"
+                )
 
             if self.prompt_engine is None:
                 raise RuntimeError("Prompt engine not initialized")
@@ -189,7 +241,10 @@ class AIArtist:
 
             while attempt <= max_retries:
                 # Process prompt (fresh variation each time if retrying)
-                prompt = self.prompt_engine.process(template)
+                base_prompt = self.prompt_engine.process(template)
+
+                # Let Aria's mood influence the prompt
+                prompt = self.mood_system.influence_prompt(base_prompt)
 
                 if attempt > 0:
                     logger.info(
@@ -213,10 +268,12 @@ class AIArtist:
                 ):  # Only load once usually, but keeping it simple
                     try:
                         logger.info(
-                            "downloading_control_image", url=photo["urls"]["regular"]
+                            "downloading_control_image",
+                            url=photo["urls"]["regular"],
                         )
                         if self.unsplash is None:
-                            raise RuntimeError("Unsplash client not initialized")
+                            msg = "Unsplash client not initialized"
+                            raise RuntimeError(msg)
                         image_data = await self.unsplash.download_image(
                             photo["urls"]["regular"]
                         )
@@ -248,7 +305,8 @@ class AIArtist:
 
                 with PerformanceTimer(logger, "image_generation"):
                     if self.generator is None:
-                        raise RuntimeError("Generator not initialized")
+                        msg = "Generator not initialized"
+                        raise RuntimeError(msg)
                     images = self.generator.generate(
                         prompt=prompt,
                         negative_prompt=self.config.generation.negative_prompt,
@@ -320,7 +378,8 @@ class AIArtist:
 
             # Fallback if we exhausted retries
             if best_image is None:
-                raise RuntimeError("No valid image generated after all retries")
+                msg = "No valid image generated after all retries"
+                raise RuntimeError(msg)
 
             # Upscale best image if enabled
             if self.config.upscaling.enabled and self.upscaler:
@@ -334,7 +393,8 @@ class AIArtist:
                         )
                     except Exception as e:
                         logger.error(
-                            "upscaling_failed_outputting_original", error=str(e)
+                            "upscaling_failed_outputting_original",
+                            error=str(e),
                         )
 
             # Apply face restoration if enabled
@@ -358,17 +418,91 @@ class AIArtist:
                     "theme": theme,
                     "model": self.config.model.base_model,
                     "quality_score": float(best_score),
+                    "mood": self.mood_system.current_mood.value,
+                    "feeling": self.mood_system.describe_feeling(),
                 },
+            )
+
+            # Let Aria reflect on her creation
+            reflection = self.mood_system.reflect_on_work(best_score, theme)
+
+            # Record in memory (both simple and enhanced)
+            extracted_style = self._extract_style_from_prompt(prompt)
+            self.memory.remember_artwork(
+                prompt=prompt,
+                subject=theme,
+                style=extracted_style,
+                mood=self.mood_system.current_mood.value,
+                colors=self.mood_system.get_mood_colors(),
+                score=best_score,
+                image_path=str(saved_path),
+                metadata={
+                    "source_id": photo["id"],
+                    "model": self.config.model.base_model,
+                    "energy_level": self.mood_system.energy_level,
+                    "reflection": reflection,
+                },
+            )
+
+            # Record in enhanced memory system (episodic + semantic learning)
+            self.enhanced_memory.record_creation(
+                artwork_details={
+                    "prompt": prompt,
+                    "style": extracted_style,
+                    "subject": theme,
+                    "colors": self.mood_system.get_mood_colors(),
+                    "reflection": reflection,
+                    "image_path": str(saved_path),
+                },
+                emotional_state={
+                    "mood": self.mood_system.current_mood.value,
+                    "energy_level": self.mood_system.energy_level,
+                },
+                outcome={
+                    "score": best_score,
+                },
+            )
+
+            # Update mood after creation
+            self.mood_system.update_mood(best_score)
+
+            logger.info(
+                "artwork_created",
+                path=str(saved_path),
+                mood=self.mood_system.current_mood.value,
+                reflection=reflection[:100],
             )
 
         # Track download
         if self.unsplash is None:
-            raise RuntimeError("Unsplash client not initialized")
+            msg = "Unsplash client not initialized"
+            raise RuntimeError(msg)
         await self.unsplash.trigger_download(photo["links"]["download_location"])
 
-        logger.info("artwork_created", path=str(saved_path))
-
         return saved_path
+
+    def _extract_style_from_prompt(self, prompt: str) -> str:
+        """Extract artistic style from prompt text."""
+        style_keywords = {
+            "pixel art": "pixel art",
+            "watercolor": "watercolor",
+            "oil painting": "oil painting",
+            "minimalist": "minimalist",
+            "abstract": "abstract",
+            "impressionist": "impressionist",
+            "cyberpunk": "cyberpunk",
+            "anime": "anime",
+            "photorealistic": "photorealistic",
+            "surreal": "surrealism",
+        }
+
+        prompt_lower = prompt.lower()
+        for keyword, style_name in style_keywords.items():
+            if keyword in prompt_lower:
+                return style_name
+
+        # Default based on mood if no style found
+        return "dreamlike"
 
     async def update_trends(self):
         """Update trending styles."""
@@ -392,7 +526,8 @@ class AIArtist:
                     limit=5
                 )  # Top 5 only
                 for tag in trends:
-                    # Async download in background essentially, or await if we want to ensure they are there
+                    # Async download in background essentially,
+                    # or await if we want to ensure they are there
                     # For now await one by one
                     await self.model_manager.download_top_lora(tag)
 
@@ -417,26 +552,35 @@ class AIArtist:
             await self.update_trends()
 
         # Schedule daily creation at 9 AM
-        def creation_job():
-            asyncio.create_task(self.create_artwork())
+        self._background_tasks = set()
 
-        self.scheduler.schedule_daily(hour=9, minute=0, job_func=creation_job)
+        def creation_job():
+            task = asyncio.create_task(self.create_artwork())
+            self._background_tasks.add(task)
+            task.add_done_callback(self._background_tasks.discard)
+
+        self.scheduler.add_daily_job(
+            job_func=creation_job, hour=9, minute=0, job_id="daily_creation"
+        )
 
         # Schedule trend updates if enabled
         if self.config.trends.enabled:
 
             def trend_job():
-                asyncio.create_task(self.update_trends())
+                task = asyncio.create_task(self.update_trends())
+                self._background_tasks.add(task)
+                task.add_done_callback(self._background_tasks.discard)
 
-            # Use interval scheduling for trends
-            # Note: Scheduler wrapper might need update for interval, using daily for now
-            # or just add another job.
-            # Assuming schedule_daily is robust. Let's stick to update once a day before creation?
-            # Or add a separate schedule.
-            # self.scheduler.scheduler.add_job(trend_job, 'interval', hours=self.config.trends.update_interval_hours)
-            # For simplicity, let's just do it at 8 AM
-            self.scheduler.schedule_daily(hour=8, minute=0, job_func=trend_job)
+            # Update trends daily at 8 AM before creation
+            self.scheduler.add_daily_job(
+                job_func=trend_job,
+                hour=8,
+                minute=0,
+                job_id="daily_trend_update",
+            )
 
+        # Start the scheduler
+        self.scheduler.start()
         logger.info("automated_mode_running")
 
         # Keep running
@@ -499,7 +643,9 @@ def main():
     """CLI entry point."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="AI Artist - Autonomous Art Generator")
+    parser = argparse.ArgumentParser(
+        description="Aria - Autonomous AI Artist with personality and memory"
+    )
     parser.add_argument(
         "--config",
         type=Path,
@@ -510,13 +656,13 @@ def main():
         "--mode",
         choices=["manual", "auto"],
         default="manual",
-        help="Run mode: manual (one-time) or auto (scheduled)",
+        help="manual: create one artwork | auto: scheduled autonomous creation",
     )
     parser.add_argument(
         "--theme",
         type=str,
         default=None,
-        help="Theme for artwork (e.g., 'sunset', 'mountains')",
+        help="Optional theme suggestion (if omitted, Aria chooses based on her mood)",
     )
     args = parser.parse_args()
 

@@ -120,7 +120,10 @@ class Config(BaseSettings):
     """Main application configuration."""
 
     model_config = SettingsConfigDict(
-        extra="allow", env_file=".env", env_nested_delimiter="__"
+        extra="allow",
+        env_file=".env",
+        env_nested_delimiter="__",
+        protected_namespaces=("settings_",),
     )  # type: ignore[misc]
 
     model: ModelConfig = Field(default_factory=ModelConfig)  # type: ignore[arg-type]

@@ -3,14 +3,13 @@
 from pathlib import Path
 from typing import Literal
 
-import numpy as np
 import torch
 from diffusers import (
+    ControlNetModel,
     DiffusionPipeline,
     DPMSolverMultistepScheduler,
-    StableDiffusionXLImg2ImgPipeline,
     StableDiffusionControlNetPipeline,
-    ControlNetModel,
+    StableDiffusionXLImg2ImgPipeline,
 )
 from PIL import Image
 
@@ -50,7 +49,9 @@ class ImageGenerator:
                 hint="Set dtype: 'float32' in config or use DEVICE=cuda if available",
             )
 
-        logger.info("initializing_generator", model=model_id, device=device, dtype=str(dtype))
+        logger.info(
+            "initializing_generator", model=model_id, device=device, dtype=str(dtype)
+        )
 
     def __enter__(self):
         """Context manager entry."""
@@ -69,9 +70,7 @@ class ImageGenerator:
             if controlnet_model:
                 logger.info("initializing_controlnet_pipeline")
                 controlnet = ControlNetModel.from_pretrained(
-                    controlnet_model,
-                    torch_dtype=self.dtype,
-                    use_safetensors=True
+                    controlnet_model, torch_dtype=self.dtype, use_safetensors=True
                 )
                 # Note: This assumes SD 1.5 based models.
                 # For SDXL, we would need StableDiffusionXLControlNetPipeline
@@ -105,15 +104,36 @@ class ImageGenerator:
 
             # Device-specific optimizations
             if self.device == "mps":
-                logger.info("applying_mps_optimizations", action="configuring_for_apple_silicon", dtype=str(self.dtype))
+                logger.info(
+                    "applying_mps_optimizations",
+                    action="configuring_for_apple_silicon",
+                    dtype=str(self.dtype),
+                )
                 # Don't use attention/VAE slicing on MPS - it's slower than direct computation
-                
+
                 # Log actual device placement
-                logger.info("verifying_device_placement",
-                    unet_device=str(self.pipeline.unet.device) if hasattr(self.pipeline.unet, 'device') else 'unknown',
-                    vae_device=str(self.pipeline.vae.device) if hasattr(self.pipeline.vae, 'device') else 'unknown',
-                    unet_dtype=str(self.pipeline.unet.dtype) if hasattr(self.pipeline.unet, 'dtype') else 'unknown',
-                    vae_dtype=str(self.pipeline.vae.dtype) if hasattr(self.pipeline.vae, 'dtype') else 'unknown'
+                logger.info(
+                    "verifying_device_placement",
+                    unet_device=(
+                        str(self.pipeline.unet.device)
+                        if hasattr(self.pipeline.unet, "device")
+                        else "unknown"
+                    ),
+                    vae_device=(
+                        str(self.pipeline.vae.device)
+                        if hasattr(self.pipeline.vae, "device")
+                        else "unknown"
+                    ),
+                    unet_dtype=(
+                        str(self.pipeline.unet.dtype)
+                        if hasattr(self.pipeline.unet, "dtype")
+                        else "unknown"
+                    ),
+                    vae_dtype=(
+                        str(self.pipeline.vae.dtype)
+                        if hasattr(self.pipeline.vae, "dtype")
+                        else "unknown"
+                    ),
                 )
             else:
                 # Enable memory-efficient slicing for CUDA/CPU
@@ -125,7 +145,9 @@ class ImageGenerator:
             logger.error("model_load_failed", model=self.model_id, error=str(e))
             raise
 
-    def load_refiner(self, refiner_id: str = "stabilityai/stable-diffusion-xl-refiner-1.0"):
+    def load_refiner(
+        self, refiner_id: str = "stabilityai/stable-diffusion-xl-refiner-1.0"
+    ):
         """Load the refiner pipeline."""
         logger.info("loading_refiner", model=refiner_id)
 
@@ -181,7 +203,7 @@ class ImageGenerator:
         controlnet_conditioning_scale: float = 1.0,
     ) -> list[Image.Image]:
         """Generate images from prompt.
-        
+
         Args:
             prompt: The text prompt for generation
             negative_prompt: What to avoid in the generation
@@ -194,7 +216,7 @@ class ImageGenerator:
             use_refiner: Whether to use the refiner model (if loaded)
             control_image: Optional PIL Image for ControlNet guidance (e.g. Canny edge map)
             controlnet_conditioning_scale: Strength of ControlNet guidance (0.0-1.0)
-            
+
         Returns:
             List of generated PIL images
         """
@@ -250,15 +272,20 @@ class ImageGenerator:
         # Add ControlNet arguments if applicable
         if control_image is not None:
             # Check if pipeline supports controlnet
-            if hasattr(self.pipeline, "controlnet") or "ControlNet" in self.pipeline.__class__.__name__:
+            if (
+                hasattr(self.pipeline, "controlnet")
+                or "ControlNet" in self.pipeline.__class__.__name__
+            ):
                 call_kwargs["image"] = control_image
-                call_kwargs["controlnet_conditioning_scale"] = controlnet_conditioning_scale
+                call_kwargs["controlnet_conditioning_scale"] = (
+                    controlnet_conditioning_scale
+                )
             else:
                 logger.warning("control_image_ignored_pipeline_no_support")
 
         # Refiner denoising end
         if use_refiner and self.refiner:
-             call_kwargs["denoising_end"] = 0.8
+            call_kwargs["denoising_end"] = 0.8
 
         result = self.pipeline(**call_kwargs)
         print()  # New line after progress bar
@@ -309,7 +336,7 @@ class ImageGenerator:
 
         # Return only valid images
         images = valid_images
-        
+
         # Clear MPS cache after generation to prevent memory buildup
         if self.device == "mps":
             torch.mps.empty_cache()

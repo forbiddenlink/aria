@@ -63,7 +63,7 @@ class ImageUpscaler:
         noise_level: int = 20,
     ) -> Image.Image:
         """Upscale an image by 4x.
-        
+
         Args:
             image: Input low-res image
             prompt: Text description to guide hallucination of details
@@ -82,7 +82,7 @@ class ImageUpscaler:
             # SD x4 Upscaler usually takes low-res images.
             # If image is already large, resizing might be needed or chunking.
             # But the model creates 4x output.
-            
+
             result = self.pipeline(
                 prompt=prompt,
                 image=image,

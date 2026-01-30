@@ -35,13 +35,13 @@ class ImageInpainter:
                 use_safetensors=True,
                 variant="fp16" if self.dtype == torch.float16 else None,
             )
-            
+
             # Optimizations
             if self.device == "cuda":
                 self.pipeline.enable_model_cpu_offload()
-            
+
             self.pipeline.enable_attention_slicing()
-            
+
             # Scheduler
             self.pipeline.scheduler = DPMSolverMultistepScheduler.from_config(
                 self.pipeline.scheduler.config
@@ -70,7 +70,7 @@ class ImageInpainter:
         strength: float = 0.75,
     ) -> Image.Image:
         """Inpaint a specific area of the image defined by the mask.
-        
+
         Args:
             image: Original image
             mask: Black and white mask image (white = inpaint this)
@@ -79,9 +79,9 @@ class ImageInpainter:
         """
         if not self.pipeline:
             self.load_model()
-            
+
         logger.info("inpainting_image", prompt=prompt[:50])
-        
+
         result = self.pipeline(
             prompt=prompt,
             negative_prompt=negative_prompt,
@@ -91,5 +91,5 @@ class ImageInpainter:
             guidance_scale=guidance_scale,
             strength=strength,
         ).images[0]
-        
+
         return result

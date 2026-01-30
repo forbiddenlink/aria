@@ -4,16 +4,16 @@
 Fourth collection featuring modern art movements, experimental techniques, and creative visions.
 """
 
-import sys
-import random
 import argparse
+import random
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.ai_artist.main import AIArtist
-from src.ai_artist.utils.logging import configure_logging, get_logger
 from src.ai_artist.utils.config import load_config
+from src.ai_artist.utils.logging import configure_logging, get_logger
 
 configure_logging()
 logger = get_logger(__name__)
@@ -30,7 +30,6 @@ ARTISTIC_PROMPTS_2 = {
         "kabuki actor portrait, bold makeup, dynamic pose, theatrical drama",
         "autumn leaves on stream, yamatoe painting, seasonal poetry visual",
     ],
-    
     "contemporary_abstract": [
         "fluid acrylic pour, cellular patterns, organic color interactions",
         "resin art with gold leaf, glossy depths, luxury abstract",
@@ -41,7 +40,6 @@ ARTISTIC_PROMPTS_2 = {
         "pour painting with metallics, flowing liquid metal aesthetic",
         "abstract landscape suggestion, turner modern interpretation, atmospheric",
     ],
-    
     "renaissance_masters": [
         "madonna and child, botticelli grace, tempera on panel, classical beauty",
         "creation hands almost touching, michelangelo fresco, divine moment",
@@ -52,7 +50,6 @@ ARTISTIC_PROMPTS_2 = {
         "mythological transformation scene, ovid metamorphoses, baroque drama",
         "sfumato portrait, leonardo technique, mysterious smile, soft edges",
     ],
-    
     "photo_realism": [
         "water droplets on glass, hyper-realistic detail, crystal clarity",
         "chrome reflection sphere, perfect mirror surface, photorealistic metal",
@@ -63,7 +60,6 @@ ARTISTIC_PROMPTS_2 = {
         "crumpled paper texture, shadow and highlight, trompe l'oeil mastery",
         "water splash frozen, liquid sculpture, hyper-realistic transparency",
     ],
-    
     "expressionist_emotion": [
         "the scream bridge scene, munch anguish, swirling sky, existential",
         "bridge at night, kirchner style, sharp angles, emotional color",
@@ -74,7 +70,6 @@ ARTISTIC_PROMPTS_2 = {
         "self portrait in mirror, harsh light, confrontational honesty",
         "dancers with exaggerated movement, emotion through form and color",
     ],
-    
     "op_art_illusion": [
         "black and white stripes bending, bridget riley optical vibration",
         "concentric circles creating movement, vasarely kinetic illusion",
@@ -85,7 +80,6 @@ ARTISTIC_PROMPTS_2 = {
         "checkerboard perspective distortion, space warping visually",
         "moire pattern interference, mathematical beauty, optical art",
     ],
-    
     "mixed_media_texture": [
         "collage with fabric and paper, robert rauschenberg combine, textural",
         "assemblage with found objects, three dimensional surface, contemporary",
@@ -96,7 +90,6 @@ ARTISTIC_PROMPTS_2 = {
         "metallic leaf and oil paint, gustav klimt gold, decorative richness",
         "torn paper revealing layers, archaeological art, stratified history",
     ],
-    
     "symbolist_mystery": [
         "woman with closed eyes surrounded by flowers, redon dream state",
         "angel with downcast gaze, burne-jones melancholy, medieval revival",
@@ -107,7 +100,6 @@ ARTISTIC_PROMPTS_2 = {
         "sphinx riddle scene, enigmatic symbolism, philosophical mystery",
         "peacock displaying meaning, luxury and vanity symbol, decorative",
     ],
-    
     "kinetic_movement": [
         "mobile sculpture in motion blur, calder influence, suspended balance",
         "spinning optical disc, motion creating color, kinetic illusion",
@@ -118,7 +110,6 @@ ARTISTIC_PROMPTS_2 = {
         "flip book animation single frame, motion suggested, sequential art",
         "zoetrope image slice, pre-cinema animation, movement captured",
     ],
-    
     "organic_biomorphic": [
         "cellular forms multiplying, biomorphic abstraction, life force",
         "amorphous shapes flowing, jean arp organic sculpture influence",
@@ -129,7 +120,6 @@ ARTISTIC_PROMPTS_2 = {
         "sea creature inspired forms, underwater biomorphism, fluid shapes",
         "microscopic life enlarged, scientific illustration as abstract art",
     ],
-    
     "naive_folk_art": [
         "village scene with flat perspective, grandma moses americana",
         "animals in paradise garden, henri rousseau jungle dream, innocent eye",
@@ -140,7 +130,6 @@ ARTISTIC_PROMPTS_2 = {
         "market day busy scene, narrative folk art, storytelling in paint",
         "seasons represented symbolically, folk tradition, decorative border",
     ],
-    
     "constructivist_design": [
         "red wedge composition, el lissitzky revolutionary, geometric power",
         "photomontage with text, rodchenko technique, propaganda aesthetic",
@@ -151,7 +140,6 @@ ARTISTIC_PROMPTS_2 = {
         "scaffolding and cranes, construction as subject, industrial beauty",
         "suprematist composition, black square on white, ultimate abstraction",
     ],
-    
     "symbolist_dreams": [
         "island of the dead, bocklin mystery, cypress trees, somber journey",
         "ophelia floating in stream, millais tragedy, pre-raphaelite detail",
@@ -162,7 +150,6 @@ ARTISTIC_PROMPTS_2 = {
         "persephone in underworld, seasonal myth, symbolist interpretation",
         "medusa reflection in shield, clever symbolism, indirect viewing",
     ],
-    
     "color_field_meditation": [
         "horizontal bands of color, newman zip, contemplative space",
         "stained canvas soft edges, frankenthaler soak-stain, lyrical",
@@ -173,7 +160,6 @@ ARTISTIC_PROMPTS_2 = {
         "soft edge hard edge contrast, color temperature study",
         "luminous color glow, light emanating, transcendent hue",
     ],
-    
     "assemblage_sculpture": [
         "nailed wood construction, louise nevelson wall, monochrome power",
         "bicycle parts welded, picasso bull's head wit, found object genius",
@@ -184,7 +170,6 @@ ARTISTIC_PROMPTS_2 = {
         "clock parts gears exposed, steampunk assemblage, time deconstructed",
         "broken ceramics reconstructed, kintsugi philosophy, beauty in repair",
     ],
-    
     "action_gesture": [
         "splattered paint energy, pollock drip technique, kinetic creation",
         "brushstroke calligraphic, franz kline gesture, black on white power",
@@ -195,7 +180,6 @@ ARTISTIC_PROMPTS_2 = {
         "finger painting primal, direct touch, unmediated expression",
         "automatic drawing, surrealist technique, unconscious gesture",
     ],
-    
     "figurative_expression": [
         "seated figure heavy brush, freud psychological, flesh rendered thick",
         "bacon screaming pope, distorted portrait, existential horror",
@@ -206,7 +190,6 @@ ARTISTIC_PROMPTS_2 = {
         "swimmer underwater, chlorine blue, aquatic figure distortion",
         "conversation between figures, social realism, everyday moment elevated",
     ],
-    
     "decorative_pattern": [
         "william morris wallpaper, intertwined vines, arts and crafts movement",
         "klimt portrait with patterns, gold leaf, decorative brilliance",
@@ -217,7 +200,6 @@ ARTISTIC_PROMPTS_2 = {
         "paisley swirl elaborate, indian textile influence, organic pattern",
         "art deco repeated forms, luxury pattern, geometric elegance",
     ],
-    
     "light_space": [
         "james turrell skyspace, aperture to sky, light as medium",
         "dan flavin fluorescent tubes, minimal light sculpture, color space",
@@ -228,7 +210,6 @@ ARTISTIC_PROMPTS_2 = {
         "sunset color study, natural light phenomenon, atmospheric optics",
         "candlelight chiaroscuro, rembrandt lighting, intimate illumination",
     ],
-    
     "social_commentary": [
         "guernica war horror, picasso protest, cubist tragedy, anti-war",
         "migrant mother photograph, dorothea lange, depression era, dignity",
@@ -250,21 +231,21 @@ def count_all_prompts() -> int:
 def collect_prompts(categories: list = None, randomize: bool = False):
     """Collect prompts from specified categories."""
     available_prompts = []
-    
+
     # Filter categories if specified
     prompt_dict = ARTISTIC_PROMPTS_2
     if categories:
         prompt_dict = {k: v for k, v in ARTISTIC_PROMPTS_2.items() if k in categories}
-    
+
     # Collect all prompts with their categories
     for category, prompts in prompt_dict.items():
         for prompt in prompts:
             available_prompts.append((category, prompt))
-    
+
     # Randomize if requested
     if randomize:
         random.shuffle(available_prompts)
-    
+
     return available_prompts
 
 
@@ -286,10 +267,10 @@ def get_generation_params(vary_parameters: bool) -> dict:
 
 def print_header(total: int, artist: AIArtist, randomize: bool, vary_parameters: bool):
     """Print generation header."""
-    print(f"\n{'='*70}")
-    print(f"🎨 AI ARTIST - ARTISTIC STYLES COLLECTION II")
-    print(f"{'='*70}")
-    print(f"📊 Statistics:")
+    print(f"\n{'=' * 70}")
+    print("🎨 AI ARTIST - ARTISTIC STYLES COLLECTION II")
+    print(f"{'=' * 70}")
+    print("📊 Statistics:")
     print(f"   • Total categories: {len(ARTISTIC_PROMPTS_2)}")
     print(f"   • Available prompts: {count_all_prompts()}")
     print(f"   • Generating: {total} artworks")
@@ -297,36 +278,44 @@ def print_header(total: int, artist: AIArtist, randomize: bool, vary_parameters:
     print(f"   • Model: {artist.generator.model_id}")
     print(f"   • Randomized: {'Yes' if randomize else 'No'}")
     print(f"   • Parameter variation: {'Yes' if vary_parameters else 'No'}")
-    print(f"{'='*70}\n")
+    print(f"{'=' * 70}\n")
 
 
-def print_progress(i: int, total: int, category: str, prompt: str, params: dict, vary: bool):
+def print_progress(
+    i: int, total: int, category: str, prompt: str, params: dict, vary: bool
+):
     """Print progress for current generation."""
     print(f"[{i}/{total}] Category: {category}")
     print(f"   Prompt: {prompt[:65]}...")
     if vary:
-        print(f"   Params: steps={params['steps']}, guidance={params['guidance']}, seed={params['seed']}")
+        print(
+            f"   Params: steps={params['steps']}, guidance={params['guidance']}, seed={params['seed']}"
+        )
 
 
-def print_summary(success_count: int, total: int, failed_prompts: list, category_counts: dict):
+def print_summary(
+    success_count: int, total: int, failed_prompts: list, category_counts: dict
+):
     """Print final summary."""
-    print(f"\n{'='*70}")
-    print(f"✨ GENERATION COMPLETE!")
-    print(f"{'='*70}")
-    print(f"📊 Results:")
-    print(f"   ✅ Successful: {success_count}/{total} ({success_count/total*100:.1f}%)")
+    print(f"\n{'=' * 70}")
+    print("✨ GENERATION COMPLETE!")
+    print(f"{'=' * 70}")
+    print("📊 Results:")
+    print(
+        f"   ✅ Successful: {success_count}/{total} ({success_count / total * 100:.1f}%)"
+    )
     print(f"   ❌ Failed: {len(failed_prompts)}")
-    print(f"\n📁 Category breakdown:")
+    print("\n📁 Category breakdown:")
     for cat, count in sorted(category_counts.items(), key=lambda x: x[1], reverse=True):
         print(f"   • {cat}: {count} images")
-    
+
     if failed_prompts:
-        print(f"\n❌ Failed prompts:")
+        print("\n❌ Failed prompts:")
         for cat, prompt in failed_prompts:
             print(f"   • [{cat}] {prompt[:50]}...")
-    
-    print(f"\n💾 All images saved to gallery/2026/")
-    print(f"{'='*70}\n")
+
+    print("\n💾 All images saved to gallery/2026/")
+    print(f"{'=' * 70}\n")
 
 
 def generate_artistic_collection_2(
@@ -336,28 +325,30 @@ def generate_artistic_collection_2(
     vary_parameters: bool = True,
 ):
     """Generate second artistic collection with more style-focused prompts.
-    
+
     Args:
         num_images: Number of images to generate (None = all prompts)
         categories: Specific categories to use (None = all categories)
         randomize: Whether to shuffle prompts randomly
         vary_parameters: Whether to vary generation parameters for variety
     """
-    logger.info("artistic_collection_2_started", 
-                num_images=num_images, 
-                categories=categories,
-                randomize=randomize)
-    
+    logger.info(
+        "artistic_collection_2_started",
+        num_images=num_images,
+        categories=categories,
+        randomize=randomize,
+    )
+
     # Load configuration
     config_path = Path("config/config.yaml")
     config = load_config(config_path)
-    
+
     # Initialize AI Artist
     artist = AIArtist(config)
-    
+
     # Detect best available device
     import torch
-    
+
     if torch.cuda.is_available():
         device = "cuda"
         dtype = torch.float16
@@ -370,44 +361,44 @@ def generate_artistic_collection_2(
         device = "cpu"
         dtype = torch.float32
         logger.info("using_cpu_device")
-    
+
     # Configure generator for optimal performance
     artist.generator.device = device
     artist.generator.dtype = dtype
     artist.generator.model_id = "runwayml/stable-diffusion-v1-5"
-    
+
     # Load model
     artist.generator.load_model()
-    
+
     # Collect and prepare prompts
     available_prompts = collect_prompts(categories, randomize)
-    
+
     # Limit to requested number
     if num_images:
         available_prompts = available_prompts[:num_images]
-    
+
     total = len(available_prompts)
-    
+
     # Display header
     print_header(total, artist, randomize, vary_parameters)
-    
+
     # Generation statistics
     success_count = 0
     failed_prompts = []
     category_counts = {}
-    
+
     # Generate images
     for i, (category, prompt) in enumerate(available_prompts, 1):
         try:
             # Track category stats
             category_counts[category] = category_counts.get(category, 0) + 1
-            
+
             # Get generation parameters
             params = get_generation_params(vary_parameters)
-            
+
             # Display progress
             print_progress(i, total, category, prompt, params, vary_parameters)
-            
+
             # Generate image with proper resolution for SD 1.5
             images = artist.generator.generate(
                 prompt=prompt,
@@ -419,7 +410,7 @@ def generate_artistic_collection_2(
                 guidance_scale=params["guidance"],
                 seed=params["seed"],
             )
-            
+
             # Save to gallery
             if images:
                 metadata = {
@@ -431,38 +422,42 @@ def generate_artistic_collection_2(
                     "seed": params["seed"] if params["seed"] else "random",
                     "collection": "artistic_2",
                 }
-                
+
                 saved_path = artist.gallery.save_image(
                     image=images[0],
                     prompt=prompt,
                     metadata=metadata,
                     featured=False,
                 )
-                
+
                 success_count += 1
                 print(f"   ✅ Saved: {saved_path.name}\n")
             else:
                 failed_prompts.append((category, prompt))
-                print(f"   ❌ Generation failed\n")
-                
+                print("   ❌ Generation failed\n")
+
         except KeyboardInterrupt:
             logger.info("generation_interrupted_by_user")
             print("\n\n⚠️  Generation interrupted by user")
             break
         except Exception as e:
-            logger.error("generation_failed", category=category, prompt=prompt[:50], error=str(e))
+            logger.error(
+                "generation_failed", category=category, prompt=prompt[:50], error=str(e)
+            )
             failed_prompts.append((category, prompt))
             print(f"   ❌ Error: {e}\n")
             continue
-    
+
     # Print final summary
     print_summary(success_count, total, failed_prompts, category_counts)
-    
+
     # Cleanup
     artist.generator.unload()
-    logger.info("artistic_collection_2_complete", 
-                success=success_count, 
-                failed=len(failed_prompts))
+    logger.info(
+        "artistic_collection_2_complete",
+        success=success_count,
+        failed=len(failed_prompts),
+    )
 
 
 def main():
@@ -471,7 +466,8 @@ def main():
         description="Generate second artistic collection with more creative styles"
     )
     parser.add_argument(
-        "-n", "--num-images",
+        "-n",
+        "--num-images",
         type=int,
         help="Number of images to generate (default: all)",
     )
@@ -481,7 +477,8 @@ def main():
         help="Generate all prompts (same as omitting -n)",
     )
     parser.add_argument(
-        "-c", "--categories",
+        "-c",
+        "--categories",
         nargs="+",
         help="Specific categories to generate from",
     )
@@ -500,16 +497,18 @@ def main():
         action="store_true",
         help="List all available categories and exit",
     )
-    
+
     args = parser.parse_args()
-    
+
     if args.list_categories:
         print("\n📋 Available Artistic Categories (Collection 2):\n")
         for i, (category, prompts) in enumerate(ARTISTIC_PROMPTS_2.items(), 1):
             print(f"{i:2}. {category:30} ({len(prompts)} prompts)")
-        print(f"\nTotal: {len(ARTISTIC_PROMPTS_2)} categories, {count_all_prompts()} prompts\n")
+        print(
+            f"\nTotal: {len(ARTISTIC_PROMPTS_2)} categories, {count_all_prompts()} prompts\n"
+        )
         return
-    
+
     generate_artistic_collection_2(
         num_images=args.num_images,
         categories=args.categories,
