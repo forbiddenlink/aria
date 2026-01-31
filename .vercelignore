@@ -20,6 +20,7 @@ uv.lock
 poetry.lock
 Pipfile.lock
 pyproject.toml
+requirements.txt
 
 # Large Model Files
 models/
