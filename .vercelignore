@@ -1,27 +1,52 @@
-# Vercel ignore file
-node_modules
-venv
-__pycache__
+# Vercel ignore file - Gallery-only mode doesn't need images!
+# The deployed app just shows a message, not the actual gallery
+
+# All gallery images (too large for deployment)
+gallery/
+
+# Dependencies & Virtual Envs
+node_modules/
+venv/
+__pycache__/
 *.pyc
-.pytest_cache
-htmlcov
+.pytest_cache/
+htmlcov/
 .coverage
-.mypy_cache
-.ruff_cache
-models/*
-!models/.gitkeep
-datasets/*
-!datasets/.gitkeep
-gallery/test/*
-logs/*
-*.log
-.DS_Store
-.env
+.mypy_cache/
+.ruff_cache/
+
+# Large Model Files
+models/
+datasets/
 *.pth
 *.ckpt
 *.safetensors
-.git
-.github
-docs/archive
-thoughts
-MagicMock
+
+# Logs & Data
+logs/
+*.log
+data/
+
+# System Files
+.DS_Store
+.env
+.git/
+.github/
+
+# Documentation & Archive
+docs/
+thoughts/
+MagicMock/
+
+# Scripts & Tests
+scripts/
+tests/
+alembic/
+
+# Config files
+*.ini
+pytest.ini
+.pre-commit-config.yaml
+squirrel.toml
+*.md
+!README.md
