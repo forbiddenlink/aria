@@ -67,5 +67,5 @@ EXPOSE 8000
 # Note: Railway's healthcheckPath in railway.toml handles this, so we disable Docker healthcheck
 # HEALTHCHECK NONE means Railway's external healthcheck will be used instead
 
-# Run web server - use shell form to allow variable substitution
-CMD uvicorn ai_artist.web.app:app --host 0.0.0.0 --port ${PORT:-8000}
+# Run web server - use explicit shell to properly expand PORT variable
+CMD ["sh", "-c", "uvicorn ai_artist.web.app:app --host 0.0.0.0 --port ${PORT:-8000}"]
