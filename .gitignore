@@ -24,7 +24,7 @@ build/
 # Data and Models
 models/cache/
 models/lora/*.safetensors
-gallery/
+/gallery/
 data/*.db
 data/*.db-*
 logs/
