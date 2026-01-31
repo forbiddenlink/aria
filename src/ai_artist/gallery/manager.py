@@ -76,9 +76,11 @@ class GalleryManager:
         return image_path
 
     def list_images(self, featured_only: bool = False) -> list[Path]:
-        """List all images in gallery."""
+        """List all images in gallery, sorted by modification time (newest first)."""
         pattern = "**/featured/*.png" if featured_only else "**/*.png"
-        return sorted(self.gallery_path.glob(pattern), reverse=True)
+        images = list(self.gallery_path.glob(pattern))
+        # Sort by modification time, newest first
+        return sorted(images, key=lambda p: p.stat().st_mtime, reverse=True)
 
     def cleanup_invalid_images(self, dry_run: bool = False) -> dict[str, int | list[str]]:
         """Scan gallery and remove black/blank/invalid images.
