@@ -16,6 +16,7 @@ from .core.upscaler import ImageUpscaler
 from .curation.curator import ImageCurator
 from .gallery.manager import GalleryManager
 from .models.manager import ModelManager
+from .personality.critic import ArtistCritic
 from .personality.enhanced_memory import EnhancedMemorySystem
 from .personality.memory import ArtistMemory
 from .personality.moods import MoodSystem
@@ -60,6 +61,8 @@ class AIArtist:
         self.enhanced_memory = EnhancedMemorySystem()
         # Artistic identity and voice
         self.profile = ArtisticProfile(name=name)
+        # Internal critic for self-evaluation
+        self.critic = ArtistCritic(name="Aria's Inner Critic")
 
         # Initialize all components
         self._initialize()
@@ -203,6 +206,70 @@ class AIArtist:
                     mood=self.mood_system.current_mood.value,
                     source="autonomous_choice",
                 )
+
+            # === CRITIQUE LOOP ===
+            # Evaluate the concept before committing to generation
+            max_critique_iterations = 3
+            critique_history = []
+
+            for critique_iteration in range(max_critique_iterations):
+                # Build concept for critique
+                concept = {
+                    "subject": query,
+                    "mood": self.mood_system.current_mood.value,
+                    "style": self.mood_system.get_mood_style(),
+                    "colors": self.mood_system.get_mood_colors(),
+                    "complexity": self.mood_system.energy_level,
+                }
+
+                # Get artist state for context
+                artist_state = {
+                    "mood": self.mood_system.current_mood.value,
+                    "energy": self.mood_system.energy_level,
+                    "recent_subjects": [
+                        ep.get("details", {}).get("subject", "")
+                        for ep in self.enhanced_memory.get_recent_episodes(5)
+                    ],
+                }
+
+                # Critique the concept
+                critique_result = self.critic.critique_concept(concept, artist_state)
+                critique_history.append(critique_result)
+
+                logger.info(
+                    "critique_received",
+                    iteration=critique_iteration + 1,
+                    approved=critique_result["approved"],
+                    confidence=critique_result["confidence"],
+                    critique=critique_result["critique"][:100],
+                )
+
+                if critique_result["approved"]:
+                    logger.info("concept_approved", iterations=critique_iteration + 1)
+                    break
+
+                # Not approved - try to improve
+                if critique_iteration < max_critique_iterations - 1:
+                    # Get a new subject based on suggestions
+                    suggestions = critique_result.get("suggestions", [])
+                    if "fresh angle" in str(suggestions).lower():
+                        # Try a completely different subject
+                        query = self.mood_system.get_mood_based_subject()
+                        logger.info(
+                            "concept_revised",
+                            reason="novelty",
+                            new_subject=query,
+                        )
+                    else:
+                        # Stick with subject but it will get new style treatment
+                        logger.info("concept_revised", reason="refinement")
+            else:
+                # Exhausted iterations, proceed anyway
+                logger.warning(
+                    "critique_iterations_exhausted",
+                    proceeding_anyway=True,
+                )
+            # === END CRITIQUE LOOP ===
 
             if self.unsplash is None:
                 raise RuntimeError("Unsplash client not initialized")
@@ -453,6 +520,8 @@ class AIArtist:
                     "colors": self.mood_system.get_mood_colors(),
                     "reflection": reflection,
                     "image_path": str(saved_path),
+                    "critique_iterations": len(critique_history),
+                    "final_critique": critique_history[-1] if critique_history else None,
                 },
                 emotional_state={
                     "mood": self.mood_system.current_mood.value,

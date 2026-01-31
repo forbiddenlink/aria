@@ -268,3 +268,8 @@ class MoodSystem:
         """Get the color palette for current mood."""
         influences = self.mood_influences[self.current_mood]
         return influences["colors"]
+
+    def get_mood_style(self) -> str:
+        """Get a style appropriate for current mood."""
+        influences = self.mood_influences[self.current_mood]
+        return random.choice(influences["styles"])
