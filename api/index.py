@@ -287,7 +287,18 @@ class handler(BaseHTTPRequestHandler):
             try {
                 // Fetch all files from the archive folder
                 const response = await fetch('https://api.github.com/repos/forbiddenlink/aria/contents/gallery/2026/01/30/archive');
+                
+                if (!response.ok) {
+                    throw new Error(`GitHub API error: ${response.status}`);
+                }
+                
                 const files = await response.json();
+                
+                // Check if we got an array (success) or an object (error)
+                if (!Array.isArray(files)) {
+                    console.error('GitHub API response:', files);
+                    throw new Error(files.message || 'Invalid response from GitHub');
+                }
                 
                 // Group files by base name (image + json pairs)
                 const artworks = {};
@@ -348,11 +359,22 @@ class handler(BaseHTTPRequestHandler):
                 console.error('Error loading gallery:', error);
                 gallery.className = '';
                 gallery.innerHTML = `
-                    <p style="color: #ff6b6b;">Unable to load gallery</p>
-                    <p style="color: #999; font-size: 0.9em;">Error: ${error.message}</p>
-                    <a href="https://github.com/forbiddenlink/aria/tree/main/gallery" 
-                       target="_blank" 
-                       style="color: #667eea; display: inline-block; margin-top: 15px;">View on GitHub →</a>
+                    <div style="text-align: center; padding: 40px;">
+                        <p style="color: #ff6b6b; margin-bottom: 10px;">Unable to load gallery from GitHub</p>
+                        <p style="color: #999; font-size: 0.9em; margin-bottom: 5px;">This may be due to:</p>
+                        <ul style="color: #999; font-size: 0.85em; text-align: left; max-width: 400px; margin: 15px auto; line-height: 1.6;">
+                            <li>GitHub API rate limiting</li>
+                            <li>Repository privacy settings</li>
+                            <li>Network connectivity issues</li>
+                        </ul>
+                        <p style="color: #999; font-size: 0.85em; margin-top: 20px;">Error details: ${error.message}</p>
+                        <a href="https://github.com/forbiddenlink/aria/tree/main/gallery/2026/01/30/archive" 
+                           target="_blank" 
+                           class="btn" 
+                           style="display: inline-block; margin-top: 20px; text-decoration: none;">
+                           View Gallery on GitHub →
+                        </a>
+                    </div>
                 `;
             }
         }
