@@ -191,8 +191,15 @@ class handler(BaseHTTPRequestHandler):
             <p style="margin-top: 15px; font-size: 0.9em;">This is a lightweight gallery interface. For full image generation with GPU support, deploy using Docker on Railway, Render, or a GPU-enabled server.</p>
         </div>
 
+        <div class="info-box">
+            <h3>🖼️ Recent Artwork</h3>
+            <div id="gallery" style="margin-top: 20px;">
+                <p style="color: #999;">Loading artwork...</p>
+            </div>
+        </div>
+
         <div class="cta">
-            <a href="https://github.com/forbiddenlink/aria" class="btn" target="_blank">View on GitHub</a>
+            <a href="https://github.com/forbiddenlink/aria" class="btn" target="_blank">View Full Collection on GitHub</a>
         </div>
 
         <footer>
@@ -200,6 +207,49 @@ class handler(BaseHTTPRequestHandler):
             <a href="/health">API Health Check</a></p>
         </footer>
     </div>
+
+    <script>
+        // Fetch gallery images from GitHub
+        async function loadGallery() {
+            const gallery = document.getElementById('gallery');
+            try {
+                // Fetch from GitHub API
+                const response = await fetch('https://api.github.com/repos/forbiddenlink/aria/contents/gallery/2026/01/30/archive');
+                const files = await response.json();
+                
+                // Filter for image files
+                const images = files.filter(f => f.name.match(/\\.(jpg|jpeg|png|gif)$/i));
+                
+                if (images.length === 0) {
+                    gallery.innerHTML = '<p style="color: #999;">No artwork available yet. Aria is preparing her first pieces!</p>';
+                    return;
+                }
+                
+                // Display images
+                gallery.innerHTML = images.slice(0, 6).map(img => `
+                    <div style="margin: 15px 0;">
+                        <img src="${img.download_url}" 
+                             alt="${img.name}" 
+                             style="width: 100%; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);"
+                             loading="lazy">
+                        <p style="font-size: 0.85em; color: #999; margin-top: 8px;">${img.name.replace(/\\.[^/.]+$/, "").replace(/_/g, " ")}</p>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Error loading gallery:', error);
+                gallery.innerHTML = `
+                    <p style="color: #999;">Gallery images available at:</p>
+                    <a href="https://github.com/forbiddenlink/aria/tree/main/gallery" 
+                       target="_blank" 
+                       style="color: #667eea;">View on GitHub →</a>
+                `;
+            }
+        }
+        
+        // Load gallery when page loads
+        loadGallery();
+    </script>
 </body>
 </html>"""
         self.wfile.write(html.encode())
