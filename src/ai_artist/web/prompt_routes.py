@@ -154,7 +154,9 @@ async def list_style_presets(
         # Filter by category if provided
         if category:
             all_presets = [
-                p for p in all_presets if p.category and category.lower() == p.category.lower()
+                p
+                for p in all_presets
+                if p.category and category.lower() == p.category.lower()
             ]
 
         return [
