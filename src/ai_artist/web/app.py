@@ -27,6 +27,7 @@ from slowapi.util import get_remote_address
 from ..gallery.manager import GalleryManager
 from ..utils.config import WebConfig
 from ..utils.logging import get_logger
+from .aria_routes import router as aria_router
 from .dependencies import GalleryManagerDep, GalleryPathDep, set_gallery_manager
 from .exception_handlers import (
     general_exception_handler,
@@ -46,6 +47,7 @@ from .middleware import (
     SecurityHeadersMiddleware,
     add_cors_middleware,
 )
+from .prompt_routes import router as prompt_router
 from .websocket import manager as ws_manager
 
 # Concurrency control for image generation
@@ -297,11 +299,8 @@ app.add_middleware(ErrorHandlingMiddleware)
 
 # Include routers
 app.include_router(health_router)
-
-# Import and include Aria routes
-from .aria_routes import router as aria_router
-
 app.include_router(aria_router)
+app.include_router(prompt_router)
 
 # Templates directory
 templates_dir = Path(__file__).parent / "templates"

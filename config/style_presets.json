@@ -1,0 +1,122 @@
+{
+  "Cinematic": {
+    "name": "Cinematic",
+    "positive": "cinematic lighting, dramatic shadows, film grain, depth of field, bokeh",
+    "negative": "flat lighting, overexposed, amateur",
+    "description": "Movie-like quality with dramatic lighting",
+    "category": "photography",
+    "tags": [
+      "dramatic",
+      "professional",
+      "film"
+    ]
+  },
+  "Dreamy": {
+    "name": "Dreamy",
+    "positive": "soft focus, ethereal, pastel colors, dreamlike atmosphere, gentle lighting",
+    "negative": "harsh, realistic, sharp details",
+    "description": "Soft and dreamlike aesthetic",
+    "category": "art",
+    "tags": [
+      "soft",
+      "fantasy",
+      "atmospheric"
+    ]
+  },
+  "Vibrant": {
+    "name": "Vibrant",
+    "positive": "vibrant colors, high saturation, bold contrasts, energetic, vivid",
+    "negative": "muted, desaturated, dull, washed out",
+    "description": "Bold and colorful",
+    "category": "art",
+    "tags": [
+      "colorful",
+      "bold",
+      "energetic"
+    ]
+  },
+  "Minimalist": {
+    "name": "Minimalist",
+    "positive": "minimalist, clean composition, negative space, simple, elegant",
+    "negative": "cluttered, busy, complex, ornate",
+    "description": "Clean and simple aesthetic",
+    "category": "art",
+    "tags": [
+      "simple",
+      "clean",
+      "modern"
+    ]
+  },
+  "Oil Painting": {
+    "name": "Oil Painting",
+    "positive": "oil painting, brushstrokes visible, canvas texture, {prompt}, masterpiece",
+    "negative": "digital art, photography, 3d render, smooth",
+    "description": "Traditional oil painting style",
+    "category": "art",
+    "tags": [
+      "traditional",
+      "painting",
+      "classic"
+    ]
+  },
+  "Studio Portrait": {
+    "name": "Studio Portrait",
+    "positive": "professional studio lighting, soft box lighting, {prompt}, high resolution, detailed",
+    "negative": "amateur, poorly lit, blurry, distorted",
+    "description": "Professional portrait photography",
+    "category": "photography",
+    "tags": [
+      "portrait",
+      "professional",
+      "studio"
+    ]
+  },
+  "Watercolor": {
+    "name": "Watercolor",
+    "positive": "watercolor painting, soft blends, flowing colors, translucent, {prompt}",
+    "negative": "digital, sharp edges, opaque, photographic",
+    "description": "Soft watercolor painting style",
+    "category": "art",
+    "tags": [
+      "painting",
+      "traditional",
+      "soft"
+    ]
+  },
+  "Dark Moody": {
+    "name": "Dark Moody",
+    "positive": "dark atmosphere, moody lighting, dramatic shadows, cinematic, {prompt}",
+    "negative": "bright, cheerful, flat lighting, overexposed",
+    "description": "Dark and atmospheric mood",
+    "category": "photography",
+    "tags": [
+      "dark",
+      "atmospheric",
+      "dramatic"
+    ]
+  },
+  "Anime": {
+    "name": "Anime",
+    "positive": "anime style, cel shaded, vibrant colors, {prompt}, detailed",
+    "negative": "realistic, photographic, western cartoon, 3d",
+    "description": "Japanese anime art style",
+    "category": "art",
+    "tags": [
+      "anime",
+      "illustration",
+      "stylized"
+    ]
+  },
+  "Retro Vintage": {
+    "name": "Retro Vintage",
+    "positive": "retro, vintage aesthetic, faded colors, film grain, 1970s, nostalgic",
+    "negative": "modern, digital, crisp, high tech",
+    "description": "Vintage 70s aesthetic",
+    "category": "photography",
+    "tags": [
+      "vintage",
+      "retro",
+      "nostalgic"
+    ]
+  }
+}
