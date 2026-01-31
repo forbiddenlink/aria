@@ -115,5 +115,5 @@ async def vercel_health():
     }
 
 
-# Export for Vercel
-handler = app
+# Export for Vercel - the app itself is the handler
+# Vercel will automatically wrap FastAPI apps
