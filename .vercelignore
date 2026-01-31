@@ -15,6 +15,12 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 
+# Lock files - we use requirements-vercel.txt instead
+uv.lock
+poetry.lock
+Pipfile.lock
+pyproject.toml
+
 # Large Model Files
 models/
 datasets/
