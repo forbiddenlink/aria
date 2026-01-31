@@ -6,20 +6,11 @@ on Railway, Render, or a GPU-enabled cloud provider.
 """
 
 import os
-import sys
 from pathlib import Path
-
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-# Set gallery-only mode environment variable
-os.environ["GALLERY_ONLY_MODE"] = "true"
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-
-# Import the main app but modify for serverless
 
 # Create a lightweight app for Vercel
 app = FastAPI(
