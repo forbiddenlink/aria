@@ -136,8 +136,8 @@ class APIKeysConfig(BaseModel):
     Access the actual value with .get_secret_value() method.
     """
 
-    unsplash_access_key: SecretStr
-    unsplash_secret_key: SecretStr
+    unsplash_access_key: SecretStr | None = None
+    unsplash_secret_key: SecretStr | None = None
     pexels_api_key: SecretStr | None = None
     hf_token: SecretStr | None = None
     civitai_api_key: SecretStr | None = None
@@ -184,27 +184,28 @@ class Config(BaseSettings):
     autonomy: AutonomyConfig = Field(default_factory=AutonomyConfig)  # type: ignore[arg-type]
     trends: TrendsConfig = Field(default_factory=TrendsConfig)  # type: ignore[arg-type]
     model_manager: ModelManagerConfig = Field(default_factory=ModelManagerConfig)  # type: ignore[arg-type]
-    api_keys: APIKeysConfig
+    api_keys: APIKeysConfig = Field(default_factory=APIKeysConfig)  # type: ignore[arg-type]
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)  # type: ignore[arg-type]
     web: WebConfig = Field(default_factory=WebConfig)  # type: ignore[arg-type]
 
 
-def load_config(config_path: Path) -> Config:
+def load_config(config_path: Path | None = None) -> Config:
     """Load configuration from YAML file.
 
+    Args:
+        config_path: Path to config file. If None or file doesn't exist,
+                    returns default config (gallery-only mode).
+
     Raises:
-        FileNotFoundError: If config file doesn't exist
-        ValueError: If required configuration is missing
+        ValueError: If config file exists but is invalid
     """
+    # If no config path or file doesn't exist, use defaults
+    if config_path is None or not config_path.exists():
+        return Config()
+
     with open(config_path) as f:
         data = yaml.safe_load(f)
     config = Config(**data)
-
-    # Validate required fields
-    if not config.api_keys.unsplash_access_key.get_secret_value():
-        raise ValueError("unsplash_access_key is required in config")
-    if not config.api_keys.unsplash_secret_key.get_secret_value():
-        raise ValueError("unsplash_secret_key is required in config")
 
     return config
 

@@ -734,6 +734,14 @@ async def generate_artwork(
         try:
             gallery_path_local = Path("gallery")
             config_path = Path("config/config.yaml")
+            
+            # Check if config exists - if not, we're in gallery-only mode
+            if not config_path.exists():
+                raise ValueError(
+                    "Image generation is not available. This instance is running in gallery-only mode. "
+                    "To enable generation, provide a config/config.yaml file with model settings."
+                )
+            
             config = load_config(config_path)
 
             # Use context manager for automatic cleanup
