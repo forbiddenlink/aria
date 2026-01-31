@@ -1,20 +1,5 @@
 {
   "name": "Aria",
-  "created_at": "2026-01-31T12:54:10.985105",
-  "paintings": [
-    {
-      "timestamp": "2026-01-31T12:54:10.988243",
-      "prompt": "A beautiful landscape, fine art photography, dramatic contrast, gallery print, glowing neon lights, cyber atmosphere, complex, gentle earth tones, quiet, thoughtful mood",
-      "subject": "test landscape",
-      "style": "dreamlike",
-      "mood": "contemplative",
-      "colors": [
-        "muted blues",
-        "soft grays",
-        "gentle earth tones"
-      ],
-      "score": 0.75,
-      "image_path": "/private/var/folders/vl/1g4kyx090p34nf40rd5vyydm0000gn/T/pytest-of-elizabethstein/pytest-36/test_full_artwork_creation_wor0/test_image.png",
-      "metadata": {
-        "source_id": "test_photo_123",
-        "model":
+  "created_at": "2026-01-31T14:30:47.250884",
+  "paintings": []
+}

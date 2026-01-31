@@ -63,9 +63,9 @@ USER aiartist
 # Expose port (Railway will set $PORT)
 EXPOSE 8000
 
-# Health check using curl (more reliable than Python)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
+# Health check - Railway sets PORT, fallback to 8000
+# Note: Railway's healthcheckPath in railway.toml handles this, so we disable Docker healthcheck
+# HEALTHCHECK NONE means Railway's external healthcheck will be used instead
 
 # Run web server - use shell form to allow variable substitution
 CMD uvicorn ai_artist.web.app:app --host 0.0.0.0 --port ${PORT:-8000}

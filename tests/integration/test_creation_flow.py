@@ -3,7 +3,6 @@
 Tests the complete pipeline: mood -> critic -> thinking -> generation
 """
 
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -128,8 +127,8 @@ class TestFullCreationFlow:
 
             result = await app.create_artwork(theme="sunset over ocean")
 
-            # Verify the flow
-            mock_unsplash.get_random_photo.assert_called()
+            # Verify the flow - autonomous inspiration is now used instead of Unsplash
+            # mock_unsplash is no longer called since we use autonomous mode
             mock_generator.generate.assert_called()
             mock_curator.evaluate.assert_called()
             mock_gallery.save_image.assert_called()
@@ -155,8 +154,8 @@ class TestFullCreationFlow:
             result = await app.create_artwork(theme=None)
 
             assert result is not None
-            # Unsplash should still be called with some query
-            mock_unsplash.get_random_photo.assert_called()
+            # Autonomous inspiration is used - no Unsplash calls
+            # The autonomous system generates original concepts instead
 
 
 class TestMoodToCriticPipeline:
@@ -308,7 +307,9 @@ class TestCriticIterationFlow:
                     "analysis": {"overall_score": 0.8},
                 }
 
-            with patch.object(app.critic, "critique_concept", side_effect=mock_critique_func):
+            with patch.object(
+                app.critic, "critique_concept", side_effect=mock_critique_func
+            ):
                 await app.create_artwork(theme="test")
 
                 # Should have iterated through critique loop
@@ -384,7 +385,9 @@ class TestMemoryIntegrationInCreation:
             await app.create_artwork(theme="test2")
 
             # Semantic memory should have learned about styles
-            effectiveness = app.enhanced_memory.semantic.knowledge["style_effectiveness"]
+            effectiveness = app.enhanced_memory.semantic.knowledge[
+                "style_effectiveness"
+            ]
             # Should have at least one style recorded
             assert len(effectiveness) > 0
 
@@ -426,25 +429,31 @@ class TestErrorHandlingInFlow:
     """Test error handling in the creation flow."""
 
     @pytest.mark.asyncio
-    async def test_unsplash_failure_propagates(self, mock_config, mock_generator, mock_curator, mock_gallery):
-        """Test that Unsplash API failure is properly propagated."""
-        mock_unsplash = AsyncMock()
-        mock_unsplash.get_random_photo.side_effect = Exception("API Error")
-
+    async def test_autonomous_inspiration_works(
+        self, mock_config, mock_generator, mock_curator, mock_gallery
+    ):
+        """Test that autonomous inspiration generates artwork without external APIs."""
+        # No Unsplash mock needed - we use autonomous inspiration
         with (
             patch("ai_artist.main.ImageGenerator", return_value=mock_generator),
-            patch("ai_artist.main.UnsplashClient", return_value=mock_unsplash),
             patch("ai_artist.main.ImageCurator", return_value=mock_curator),
             patch("ai_artist.main.GalleryManager", return_value=mock_gallery),
             patch("ai_artist.main.configure_logging"),
         ):
             app = AIArtist(mock_config)
 
-            with pytest.raises(Exception, match="API Error"):
-                await app.create_artwork(theme="test")
+            # Should succeed without external API calls
+            result = await app.create_artwork(theme="test")
+
+            assert result is not None
+            # Verify autonomous generation was used
+            mock_generator.generate.assert_called()
+            mock_curator.evaluate.assert_called()
 
     @pytest.mark.asyncio
-    async def test_generator_failure_propagates(self, mock_config, mock_unsplash, mock_curator, mock_gallery):
+    async def test_generator_failure_propagates(
+        self, mock_config, mock_unsplash, mock_curator, mock_gallery
+    ):
         """Test that generator failure is properly propagated."""
         mock_generator = MagicMock()
         mock_generator.generate.side_effect = Exception("Generation failed")
