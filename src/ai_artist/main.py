@@ -427,6 +427,7 @@ class AIArtist:
             )
             best_image = None
             best_score = -1.0
+            used_model = self.config.model.base_model  # Track model used for metadata
 
             while attempt <= max_retries:
                 # Process prompt (fresh variation each time if retrying)
@@ -485,11 +486,39 @@ class AIArtist:
                     except Exception as e:
                         logger.error("control_image_preparation_failed", error=str(e))
 
+                # Select model based on current mood
+                current_mood = self.mood_system.current_mood.value
+                mood_model = self.config.model.mood_models.get_model_for_mood(current_mood)
+                used_model = mood_model  # Track for metadata
+
+                # Switch to mood-appropriate model if different
+                if self.generator is not None:
+                    model_switched = self.generator.switch_model(mood_model)
+                    if model_switched:
+                        logger.info(
+                            "model_switched_for_mood",
+                            mood=current_mood,
+                            model=mood_model,
+                        )
+
+                        # Broadcast model selection via WebSocket
+                        if ws_manager:
+                            try:
+                                await ws_manager.broadcast({
+                                    "type": "model_selection",
+                                    "session_id": request_id,
+                                    "mood": current_mood,
+                                    "model": mood_model,
+                                })
+                            except Exception as e:
+                                logger.debug("model_selection_broadcast_failed", error=str(e))
+
                 # Generate images with performance tracking
                 logger.info(
                     "generation_started",
                     num_variations=self.config.generation.num_variations,
                     prompt=prompt[:100],  # Truncate for logs
+                    model=mood_model,
                 )
 
                 with PerformanceTimer(logger, "image_generation"):
@@ -605,7 +634,7 @@ class AIArtist:
                     "source_url": photo["urls"]["regular"],
                     "source_id": photo["id"],
                     "theme": theme,
-                    "model": self.config.model.base_model,
+                    "model": used_model,
                     "quality_score": float(best_score),
                     "mood": self.mood_system.current_mood.value,
                     "feeling": self.mood_system.describe_feeling(),
@@ -627,7 +656,7 @@ class AIArtist:
                 image_path=str(saved_path),
                 metadata={
                     "source_id": photo["id"],
-                    "model": self.config.model.base_model,
+                    "model": used_model,
                     "energy_level": self.mood_system.energy_level,
                     "reflection": reflection,
                 },

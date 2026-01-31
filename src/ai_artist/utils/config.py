@@ -9,6 +9,31 @@ from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+class MoodModelConfig(BaseModel):
+    """Mood-to-model mapping configuration."""
+
+    # Default model used when mood not found in mapping
+    default_model: str = "stabilityai/stable-diffusion-xl-base-1.0"
+
+    # Mood-specific model assignments
+    mood_models: dict[str, str] = {
+        "contemplative": "stabilityai/stable-diffusion-xl-base-1.0",
+        "chaotic": "runwayml/stable-diffusion-v1-5",  # More experimental
+        "serene": "Lykon/dreamshaper-8",  # Softer rendering
+        "melancholic": "stabilityai/stable-diffusion-xl-base-1.0",
+        "joyful": "Lykon/dreamshaper-8",
+        "rebellious": "runwayml/stable-diffusion-v1-5",
+        "curious": "stabilityai/stable-diffusion-xl-base-1.0",
+        "nostalgic": "Lykon/dreamshaper-8",
+        "playful": "Lykon/dreamshaper-8",
+        "introspective": "stabilityai/stable-diffusion-xl-base-1.0",
+    }
+
+    def get_model_for_mood(self, mood: str) -> str:
+        """Get the model ID for a given mood."""
+        return self.mood_models.get(mood.lower(), self.default_model)
+
+
 class ModelConfig(BaseModel):
     """Model configuration."""
 
@@ -21,6 +46,7 @@ class ModelConfig(BaseModel):
     lora_scale: float = 0.8  # LoRA strength (0.0-1.0)
     use_refiner: bool = False
     refiner_model: str = "stabilityai/stable-diffusion-xl-refiner-1.0"
+    mood_models: MoodModelConfig = Field(default_factory=MoodModelConfig)  # type: ignore[arg-type]
 
 
 class GenerationConfig(BaseModel):

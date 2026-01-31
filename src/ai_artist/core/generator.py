@@ -26,6 +26,8 @@ class ImageGenerator:
         with ImageGenerator() as generator:
             generator.load_model()
             images = generator.generate("a beautiful landscape")
+
+    Supports multi-model caching for mood-based model selection.
     """
 
     def __init__(
@@ -39,6 +41,10 @@ class ImageGenerator:
         self.dtype = dtype
         self.pipeline = None
         self.refiner = None
+
+        # Cache for loaded models to avoid reloading
+        self._model_cache: dict[str, DiffusionPipeline] = {}
+        self._current_model_id: str | None = None
 
         # MPS + float16 can produce black/NaN images - warn and suggest float32
         if device == "mps" and dtype == torch.float16:
@@ -62,9 +68,61 @@ class ImageGenerator:
         self.unload()
         return False
 
-    def load_model(self, controlnet_model: str | None = None):
-        """Load the diffusion pipeline."""
-        logger.info("loading_model", model=self.model_id, controlnet=controlnet_model)
+    def get_model_for_mood(self, mood: str, mood_models: dict[str, str] | None = None) -> str:
+        """Get the appropriate model ID for a given mood.
+
+        Args:
+            mood: The current mood (e.g., "contemplative", "chaotic")
+            mood_models: Optional mood-to-model mapping dict
+
+        Returns:
+            The model ID to use for this mood
+        """
+        if mood_models is None:
+            return self.model_id
+
+        model_id = mood_models.get(mood.lower(), self.model_id)
+        logger.debug("model_for_mood", mood=mood, model=model_id)
+        return model_id
+
+    def switch_model(self, new_model_id: str, controlnet_model: str | None = None) -> bool:
+        """Switch to a different model, using cache if available.
+
+        Args:
+            new_model_id: The model ID to switch to
+            controlnet_model: Optional ControlNet model
+
+        Returns:
+            True if model was switched, False if already using this model
+        """
+        if new_model_id == self._current_model_id and self.pipeline is not None:
+            logger.debug("model_already_loaded", model=new_model_id)
+            return False
+
+        # Check cache first
+        if new_model_id in self._model_cache:
+            logger.info("switching_to_cached_model", model=new_model_id)
+            self.pipeline = self._model_cache[new_model_id]
+            self._current_model_id = new_model_id
+            return True
+
+        # Load new model (will be cached)
+        old_model_id = self.model_id
+        self.model_id = new_model_id
+        self.load_model(controlnet_model=controlnet_model)
+        self.model_id = old_model_id  # Restore original default
+
+        return True
+
+    def load_model(self, controlnet_model: str | None = None, model_override: str | None = None):
+        """Load the diffusion pipeline.
+
+        Args:
+            controlnet_model: Optional ControlNet model to load
+            model_override: Optional model ID to load instead of self.model_id
+        """
+        model_to_load = model_override or self.model_id
+        logger.info("loading_model", model=model_to_load, controlnet=controlnet_model)
 
         try:
             if controlnet_model:
@@ -75,7 +133,7 @@ class ImageGenerator:
                 # Note: This assumes SD 1.5 based models.
                 # For SDXL, we would need StableDiffusionXLControlNetPipeline
                 pipeline = StableDiffusionControlNetPipeline.from_pretrained(
-                    self.model_id,
+                    model_to_load,
                     controlnet=controlnet,
                     torch_dtype=self.dtype,
                     variant="fp16" if self.dtype == torch.float16 else None,
@@ -84,7 +142,7 @@ class ImageGenerator:
                 )
             else:
                 pipeline = DiffusionPipeline.from_pretrained(
-                    self.model_id,
+                    model_to_load,
                     torch_dtype=self.dtype,
                     variant="fp16" if self.dtype == torch.float16 else None,
                     use_safetensors=True,
@@ -143,9 +201,13 @@ class ImageGenerator:
             # Assign to instance attribute after all setup is complete
             self.pipeline = pipeline
 
-            logger.info("model_loaded", model=self.model_id, device=self.device)
+            # Cache the loaded model for future use
+            self._model_cache[model_to_load] = pipeline
+            self._current_model_id = model_to_load
+
+            logger.info("model_loaded", model=model_to_load, device=self.device)
         except Exception as e:
-            logger.error("model_load_failed", model=self.model_id, error=str(e))
+            logger.error("model_load_failed", model=model_to_load, error=str(e))
             raise
 
     def load_refiner(
@@ -361,6 +423,14 @@ class ImageGenerator:
             logger.info("unloading_refiner")
             del self.refiner
             self.refiner = None
+
+        # Clear model cache
+        if self._model_cache:
+            logger.info("clearing_model_cache", num_models=len(self._model_cache))
+            for model_id in list(self._model_cache.keys()):
+                del self._model_cache[model_id]
+            self._model_cache.clear()
+            self._current_model_id = None
 
         if self.pipeline:
             logger.info("unloading_model")
