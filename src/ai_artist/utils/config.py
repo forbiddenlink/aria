@@ -9,24 +9,30 @@ from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+# Model constants to avoid string duplication
+MODEL_SDXL = "stabilityai/stable-diffusion-xl-base-1.0"
+MODEL_SD15 = "runwayml/stable-diffusion-v1-5"
+MODEL_DREAMSHAPER = "Lykon/dreamshaper-8"
+
+
 class MoodModelConfig(BaseModel):
     """Mood-to-model mapping configuration."""
 
     # Default model used when mood not found in mapping
-    default_model: str = "stabilityai/stable-diffusion-xl-base-1.0"
+    default_model: str = MODEL_SDXL
 
     # Mood-specific model assignments
     mood_models: dict[str, str] = {
-        "contemplative": "stabilityai/stable-diffusion-xl-base-1.0",
-        "chaotic": "runwayml/stable-diffusion-v1-5",  # More experimental
-        "serene": "Lykon/dreamshaper-8",  # Softer rendering
-        "melancholic": "stabilityai/stable-diffusion-xl-base-1.0",
-        "joyful": "Lykon/dreamshaper-8",
-        "rebellious": "runwayml/stable-diffusion-v1-5",
-        "curious": "stabilityai/stable-diffusion-xl-base-1.0",
-        "nostalgic": "Lykon/dreamshaper-8",
-        "playful": "Lykon/dreamshaper-8",
-        "introspective": "stabilityai/stable-diffusion-xl-base-1.0",
+        "contemplative": MODEL_SDXL,
+        "chaotic": MODEL_SD15,  # More experimental
+        "serene": MODEL_DREAMSHAPER,  # Softer rendering
+        "melancholic": MODEL_SDXL,
+        "joyful": MODEL_DREAMSHAPER,
+        "rebellious": MODEL_SD15,
+        "curious": MODEL_SDXL,
+        "nostalgic": MODEL_DREAMSHAPER,
+        "playful": MODEL_DREAMSHAPER,
+        "introspective": MODEL_SDXL,
     }
 
     def get_model_for_mood(self, mood: str) -> str:
@@ -37,7 +43,7 @@ class MoodModelConfig(BaseModel):
 class ModelConfig(BaseModel):
     """Model configuration."""
 
-    base_model: str = "stabilityai/stable-diffusion-xl-base-1.0"
+    base_model: str = MODEL_SDXL
     device: Literal["cuda", "mps", "cpu"] = "cuda"
     dtype: Literal["float16", "float32"] = "float16"
     enable_attention_slicing: bool = True

@@ -36,25 +36,32 @@ class TestCreationScheduler:
         assert scheduler.current_topic_index == 0
 
     def test_get_next_topic(self, scheduler):
-        """Test topic rotation."""
-        first_topic = scheduler.get_next_topic()
+        """Test topic rotation in traditional mode."""
+        first_topic = scheduler.get_next_topic(mode="traditional")
         assert first_topic == "nature landscape"
         assert scheduler.current_topic_index == 1
 
-        second_topic = scheduler.get_next_topic()
+        second_topic = scheduler.get_next_topic(mode="traditional")
         assert second_topic == "abstract art"
         assert scheduler.current_topic_index == 2
 
     def test_topic_wraps_around(self, scheduler):
-        """Test topic rotation wraps around."""
+        """Test topic rotation wraps around in traditional mode."""
         # Get all topics
         for _ in range(8):
-            scheduler.get_next_topic()
+            scheduler.get_next_topic(mode="traditional")
 
         # Should wrap to first topic
         assert scheduler.current_topic_index == 0
-        topic = scheduler.get_next_topic()
+        topic = scheduler.get_next_topic(mode="traditional")
         assert topic == "nature landscape"
+
+    def test_auto_mode_generates_topic(self, scheduler):
+        """Test auto mode generates autonomous topics."""
+        topic = scheduler.get_next_topic(mode="auto")
+        # Auto mode returns generated prompts, not predefined topics
+        assert isinstance(topic, str)
+        assert len(topic) > 0
 
     def test_add_daily_job(self, scheduler):
         """Test adding daily job."""
@@ -120,12 +127,15 @@ class TestScheduledArtist:
 
     @pytest.mark.asyncio
     async def test_create_with_rotation(self, scheduled_artist, mock_artist):
-        """Test creation with topic rotation."""
+        """Test creation with topic rotation (now uses autonomous mode)."""
         await scheduled_artist.create_with_rotation()
 
         mock_artist.create_artwork.assert_called_once()
         call_args = mock_artist.create_artwork.call_args
-        assert call_args.kwargs["theme"] == "nature landscape"
+        # Autonomous mode generates varied topics, just verify a theme was passed
+        assert "theme" in call_args.kwargs
+        assert isinstance(call_args.kwargs["theme"], str)
+        assert len(call_args.kwargs["theme"]) > 0
 
     @pytest.mark.asyncio
     async def test_create_batch(self, scheduled_artist, mock_artist):
