@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import (
+    Depends,
     FastAPI,
     HTTPException,
     Query,
@@ -16,17 +17,16 @@ from fastapi import (
 )
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, Response
+from fastapi.security import APIKeyHeader
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from ..gallery.manager import GalleryManager
+from ..utils.config import WebConfig
 from ..utils.logging import get_logger
-
-# Concurrency control for image generation
-# Only allow 1 concurrent generation to prevent VRAM exhaustion
-_generation_semaphore = asyncio.Semaphore(1)
-_generation_timeout_seconds = 300  # 5 minute timeout for generation
-_generation_queue_size = 0  # Track queue depth
 from .dependencies import GalleryManagerDep, GalleryPathDep, set_gallery_manager
 from .exception_handlers import (
     general_exception_handler,
@@ -47,6 +47,88 @@ from .middleware import (
     add_cors_middleware,
 )
 from .websocket import manager as ws_manager
+
+# Concurrency control for image generation
+# Only allow 1 concurrent generation to prevent VRAM exhaustion
+_generation_semaphore = asyncio.Semaphore(1)
+_generation_timeout_seconds = 300  # 5 minute timeout for generation
+_generation_queue_size = 0  # Track queue depth
+
+# Rate limiter instance
+limiter = Limiter(key_func=get_remote_address)
+
+# API key header for authentication
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+# Web configuration (set during app initialization)
+_web_config: WebConfig | None = None
+
+
+def set_web_config(config: WebConfig) -> None:
+    """Set the web configuration for authentication and rate limiting."""
+    global _web_config
+    _web_config = config
+
+
+def get_web_config() -> WebConfig:
+    """Get the current web configuration."""
+    global _web_config
+    if _web_config is None:
+        # Return default config if not set (dev mode)
+        return WebConfig()
+    return _web_config
+
+
+async def verify_api_key(api_key: str | None = Depends(api_key_header)) -> str | None:
+    """Verify API key if authentication is enabled.
+
+    If no API keys are configured (empty list), all requests are allowed (dev mode).
+    If API keys are configured, a valid key must be provided in X-API-Key header.
+
+    Returns:
+        The validated API key or None if auth is disabled
+    Raises:
+        HTTPException: If auth is enabled and key is invalid/missing
+    """
+    config = get_web_config()
+
+    # If no API keys configured, allow all requests (dev mode)
+    if not config.api_keys:
+        return None
+
+    # Auth is enabled - key is required
+    if api_key is None:
+        raise HTTPException(
+            status_code=401,
+            detail="API key required. Provide X-API-Key header.",
+            headers={"WWW-Authenticate": "API key required"},
+        )
+
+    # Check if key is valid
+    valid_keys = [k.get_secret_value() for k in config.api_keys]
+    if api_key not in valid_keys:
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid API key",
+        )
+
+    return api_key
+
+
+def _rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> Response:
+    """Handle rate limit exceeded errors."""
+    from fastapi.responses import JSONResponse
+
+    return JSONResponse(
+        status_code=429,
+        content={
+            "error": "Rate limit exceeded",
+            "detail": str(exc.detail),
+            "retry_after": exc.detail,
+        },
+        headers={"Retry-After": str(getattr(exc, "retry_after", 60))},
+    )
+
 
 logger = get_logger(__name__)
 
@@ -134,8 +216,15 @@ def validate_generation_request(request: GenerationRequest) -> None:
     if not request.prompt or not request.prompt.strip():
         raise HTTPException(status_code=422, detail="Prompt cannot be empty")
 
-    if request.width < 512 or request.width > 2048 or request.height < 512 or request.height > 2048:
-        raise HTTPException(status_code=422, detail="Dimensions must be between 512 and 2048")
+    if (
+        request.width < 512
+        or request.width > 2048
+        or request.height < 512
+        or request.height > 2048
+    ):
+        raise HTTPException(
+            status_code=422, detail="Dimensions must be between 512 and 2048"
+        )
 
     if request.width % 8 != 0 or request.height % 8 != 0:
         raise HTTPException(status_code=422, detail="Dimensions must be multiples of 8")
@@ -154,6 +243,24 @@ async def lifespan(app: FastAPI):
         set_gallery_manager(gallery_manager_instance, str(gallery_path))
         logger.info("web_gallery_started", gallery_path=str(gallery_path))
 
+    # Try to load web config from config file
+    try:
+        from ..utils.config import load_config
+
+        config_path = Path("config/config.yaml")
+        if config_path.exists():
+            config = load_config(config_path)
+            set_web_config(config.web)
+            logger.info(
+                "web_config_loaded",
+                api_keys_configured=len(config.web.api_keys) > 0,
+                cors_origins=config.web.cors_origins,
+            )
+    except Exception as e:
+        logger.warning("web_config_load_failed", error=str(e))
+        # Use default config (no auth required)
+        set_web_config(WebConfig())
+
     yield
 
     # Shutdown
@@ -169,13 +276,18 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Add rate limiter to app state
+app.state.limiter = limiter
+
 # Add exception handlers
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, general_exception_handler)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Add middleware (added in reverse order of execution)
 # CORS must be added last so it processes requests first
+# Note: CORS origins from config are applied during lifespan
 add_cors_middleware(app)
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
@@ -256,13 +368,16 @@ async def test_websocket(request: Request):
 
 
 @app.get("/api/images", response_model=list[ImageMetadata])
+@limiter.limit("60/minute")
 async def list_images(
+    request: Request,
     gallery_manager: GalleryManagerDep,
     gallery_path: GalleryPathDep,
     featured: bool | None = Query(None, description="Filter by featured status"),
     limit: int = Query(50, ge=1, le=500, description="Number of images to return"),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
     search: str | None = Query(None, description="Search in prompts"),
+    _api_key: str | None = Depends(verify_api_key),
 ):
     """List all images with metadata."""
     # Get image paths
@@ -304,7 +419,13 @@ async def list_images(
 
 
 @app.get("/api/images/file/{file_path:path}")
-async def get_image_file(file_path: str, gallery_path: GalleryPathDep):
+@limiter.limit("60/minute")
+async def get_image_file(
+    request: Request,
+    file_path: str,
+    gallery_path: GalleryPathDep,
+    _api_key: str | None = Depends(verify_api_key),
+):
     """Serve image file."""
     gallery_path_obj = Path(gallery_path)
     if not gallery_path_obj:
@@ -331,7 +452,12 @@ async def get_image_file(file_path: str, gallery_path: GalleryPathDep):
 
 
 @app.get("/api/stats", response_model=GalleryStats)
-async def get_stats(gallery_manager: GalleryManagerDep):
+@limiter.limit("60/minute")
+async def get_stats(
+    request: Request,
+    gallery_manager: GalleryManagerDep,
+    _api_key: str | None = Depends(verify_api_key),
+):
     """Get gallery statistics."""
     featured_images = gallery_manager.list_images(featured_only=True)
 
@@ -347,13 +473,19 @@ async def get_stats(gallery_manager: GalleryManagerDep):
 
 
 @app.delete("/api/images/{file_path:path}")
-async def delete_image(file_path: str, gallery_path: GalleryPathDep):
+@limiter.limit("60/minute")
+async def delete_image(
+    request: Request,
+    file_path: str,
+    gallery_path: GalleryPathDep,
+    _api_key: str | None = Depends(verify_api_key),
+):
     """Delete an image and its metadata."""
     gallery_path_obj = Path(gallery_path)
 
     # Validate and resolve full paths
     full_image_path = gallery_path_obj / file_path
-    metadata_path = full_image_path.with_suffix('.json')
+    metadata_path = full_image_path.with_suffix(".json")
 
     # Security check
     try:
@@ -376,11 +508,18 @@ async def delete_image(file_path: str, gallery_path: GalleryPathDep):
 
 
 @app.put("/api/images/{file_path:path}/featured")
-async def toggle_featured(file_path: str, featured: bool, gallery_path: GalleryPathDep):
+@limiter.limit("60/minute")
+async def toggle_featured(
+    request: Request,
+    file_path: str,
+    featured: bool,
+    gallery_path: GalleryPathDep,
+    _api_key: str | None = Depends(verify_api_key),
+):
     """Toggle featured status of an image."""
     gallery_path_obj = Path(gallery_path)
     full_image_path = gallery_path_obj / file_path
-    metadata_path = full_image_path.with_suffix('.json')
+    metadata_path = full_image_path.with_suffix(".json")
 
     # Security check
     try:
@@ -403,16 +542,21 @@ async def toggle_featured(file_path: str, featured: bool, gallery_path: GalleryP
     metadata["featured"] = featured
 
     # Save metadata
-    with open(metadata_path, 'w') as f:
+    with open(metadata_path, "w") as f:
         json.dump(metadata, f, indent=2)
 
     logger.info("image_featured_toggled", path=str(file_path), featured=featured)
 
-    return {"message": "Featured status updated", "path": file_path, "featured": featured}
+    return {
+        "message": "Featured status updated",
+        "path": file_path,
+        "featured": featured,
+    }
 
 
 # Prompt Templates Storage
 TEMPLATES_FILE = Path("config/prompt_templates.json")
+
 
 def load_templates() -> list[dict]:
     """Load templates from JSON file."""
@@ -425,22 +569,32 @@ def load_templates() -> list[dict]:
     except json.JSONDecodeError:
         return []
 
+
 def save_templates(templates: list[dict]):
     """Save templates to JSON file."""
     TEMPLATES_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(TEMPLATES_FILE, 'w') as f:
+    with open(TEMPLATES_FILE, "w") as f:
         json.dump(templates, f, indent=2)
 
 
 @app.get("/api/templates", response_model=list[PromptTemplate])
-async def get_templates():
+@limiter.limit("60/minute")
+async def get_templates(
+    request: Request,
+    _api_key: str | None = Depends(verify_api_key),
+):
     """Get all prompt templates."""
     templates = load_templates()
     return templates
 
 
 @app.post("/api/templates", response_model=PromptTemplate)
-async def create_template(request: CreateTemplateRequest):
+@limiter.limit("60/minute")
+async def create_template(
+    request: Request,
+    template_request: CreateTemplateRequest,
+    _api_key: str | None = Depends(verify_api_key),
+):
     """Create a new prompt template."""
     import uuid
 
@@ -448,27 +602,34 @@ async def create_template(request: CreateTemplateRequest):
 
     new_template = {
         "id": str(uuid.uuid4()),
-        "name": request.name,
-        "prompt": request.prompt,
-        "negative_prompt": request.negative_prompt,
-        "width": request.width,
-        "height": request.height,
-        "num_inference_steps": request.num_inference_steps,
-        "guidance_scale": request.guidance_scale,
+        "name": template_request.name,
+        "prompt": template_request.prompt,
+        "negative_prompt": template_request.negative_prompt,
+        "width": template_request.width,
+        "height": template_request.height,
+        "num_inference_steps": template_request.num_inference_steps,
+        "guidance_scale": template_request.guidance_scale,
         "created_at": datetime.now().isoformat(),
-        "tags": request.tags,
+        "tags": template_request.tags,
     }
 
     templates.append(new_template)
     save_templates(templates)
 
-    logger.info("template_created", template_id=new_template["id"], name=new_template["name"])
+    logger.info(
+        "template_created", template_id=new_template["id"], name=new_template["name"]
+    )
 
     return new_template
 
 
 @app.delete("/api/templates/{template_id}")
-async def delete_template(template_id: str):
+@limiter.limit("60/minute")
+async def delete_template(
+    request: Request,
+    template_id: str,
+    _api_key: str | None = Depends(verify_api_key),
+):
     """Delete a prompt template."""
     templates = load_templates()
     templates = [t for t in templates if t["id"] != template_id]
@@ -480,9 +641,12 @@ async def delete_template(template_id: str):
 
 
 @app.post("/api/gallery/cleanup")
+@limiter.limit("60/minute")
 async def cleanup_gallery(
+    request: Request,
     gallery_manager: GalleryManagerDep,
     dry_run: bool = Query(True, description="If true, only report without deleting"),
+    _api_key: str | None = Depends(verify_api_key),
 ):
     """Scan and remove black/blank/invalid images from the gallery.
 
@@ -499,11 +663,17 @@ async def cleanup_gallery(
 
 
 @app.post("/api/generate", response_model=GenerationResponse)
-async def generate_artwork(request: GenerationRequest):
+@limiter.limit("5/minute")
+async def generate_artwork(
+    request: Request,
+    generation_request: GenerationRequest,
+    _api_key: str | None = Depends(verify_api_key),
+):
     """Start an artwork generation job.
 
     Returns a session ID that can be used to track progress via WebSocket.
     Uses a semaphore to limit concurrent generations and prevent VRAM exhaustion.
+    Rate limited to 5 requests per minute due to expensive GPU operations.
     """
     import uuid
 
@@ -514,7 +684,7 @@ async def generate_artwork(request: GenerationRequest):
     global _generation_queue_size
 
     # Validate request
-    validate_generation_request(request)
+    validate_generation_request(generation_request)
 
     # Generate unique session ID
     session_id = str(uuid.uuid4())
@@ -538,7 +708,7 @@ async def generate_artwork(request: GenerationRequest):
                 )
                 await ws_manager.send_generation_error(
                     session_id=session_id,
-                    error=f"Generation timed out after {_generation_timeout_seconds}s"
+                    error=f"Generation timed out after {_generation_timeout_seconds}s",
                 )
         finally:
             _generation_queue_size -= 1
@@ -552,34 +722,36 @@ async def generate_artwork(request: GenerationRequest):
 
             # Use context manager for automatic cleanup
             generator = ImageGenerator(
-                model_id=config.model.base_model,
-                device=config.model.device
+                model_id=config.model.base_model, device=config.model.device
             )
             generator.load_model()
 
             # Send progress update
-            await ws_manager.broadcast({
-                "type": "progress",
-                "session_id": session_id,
-                "status": "generating",
-                "message": "Model loaded, generating images...",
-            })
+            await ws_manager.broadcast(
+                {
+                    "type": "progress",
+                    "session_id": session_id,
+                    "status": "generating",
+                    "message": "Model loaded, generating images...",
+                }
+            )
 
             # Generate images
             images = generator.generate(
-                prompt=request.prompt,
-                negative_prompt=request.negative_prompt,
-                width=request.width,
-                height=request.height,
-                num_inference_steps=request.num_inference_steps,
-                guidance_scale=request.guidance_scale,
-                num_images=request.num_images,
-                seed=request.seed
+                prompt=generation_request.prompt,
+                negative_prompt=generation_request.negative_prompt,
+                width=generation_request.width,
+                height=generation_request.height,
+                num_inference_steps=generation_request.num_inference_steps,
+                guidance_scale=generation_request.guidance_scale,
+                num_images=generation_request.num_images,
+                seed=generation_request.seed,
             )
 
             # Save only valid images (black/blank already filtered by generator)
             image_paths = []
             from datetime import datetime as dt
+
             now = dt.now()
             for i, img in enumerate(images):
                 # Double-check validity before saving
@@ -607,36 +779,38 @@ async def generate_artwork(request: GenerationRequest):
 
                 # Save metadata
                 metadata_path = save_path.with_suffix(".json")
-                metadata_path.write_text(json.dumps({
-                    "prompt": request.prompt,
-                    "negative_prompt": request.negative_prompt,
-                    "width": request.width,
-                    "height": request.height,
-                    "steps": request.num_inference_steps,
-                    "guidance_scale": request.guidance_scale,
-                    "seed": request.seed,
-                    "created_at": now.isoformat(),
-                    "session_id": session_id,
-                }, indent=2))
+                metadata_path.write_text(
+                    json.dumps(
+                        {
+                            "prompt": generation_request.prompt,
+                            "negative_prompt": generation_request.negative_prompt,
+                            "width": generation_request.width,
+                            "height": generation_request.height,
+                            "steps": generation_request.num_inference_steps,
+                            "guidance_scale": generation_request.guidance_scale,
+                            "seed": generation_request.seed,
+                            "created_at": now.isoformat(),
+                            "session_id": session_id,
+                        },
+                        indent=2,
+                    )
+                )
 
             if image_paths:
                 await ws_manager.send_generation_complete(
                     session_id=session_id,
                     image_paths=image_paths,
-                    metadata={"prompt": request.prompt}
+                    metadata={"prompt": generation_request.prompt},
                 )
             else:
                 await ws_manager.send_generation_error(
                     session_id=session_id,
-                    error="All generated images were invalid (black/blank). Try different settings."
+                    error="All generated images were invalid (black/blank). Try different settings.",
                 )
 
         except Exception as e:
             logger.error("generation_failed", session_id=session_id, error=str(e))
-            await ws_manager.send_generation_error(
-                session_id=session_id,
-                error=str(e)
-            )
+            await ws_manager.send_generation_error(session_id=session_id, error=str(e))
         finally:
             # Cleanup generator resources
             if generator:
@@ -648,7 +822,7 @@ async def generate_artwork(request: GenerationRequest):
     return GenerationResponse(
         session_id=session_id,
         message="Generation started. Connect to WebSocket to track progress.",
-        status="started"
+        status="started",
     )
 
 

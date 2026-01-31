@@ -115,11 +115,17 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             raise
 
 
-def add_cors_middleware(app):
+def add_cors_middleware(app, cors_origins: list[str] | None = None):
     """Add CORS middleware with secure defaults.
 
+    Args:
+        app: The FastAPI application
+        cors_origins: List of allowed origins from config. If empty/None,
+                     uses secure localhost defaults for development.
+                     Set to ["*"] to allow all origins.
+
     By default, only allows localhost origins for development.
-    Set ALLOWED_ORIGINS environment variable for production (comma-separated).
+    Set ALLOWED_ORIGINS environment variable or use config for production.
     Example: ALLOWED_ORIGINS=https://example.com,https://app.example.com
     """
     import os
@@ -132,12 +138,18 @@ def add_cors_middleware(app):
         "http://127.0.0.1:8000",
     ]
 
-    # Allow override via environment variable for production
-    allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
-    if allowed_origins_env:
-        allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",")]
+    # Priority: config -> environment variable -> defaults
+    if cors_origins:
+        allowed_origins = cors_origins
     else:
-        allowed_origins = default_origins
+        # Allow override via environment variable for production
+        allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+        if allowed_origins_env:
+            allowed_origins = [
+                origin.strip() for origin in allowed_origins_env.split(",")
+            ]
+        else:
+            allowed_origins = default_origins
 
     app.add_middleware(
         CORSMiddleware,

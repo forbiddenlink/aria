@@ -63,8 +63,9 @@ class FaceRestorationConfig(BaseModel):
     """Face restoration configuration."""
 
     enabled: bool = False
-    model: Literal["gfpgan", "codeformer"] = "gfpgan"
+    model: Literal["codeformer"] = "codeformer"  # CodeFormer is now the only option
     model_path: str | None = None  # Custom model path (optional)
+    fidelity: float = 0.7  # Balance between quality (0) and fidelity (1)
 
 
 class AutonomyConfig(BaseModel):
@@ -116,6 +117,20 @@ class DatabaseConfig(BaseModel):
     url: str = "sqlite:///./data/ai_artist.db"
 
 
+class WebConfig(BaseModel):
+    """Web server configuration."""
+
+    # API key authentication - empty list means no auth required (dev mode)
+    api_keys: list[SecretStr] = []
+
+    # CORS origins - empty list uses secure localhost defaults
+    cors_origins: list[str] = []
+
+    # Rate limiting
+    rate_limit_generate: str = "5/minute"  # For /api/generate endpoint
+    rate_limit_api: str = "60/minute"  # For other API endpoints
+
+
 class Config(BaseSettings):
     """Main application configuration."""
 
@@ -139,6 +154,7 @@ class Config(BaseSettings):
     model_manager: ModelManagerConfig = Field(default_factory=ModelManagerConfig)  # type: ignore[arg-type]
     api_keys: APIKeysConfig
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)  # type: ignore[arg-type]
+    web: WebConfig = Field(default_factory=WebConfig)  # type: ignore[arg-type]
 
 
 def load_config(config_path: Path) -> Config:

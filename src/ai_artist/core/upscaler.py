@@ -72,6 +72,9 @@ class ImageUpscaler:
         if not self.pipeline:
             self.load_model()
 
+        # Assert pipeline is loaded after load_model()
+        assert self.pipeline is not None, "Pipeline failed to load"
+
         logger.info("upscaling_image", size=image.size)
 
         try:
@@ -83,7 +86,7 @@ class ImageUpscaler:
             # If image is already large, resizing might be needed or chunking.
             # But the model creates 4x output.
 
-            result = self.pipeline(
+            result: Image.Image = self.pipeline(
                 prompt=prompt,
                 image=image,
                 num_inference_steps=num_inference_steps,

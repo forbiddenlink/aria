@@ -25,6 +25,10 @@ def mock_config():
     config.generation.guidance_scale = 7.5
     config.generation.num_images = 1
     config.curation.enabled = True
+    # Face restoration config
+    config.face_restoration.enabled = False
+    config.face_restoration.fidelity = 0.7
+    config.face_restoration.model_path = None
     return config
 
 

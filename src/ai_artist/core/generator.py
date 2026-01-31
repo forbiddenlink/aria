@@ -74,7 +74,7 @@ class ImageGenerator:
                 )
                 # Note: This assumes SD 1.5 based models.
                 # For SDXL, we would need StableDiffusionXLControlNetPipeline
-                self.pipeline = StableDiffusionControlNetPipeline.from_pretrained(
+                pipeline = StableDiffusionControlNetPipeline.from_pretrained(
                     self.model_id,
                     controlnet=controlnet,
                     torch_dtype=self.dtype,
@@ -83,7 +83,7 @@ class ImageGenerator:
                     safety_checker=None,
                 )
             else:
-                self.pipeline = DiffusionPipeline.from_pretrained(
+                pipeline = DiffusionPipeline.from_pretrained(
                     self.model_id,
                     torch_dtype=self.dtype,
                     variant="fp16" if self.dtype == torch.float16 else None,
@@ -91,12 +91,12 @@ class ImageGenerator:
                 )
 
             # Move pipeline to device
-            self.pipeline = self.pipeline.to(self.device)
+            pipeline = pipeline.to(self.device)
 
             # Use better scheduler (if compatible)
             try:
-                self.pipeline.scheduler = DPMSolverMultistepScheduler.from_config(
-                    self.pipeline.scheduler.config
+                pipeline.scheduler = DPMSolverMultistepScheduler.from_config(
+                    pipeline.scheduler.config
                 )
             except ValueError as e:
                 # Some models have incompatible scheduler configs - use their default
@@ -115,30 +115,33 @@ class ImageGenerator:
                 logger.info(
                     "verifying_device_placement",
                     unet_device=(
-                        str(self.pipeline.unet.device)
-                        if hasattr(self.pipeline.unet, "device")
+                        str(pipeline.unet.device)
+                        if hasattr(pipeline.unet, "device")
                         else "unknown"
                     ),
                     vae_device=(
-                        str(self.pipeline.vae.device)
-                        if hasattr(self.pipeline.vae, "device")
+                        str(pipeline.vae.device)
+                        if hasattr(pipeline.vae, "device")
                         else "unknown"
                     ),
                     unet_dtype=(
-                        str(self.pipeline.unet.dtype)
-                        if hasattr(self.pipeline.unet, "dtype")
+                        str(pipeline.unet.dtype)
+                        if hasattr(pipeline.unet, "dtype")
                         else "unknown"
                     ),
                     vae_dtype=(
-                        str(self.pipeline.vae.dtype)
-                        if hasattr(self.pipeline.vae, "dtype")
+                        str(pipeline.vae.dtype)
+                        if hasattr(pipeline.vae, "dtype")
                         else "unknown"
                     ),
                 )
             else:
                 # Enable memory-efficient slicing for CUDA/CPU
-                self.pipeline.enable_attention_slicing()
-                self.pipeline.enable_vae_slicing()
+                pipeline.enable_attention_slicing()
+                pipeline.enable_vae_slicing()
+
+            # Assign to instance attribute after all setup is complete
+            self.pipeline = pipeline
 
             logger.info("model_loaded", model=self.model_id, device=self.device)
         except Exception as e:
@@ -152,17 +155,26 @@ class ImageGenerator:
         logger.info("loading_refiner", model=refiner_id)
 
         try:
-            self.refiner = StableDiffusionXLImg2ImgPipeline.from_pretrained(
+            # Get text_encoder_2 and vae from pipeline if available
+            text_encoder_2 = None
+            vae = None
+            if self.pipeline is not None:
+                if hasattr(self.pipeline, "text_encoder_2"):
+                    text_encoder_2 = self.pipeline.text_encoder_2
+                if hasattr(self.pipeline, "vae"):
+                    vae = self.pipeline.vae
+
+            refiner = StableDiffusionXLImg2ImgPipeline.from_pretrained(
                 refiner_id,
-                text_encoder_2=self.pipeline.text_encoder_2 if self.pipeline else None,
-                vae=self.pipeline.vae if self.pipeline else None,
+                text_encoder_2=text_encoder_2,
+                vae=vae,
                 torch_dtype=self.dtype,
                 use_safetensors=True,
                 variant="fp16" if self.dtype == torch.float16 else None,
             )
 
-            # Move refiner to device
-            self.refiner = self.refiner.to(self.device)
+            # Move refiner to device and assign to instance
+            self.refiner = refiner.to(self.device)
 
             logger.info("refiner_loaded", model=refiner_id)
         except Exception as e:
