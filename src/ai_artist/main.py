@@ -16,6 +16,7 @@ from .core.upscaler import ImageUpscaler
 from .curation.curator import ImageCurator
 from .gallery.manager import GalleryManager
 from .models.manager import ModelManager
+from .personality.cognition import ThinkingProcess
 from .personality.critic import ArtistCritic
 from .personality.enhanced_memory import EnhancedMemorySystem
 from .personality.memory import ArtistMemory
@@ -63,6 +64,14 @@ class AIArtist:
         self.profile = ArtisticProfile(name=name)
         # Internal critic for self-evaluation
         self.critic = ArtistCritic(name="Aria's Inner Critic")
+        # Visible thinking process (ReAct pattern)
+        self.thinking = ThinkingProcess(
+            mood_system=self.mood_system,
+            memory_system=self.enhanced_memory,
+            on_thought=self._on_thought,
+        )
+        # WebSocket manager for real-time updates (lazy loaded)
+        self._ws_manager = None
 
         # Initialize all components
         self._initialize()
@@ -171,18 +180,103 @@ class AIArtist:
 
         logger.info("ai_artist_initialized")
 
+    def _get_ws_manager(self):
+        """Lazily load WebSocket manager to avoid circular imports."""
+        if self._ws_manager is None:
+            try:
+                from .web.websocket import manager
+                self._ws_manager = manager
+            except ImportError:
+                logger.debug("websocket_manager_not_available")
+        return self._ws_manager
+
+    def _on_thought(self, thought):
+        """Handle a new thought from the thinking process."""
+        # Log the thought
+        logger.info(
+            "aria_thinking",
+            type=thought.type.value,
+            content=thought.content[:100],
+        )
+
+        # Try to broadcast via WebSocket if available
+        ws_manager = self._get_ws_manager()
+        if ws_manager:
+            import asyncio
+            try:
+                # Get or create event loop
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    loop = None
+
+                if loop and loop.is_running():
+                    # Schedule the coroutine
+                    asyncio.create_task(
+                        ws_manager.send_thinking_update(
+                            session_id=self._current_session_id or "unknown",
+                            thought_type=thought.type.value,
+                            content=thought.content,
+                            context=thought.context,
+                        )
+                    )
+            except Exception as e:
+                logger.debug("websocket_broadcast_failed", error=str(e))
+
     async def create_artwork(self, theme: str | None = None):
         """Create a single piece of artwork with Aria's personality."""
         # Set unique request ID for this operation
         request_id = set_request_id()
+        self._current_session_id = request_id
+
+        # Clear thinking for new session
+        self.thinking.clear_session()
 
         # Update Aria's mood
         self.mood_system.update_mood()
+
+        # Broadcast Aria's state if WebSocket available
+        ws_manager = self._get_ws_manager()
+        if ws_manager:
+            try:
+                await ws_manager.send_aria_state(
+                    mood=self.mood_system.current_mood.value,
+                    energy=self.mood_system.energy_level,
+                    feeling=self.mood_system.describe_feeling(),
+                    session_id=request_id,
+                )
+            except Exception as e:
+                logger.debug("state_broadcast_failed", error=str(e))
 
         # Get relevant context from enhanced memory to inform creation
         memory_context = self.enhanced_memory.get_relevant_context(
             current_mood=self.mood_system.current_mood.value, limit=3
         )
+
+        # === VISIBLE THINKING: OBSERVE ===
+        # Determine time of day for context
+        from datetime import datetime as dt
+        hour = dt.now().hour
+        if 5 <= hour < 12:
+            time_of_day = "morning"
+        elif 12 <= hour < 17:
+            time_of_day = "afternoon"
+        elif 17 <= hour < 21:
+            time_of_day = "evening"
+        else:
+            time_of_day = "night"
+
+        # Get recent work for context
+        recent_episodes = self.enhanced_memory.episodic.get_recent_episodes(3, "creation")
+        recent_work = None
+        if recent_episodes:
+            recent_work = recent_episodes[-1].get("details", {}).get("subject")
+
+        self.thinking.observe({
+            "time_of_day": time_of_day,
+            "theme": theme,
+            "recent_work": recent_work,
+        })
 
         logger.info(
             "aria_creating",
@@ -194,18 +288,32 @@ class AIArtist:
         )
 
         with PerformanceTimer(logger, "artwork_creation"):
+            # === VISIBLE THINKING: REFLECT & DECIDE ===
             # Aria chooses what to paint (autonomous decision)
             if theme:
                 query = theme
+                # Reflect on the suggested theme
+                self.thinking.reflect(theme)
                 logger.info("theme_suggested", theme=theme, source="human_suggestion")
             else:
-                # Aria makes her own choice based on mood & memory
-                query = self.mood_system.get_mood_based_subject()
+                # Aria reflects on possible directions
+                mood_subjects = self.mood_system.mood_influences[
+                    self.mood_system.current_mood
+                ]["subjects"]
+                self.thinking.reflect("what to create")
+
+                # Make a decision among mood-appropriate subjects
+                query, reasoning = self.thinking.decide(mood_subjects)
+                if not query:
+                    # Fallback to mood-based selection
+                    query = self.mood_system.get_mood_based_subject()
+
                 logger.info(
                     "aria_chose_subject",
                     subject=query,
                     mood=self.mood_system.current_mood.value,
                     source="autonomous_choice",
+                    reasoning=reasoning[:100] if reasoning else None,
                 )
 
             # === CRITIQUE LOOP ===
@@ -229,7 +337,7 @@ class AIArtist:
                     "energy": self.mood_system.energy_level,
                     "recent_subjects": [
                         ep.get("details", {}).get("subject", "")
-                        for ep in self.enhanced_memory.get_recent_episodes(5)
+                        for ep in self.enhanced_memory.episodic.get_recent_episodes(5)
                     ],
                 }
 
@@ -244,6 +352,19 @@ class AIArtist:
                     confidence=critique_result["confidence"],
                     critique=critique_result["critique"][:100],
                 )
+
+                # Broadcast critique via WebSocket
+                if ws_manager:
+                    try:
+                        await ws_manager.send_critique_update(
+                            session_id=request_id,
+                            iteration=critique_iteration + 1,
+                            approved=critique_result["approved"],
+                            critique=critique_result["critique"],
+                            confidence=critique_result["confidence"],
+                        )
+                    except Exception as e:
+                        logger.debug("critique_broadcast_failed", error=str(e))
 
                 if critique_result["approved"]:
                     logger.info("concept_approved", iterations=critique_iteration + 1)
@@ -523,6 +644,7 @@ class AIArtist:
                     "image_path": str(saved_path),
                     "critique_iterations": len(critique_history),
                     "final_critique": critique_history[-1] if critique_history else None,
+                    "thinking_narrative": self.thinking.get_thinking_narrative(),
                 },
                 emotional_state={
                     "mood": self.mood_system.current_mood.value,
@@ -532,6 +654,9 @@ class AIArtist:
                     "score": best_score,
                 },
             )
+
+            # Store thinking session in memory for future reference
+            self.thinking.store_in_memory()
 
             # Update mood after creation
             self.mood_system.update_mood(best_score)

@@ -144,6 +144,84 @@ class ConnectionManager:
         }
         await self.broadcast(update)
 
+    async def send_thinking_update(
+        self,
+        session_id: str,
+        thought_type: str,
+        content: str,
+        context: dict | None = None,
+    ):
+        """Send Aria's thinking process update for visible thinking.
+
+        Args:
+            session_id: The creation session ID
+            thought_type: One of "observe", "reflect", "decide", "express", "create"
+            content: The thought content
+            context: Optional additional context
+        """
+        update = {
+            "type": "thinking_update",
+            "session_id": session_id,
+            "thought_type": thought_type,
+            "content": content,
+            "context": context or {},
+            "timestamp": datetime.now().isoformat(),
+        }
+        await self.broadcast(update)
+
+    async def send_aria_state(
+        self,
+        mood: str,
+        energy: float,
+        feeling: str,
+        session_id: str | None = None,
+    ):
+        """Send Aria's current emotional state.
+
+        Args:
+            mood: Current mood name
+            energy: Energy level (0-1)
+            feeling: Aria's description of how she feels
+            session_id: Optional session ID
+        """
+        state = {
+            "type": "aria_state",
+            "session_id": session_id,
+            "mood": mood,
+            "energy": energy,
+            "feeling": feeling,
+            "timestamp": datetime.now().isoformat(),
+        }
+        await self.broadcast(state)
+
+    async def send_critique_update(
+        self,
+        session_id: str,
+        iteration: int,
+        approved: bool,
+        critique: str,
+        confidence: float,
+    ):
+        """Send critique loop update.
+
+        Args:
+            session_id: The creation session ID
+            iteration: Which critique iteration (1, 2, 3...)
+            approved: Whether the concept was approved
+            critique: The critique text
+            confidence: Confidence score (0-1)
+        """
+        update = {
+            "type": "critique_update",
+            "session_id": session_id,
+            "iteration": iteration,
+            "approved": approved,
+            "critique": critique,
+            "confidence": confidence,
+            "timestamp": datetime.now().isoformat(),
+        }
+        await self.broadcast(update)
+
 
 # Global instance
 manager = ConnectionManager()

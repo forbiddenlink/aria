@@ -1,5 +1,6 @@
 """Aria's personality system - bringing soul to the autonomous artist."""
 
+from .cognition import Thought, ThinkingProcess, ThoughtType
 from .enhanced_memory import EnhancedMemorySystem, EpisodicMemory, SemanticMemory
 from .memory import ArtistMemory
 from .moods import Mood, MoodSystem
@@ -13,4 +14,7 @@ __all__ = [
     "EnhancedMemorySystem",
     "EpisodicMemory",
     "SemanticMemory",
+    "ThinkingProcess",
+    "Thought",
+    "ThoughtType",
 ]

@@ -194,21 +194,31 @@ Current gallery is functional but basic. Should show:
 - Creates iterative improvement loop (max 3 iterations)
 - Records critique history in enhanced memory
 
-### Phase 2: Visible Thinking
+### Phase 2: Visible Thinking - COMPLETE
 
-**Files to create:**
+**Files created:**
 
-- `src/ai_artist/personality/cognition.py`
+- `src/ai_artist/personality/cognition.py` - ThinkingProcess class with ReAct pattern
 
-**Files to modify:**
+**Files modified:**
 
-- `src/ai_artist/web/app.py` - Add WebSocket endpoints
+- `src/ai_artist/main.py` - Integrated ThinkingProcess into creation flow
+- `src/ai_artist/web/websocket.py` - Added thinking/state broadcast methods
+- `src/ai_artist/personality/__init__.py` - Exported new cognition components
 
-**Endpoints:**
+**WebSocket Events (via existing /ws endpoint):**
 
-- `/ws/state` - Real-time Aria state
-- `/ws/thinking` - Live thinking narrative
-- `/ws/progress` - Generation progress
+- `thinking_update` - Real-time thinking narrative (observe/reflect/decide/express/create)
+- `aria_state` - Mood, energy, and feeling updates
+- `critique_update` - Critique loop iterations with approval/feedback
+
+**ThinkingProcess Methods:**
+
+- `observe(context)` - What Aria notices about time, mood, suggestions
+- `reflect(topic)` - Associations and memory-informed contemplation
+- `decide(options)` - Choice with mood-aligned reasoning
+- `express(intent)` - Mood-colored articulation
+- `begin_creation(concept)` - Signal start of creative act
 
 ### Phase 3: Multi-Model Support
 
@@ -312,7 +322,7 @@ src/ai_artist/
 │   ├── profile.py         ✅ Implemented
 │   ├── aria_memory.py     ✅ Implemented
 │   ├── critic.py          ✅ Implemented (Phase 1 complete)
-│   └── cognition.py       ⬜ To create (Phase 2)
+│   └── cognition.py       ✅ Implemented (Phase 2 complete)
 │
 ├── core/
 │   ├── generator.py       ✅ Implemented (needs multi-model)
@@ -359,7 +369,7 @@ uvicorn ai_artist.web.app:app --reload
 When properly implemented, Aria will:
 
 - [x] Critique concepts before generating (60%+ reduction in bad art)
-- [ ] Show visible thinking process in real-time
+- [x] Show visible thinking process in real-time
 - [ ] Use appropriate models based on mood
 - [ ] Display evolution and learning visibly
 - [ ] Operate autonomously 24/7 with minimal intervention
