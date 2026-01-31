@@ -141,6 +141,7 @@ class AIArtist:
             self.face_restorer = FaceRestorer(
                 model_path=self.config.face_restoration.model_path,
                 device=self.config.model.device,
+                fidelity=self.config.face_restoration.fidelity,
             )
 
         # Initialize gallery

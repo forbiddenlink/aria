@@ -1,6 +1,7 @@
-"""Automated image curation using CLIP."""
+"""Automated image curation using CLIP and LAION aesthetic predictor."""
 
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 from PIL import Image
@@ -8,6 +9,9 @@ from PIL import Image
 from ..utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+# Default model for aesthetic prediction
+AESTHETIC_MODEL_ID = "shunk031/aesthetics-predictor-v2-sac-logos-ava1-l14-linearMSE"
 
 
 def is_black_or_blank(image: Image.Image, threshold: float = 0.02) -> tuple[bool, str]:
@@ -77,13 +81,18 @@ class QualityMetrics:
 
 
 class ImageCurator:
-    """CLIP-based image curation."""
+    """CLIP-based image curation with LAION aesthetic scoring."""
 
-    def __init__(self, device: str = "cuda"):
+    def __init__(self, device: str = "cuda", aesthetic_model_id: str | None = None):
         self.device = device
         # Note: CLIP loading is deferred to avoid import errors if not installed yet
         self.model = None
         self.preprocess = None
+        # Aesthetic predictor (lazy loaded)
+        self._aesthetic_model: Any = None
+        self._aesthetic_processor: Any = None
+        self._aesthetic_model_id = aesthetic_model_id or AESTHETIC_MODEL_ID
+        self._aesthetic_available: bool | None = None  # None = not checked yet
         logger.info("curator_initialized", device=device)
 
     def _load_clip(self):
@@ -102,6 +111,66 @@ class ImageCurator:
                 # Don't raise - allow graceful degradation
                 return False
         return True
+
+    def _load_aesthetic_model(self) -> bool:
+        """Lazy load LAION aesthetic predictor model.
+
+        Returns:
+            True if model loaded successfully, False otherwise.
+        """
+        # Already checked and failed
+        if self._aesthetic_available is False:
+            return False
+
+        # Already loaded
+        if self._aesthetic_model is not None:
+            return True
+
+        try:
+            import torch
+            from aesthetics_predictor import AestheticsPredictorV2Linear
+            from transformers import CLIPProcessor
+
+            logger.info(
+                "loading_aesthetic_model",
+                model_id=self._aesthetic_model_id,
+            )
+
+            self._aesthetic_model = AestheticsPredictorV2Linear.from_pretrained(
+                self._aesthetic_model_id
+            )
+            self._aesthetic_processor = CLIPProcessor.from_pretrained(
+                self._aesthetic_model_id
+            )
+
+            # Move model to device and set to evaluation mode
+            self._aesthetic_model = self._aesthetic_model.to(self.device)
+            self._aesthetic_model.train(False)  # Sets model to evaluation mode
+
+            self._aesthetic_available = True
+            logger.info(
+                "aesthetic_model_loaded",
+                model_id=self._aesthetic_model_id,
+                device=self.device,
+            )
+            return True
+
+        except ImportError as e:
+            logger.warning(
+                "aesthetic_predictor_not_installed",
+                error=str(e),
+                message="Install with: pip install simple-aesthetics-predictor transformers",
+            )
+            self._aesthetic_available = False
+            return False
+        except Exception as e:
+            logger.error(
+                "aesthetic_model_load_failed",
+                error=str(e),
+                model_id=self._aesthetic_model_id,
+            )
+            self._aesthetic_available = False
+            return False
 
     def evaluate(self, image: Image.Image, prompt: str) -> QualityMetrics:
         """Evaluate image quality."""
@@ -160,13 +229,139 @@ class ImageCurator:
         return float(max(0.0, similarity))  # Clip to [0, 1]
 
     def _estimate_aesthetic(self, image: Image.Image) -> float:
-        """Estimate aesthetic score (placeholder)."""
-        # TODO: Implement with LAION aesthetic predictor
-        # For now, return a dummy score based on image properties
-        width, height = image.size
-        # Prefer images close to square aspect ratio
-        aspect_ratio = min(width, height) / max(width, height)
-        return float(0.5 + (aspect_ratio * 0.3))  # Range: 0.5-0.8
+        """Estimate aesthetic score using LAION aesthetic predictor.
+
+        Uses the LAION aesthetic predictor V2 model to score images on a 1-10 scale,
+        then normalizes to 0-1 range. Falls back to heuristic scoring if the model
+        is not available.
+
+        Args:
+            image: PIL Image to score.
+
+        Returns:
+            Aesthetic score in range 0-1.
+        """
+        # Try to use the LAION aesthetic predictor
+        if self._load_aesthetic_model():
+            try:
+                return self._compute_aesthetic_score(image)
+            except Exception as e:
+                logger.warning(
+                    "aesthetic_prediction_failed",
+                    error=str(e),
+                    fallback="heuristic",
+                )
+
+        # Fallback to heuristic scoring
+        return self._estimate_aesthetic_heuristic(image)
+
+    def _compute_aesthetic_score(self, image: Image.Image) -> float:
+        """Compute aesthetic score using the LAION model.
+
+        Args:
+            image: PIL Image to score.
+
+        Returns:
+            Normalized aesthetic score (0-1).
+        """
+        import torch
+
+        assert self._aesthetic_model is not None
+        assert self._aesthetic_processor is not None
+
+        # Ensure image is RGB
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+
+        # Preprocess the image
+        inputs = self._aesthetic_processor(images=image, return_tensors="pt")
+
+        # Move inputs to the same device as model
+        inputs = {k: v.to(self.device) for k, v in inputs.items()}
+
+        # Run inference
+        with torch.no_grad():
+            outputs = self._aesthetic_model(**inputs)
+            # Model outputs logits in range ~1-10
+            raw_score = outputs.logits.item()
+
+        # Normalize from 1-10 scale to 0-1
+        # Scores below 4 are generally considered low quality
+        # Scores above 7 are considered high quality
+        normalized_score = (raw_score - 1.0) / 9.0  # Map 1-10 to 0-1
+        normalized_score = max(0.0, min(1.0, normalized_score))  # Clamp
+
+        logger.debug(
+            "aesthetic_score_computed",
+            raw_score=round(raw_score, 2),
+            normalized_score=round(normalized_score, 3),
+        )
+
+        return float(normalized_score)
+
+    def _estimate_aesthetic_heuristic(self, image: Image.Image) -> float:
+        """Fallback heuristic aesthetic scoring when model is unavailable.
+
+        Combines multiple image quality signals:
+        - Aspect ratio preference (40%)
+        - Contrast/dynamic range (30%)
+        - Color saturation (30%)
+
+        Args:
+            image: PIL Image to score.
+
+        Returns:
+            Heuristic aesthetic score in range 0-1.
+        """
+        try:
+            img_array = np.array(image.convert("RGB"))
+
+            # 1. Aspect ratio score (prefer ratios close to golden ratio or square)
+            width, height = image.size
+            aspect = max(width, height) / max(min(width, height), 1)
+            golden_ratio = 1.618
+            # Score how close to golden ratio or square (1.0)
+            aspect_score = 1.0 - min(abs(aspect - golden_ratio), abs(aspect - 1.0)) / 2.0
+            aspect_score = max(0.0, min(1.0, aspect_score))
+
+            # 2. Contrast score (standard deviation of luminance)
+            luminance = 0.299 * img_array[:, :, 0] + 0.587 * img_array[:, :, 1] + 0.114 * img_array[:, :, 2]
+            contrast = luminance.std() / 128.0  # Normalize by half the max value
+            contrast_score = min(1.0, contrast)
+
+            # 3. Color saturation score
+            # Convert to HSV-like saturation without opencv
+            r, g, b = img_array[:, :, 0].astype(np.float32), img_array[:, :, 1].astype(np.float32), img_array[:, :, 2].astype(np.float32)
+            max_rgb = np.maximum(np.maximum(r, g), b)
+            min_rgb = np.minimum(np.minimum(r, g), b)
+            # Saturation = (max - min) / max, avoiding division by zero
+            # Use epsilon to prevent division warning on black pixels
+            saturation = (max_rgb - min_rgb) / np.maximum(max_rgb, 1e-7)
+            saturation_score = float(saturation.mean())
+
+            # Weighted combination
+            aesthetic_score = (
+                aspect_score * 0.4
+                + contrast_score * 0.3
+                + saturation_score * 0.3
+            )
+
+            logger.debug(
+                "heuristic_aesthetic_score",
+                aspect_score=round(aspect_score, 3),
+                contrast_score=round(contrast_score, 3),
+                saturation_score=round(saturation_score, 3),
+                total=round(aesthetic_score, 3),
+            )
+
+            return float(aesthetic_score)
+
+        except Exception as e:
+            logger.error("heuristic_aesthetic_failed", error=str(e))
+            # Ultimate fallback: moderate score based on aspect ratio
+            width, height = image.size
+            aspect_ratio = min(width, height) / max(width, height)
+            return float(0.5 + (aspect_ratio * 0.3))
 
     def _detect_blur(self, image: Image.Image) -> float:
         """Detect image blur using Laplacian variance.
