@@ -1,0 +1,27 @@
+# Vercel ignore file
+node_modules
+venv
+__pycache__
+*.pyc
+.pytest_cache
+htmlcov
+.coverage
+.mypy_cache
+.ruff_cache
+models/*
+!models/.gitkeep
+datasets/*
+!datasets/.gitkeep
+gallery/test/*
+logs/*
+*.log
+.DS_Store
+.env
+*.pth
+*.ckpt
+*.safetensors
+.git
+.github
+docs/archive
+thoughts
+MagicMock

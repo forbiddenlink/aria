@@ -1,7 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "name": "ai-artist-gallery",
   "builds": [
     {
       "src": "api/index.py",
@@ -28,20 +27,5 @@
   "env": {
     "GALLERY_ONLY_MODE": "true",
     "GALLERY_PATH": "/tmp/gallery"
-  },
-  "functions": {
-    "api/index.py": {
-      "memory": 1024,
-      "maxDuration": 30
-    }
-  },
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS" }
-      ]
-    }
-  ]
+  }
 }
