@@ -8,17 +8,9 @@
       "config": {
         "maxLambdaSize": "50mb"
       }
-    },
-    {
-      "src": "gallery/**/*",
-      "use": "@vercel/static"
     }
   ],
   "routes": [
-    {
-      "src": "/gallery/(.*)",
-      "dest": "/gallery/$1"
-    },
     {
       "src": "/(.*)",
       "dest": "/api/index.py"
