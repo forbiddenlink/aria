@@ -8,9 +8,10 @@ on Railway, Render, or a GPU-enabled cloud provider.
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from mangum import Mangum
 
 # Create a lightweight app for Vercel
 app = FastAPI(
@@ -115,5 +116,5 @@ async def vercel_health():
     }
 
 
-# Export for Vercel - the app itself is the handler
-# Vercel will automatically wrap FastAPI apps
+# Mangum handler for Vercel serverless
+handler = Mangum(app)
