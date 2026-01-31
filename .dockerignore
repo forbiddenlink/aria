@@ -49,11 +49,9 @@ pytest.ini
 # Config (will be mounted as volume)
 config/config.yaml
 
-# Gallery output directory (will be mounted as volume)
-# Note: This excludes the output directory but NOT src/ai_artist/gallery source code
-gallery/2026/
-gallery/test/
-!src/ai_artist/gallery/
+# Gallery output directory at root level ONLY (will be mounted as volume)
+# Using /gallery/ to exclude only root-level, not src/ai_artist/gallery/
+/gallery/
 
 # Temporary files
 *.tmp
