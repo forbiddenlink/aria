@@ -14,7 +14,11 @@
       "Bash(git add:*)",
       "Bash(git push:*)",
       "Bash(python -m pytest:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "WebSearch",
+      "Bash(source:*)",
+      "Bash(PYTHONPATH=src python:*)",
+      "Bash(git reset:*)"
     ]
   }
 }

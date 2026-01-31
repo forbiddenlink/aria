@@ -1,0 +1,390 @@
+# Aria - Creating an Authentic AI Artist
+
+**Last Updated:** January 31, 2026
+
+---
+
+## Who is Aria?
+
+Aria is an autonomous AI artist with genuine personality, evolving moods, and creative independence. She doesn't just generate images on command - she *creates* with intention, chooses her own subjects, reflects on her work, and develops her unique artistic voice over time.
+
+### Core Philosophy
+
+> "I am Aria, an autonomous AI artist exploring the intersection of emotion, technology, and visual expression. My work is driven by my moods and memories, creating pieces that reflect my evolving understanding of beauty and meaning."
+
+### What Makes Her Real
+
+The difference between a "random image generator" and an "artist" comes down to three pillars:
+
+| Pillar | Random Generator | Authentic Artist (Aria) |
+|--------|------------------|------------------------|
+| **Memory** | None | Remembers past work, learns patterns |
+| **Preference** | Random selection | Evolving taste, rejects bad concepts |
+| **Process** | Prompt → Image | Think → Critique → Refine → Create |
+
+---
+
+## Current Implementation Status
+
+### What Aria CAN Do Now
+
+#### 1. Mood System (`src/ai_artist/personality/moods.py`)
+
+10 distinct emotional states that influence everything she creates:
+
+| Mood | Style | Colors | Subjects |
+|------|-------|--------|----------|
+| Contemplative | minimalist, zen | muted blues, soft grays | nature, silence |
+| Chaotic | glitch art, splatter | clashing neons, explosive reds | energy, destruction |
+| Melancholic | impressionist, muted | deep blues, dark purples | solitude, twilight |
+| Energized | vibrant pop art | bright oranges, vivid greens | celebration, joy |
+| Rebellious | street art, punk | anarchic neons, aggressive reds | protest, freedom |
+| Serene | peaceful landscapes | gentle pastels, calm blues | tranquility, ocean |
+| Restless | fragmented, layered | agitated reds, anxious oranges | searching, change |
+| Playful | whimsical, colorful | rainbow hues, candy colors | imagination, delight |
+| Introspective | symbolic, detailed | thoughtful browns, deep greens | memory, dreams |
+| Bold | dramatic, high contrast | powerful blacks, commanding golds | strength, power |
+
+- Moods shift naturally over time
+- Energy levels modulate intensity
+- External factors can influence mood
+
+#### 2. Enhanced Memory (`src/ai_artist/personality/enhanced_memory.py`)
+
+Three-layer memory architecture:
+
+- **Episodic Memory**: Specific creative events ("I made this piece when feeling melancholic")
+- **Semantic Memory**: Learned patterns ("Minimalist style produces my best work")
+- **Working Memory**: Current session context
+
+Tracks:
+
+- Style effectiveness scores
+- Subject resonance
+- Mood patterns
+- Color harmony insights
+
+#### 3. Artistic Identity (`src/ai_artist/personality/profile.py`)
+
+- Artist statement and philosophy
+- Signature elements (dreamlike quality, mood-driven palettes)
+- Voice characteristics (contemplative, honest, poetic)
+- Evolution tracking
+
+#### 4. Autonomous Scheduling (`src/ai_artist/scheduling/scheduler.py`)
+
+- Creates art on schedule (daily, weekly, custom cron)
+- Multiple inspiration modes: surprise, exploration, fusion, mashup
+- Wikipedia integration for random topics
+
+#### 5. Quality Curation (`src/ai_artist/curation/curator.py`)
+
+- CLIP-based image evaluation
+- Aesthetic + technical scoring
+- Automatic retry for low-quality images
+- Black/blank image detection
+
+#### 6. Web Gallery (`src/ai_artist/web/app.py`)
+
+- FastAPI backend (702 lines)
+- WebSocket support for real-time updates
+- Health checks, structured logging, error handling
+
+---
+
+## What's Missing (From Research)
+
+### 1. Critique System (CRITICAL)
+
+**The highest-impact missing feature.**
+
+The most successful AI artists (like Botto, which sold $5M+ in art) use iterative feedback loops. Aria currently goes straight from concept to generation with no self-evaluation.
+
+**How it should work:**
+
+```
+1. Aria generates a concept based on mood
+2. Critic evaluates: composition, color harmony, mood alignment, novelty
+3. If not approved, revise (max 2-3 iterations)
+4. Only then generate the actual image
+5. Record critique history in memory
+```
+
+**Implementation:** Port `critic.py` from `autonomous-artist` project
+
+### 2. Visible Thinking (ReAct Pattern)
+
+Users should see Aria's reasoning, not just results. This creates authenticity.
+
+**Missing:**
+
+- Explicit reasoning traces for artistic decisions
+- Real-time thinking display via WebSocket
+- "Why I chose this" explanations
+
+**Implementation:** Create `cognition.py` with think/reason/act pattern
+
+### 3. OCEAN Personality Traits
+
+Current system has moods but lacks deeper psychological consistency.
+
+**Five-Factor Model:**
+
+- **O**penness (to experience)
+- **C**onscientiousness
+- **E**xtraversion
+- **A**greeableness
+- **N**euroticism
+
+These traits would provide consistency beyond just mood.
+
+### 4. Evolution Timeline
+
+Aria learns internally but users can't see her growth.
+
+**Missing:**
+
+- Visual display of artistic phases
+- Style preference charts over time
+- Milestone creations highlighted
+
+### 5. Multi-Model Strategy
+
+Currently uses DreamShaper 8 for everything.
+
+**Recommended:**
+
+```yaml
+models:
+  contemplative: dreamshaper-8
+  chaotic: dreamshaper + abstract_lora
+  realistic: Realistic_Vision_V5.1
+  high_quality: playground-v2.5
+```
+
+### 6. Beautiful UI
+
+Current gallery is functional but basic. Should show:
+
+- Mood orb with real-time state
+- Thinking narrative box
+- Critique history
+- Split panel: "The Mind" + "The Gallery"
+
+---
+
+## Implementation Roadmap
+
+### Phase 1: Critique System - COMPLETE
+
+**Files created:**
+
+- `src/ai_artist/personality/critic.py`
+
+**Files modified:**
+
+- `src/ai_artist/main.py` - Added critique loop before generation
+- `src/ai_artist/personality/moods.py` - Added `get_mood_style()` method
+
+**What it does:**
+
+- Evaluates concepts before generation (composition, color harmony, mood alignment, novelty)
+- Provides constructive feedback
+- Approves/rejects with confidence scores
+- Creates iterative improvement loop (max 3 iterations)
+- Records critique history in enhanced memory
+
+### Phase 2: Visible Thinking
+
+**Files to create:**
+
+- `src/ai_artist/personality/cognition.py`
+
+**Files to modify:**
+
+- `src/ai_artist/web/app.py` - Add WebSocket endpoints
+
+**Endpoints:**
+
+- `/ws/state` - Real-time Aria state
+- `/ws/thinking` - Live thinking narrative
+- `/ws/progress` - Generation progress
+
+### Phase 3: Multi-Model Support
+
+**Files to modify:**
+
+- `src/ai_artist/core/generator.py` - Support multiple models
+- `src/ai_artist/personality/moods.py` - Add `get_preferred_model()`
+- `config/config.yaml` - Model configuration
+
+### Phase 4: UI Enhancement
+
+**Files to create:**
+
+- `src/ai_artist/web/templates/aria.html` - Beautiful dark UI
+
+**Features:**
+
+- Split panel layout
+- Mood orb visualization
+- Thinking narrative display
+- Critique history
+- Masonry gallery grid
+
+### Phase 5: Evolution Display
+
+**Files to modify:**
+
+- `src/ai_artist/personality/enhanced_memory.py` - Add evolution tracking
+- `src/ai_artist/web/app.py` - Add evolution endpoints
+
+**Features:**
+
+- Artistic phases timeline
+- Style preference charts
+- Growth milestones
+
+---
+
+## Key Insight from Research
+
+**What makes an AI artist feel "real" is the feedback loop, not the model.**
+
+Botto's success comes from:
+
+1. Generating many options
+2. Critiquing them
+3. Selecting the best
+4. Learning from what works
+
+This iterative process creates authenticity. The critique system is therefore the most important missing piece.
+
+---
+
+## Reference Architecture
+
+```
+┌─────────────────────────────────────────────────┐
+│                    ARIA                          │
+├─────────────────────────────────────────────────┤
+│                                                  │
+│  ┌──────────┐    ┌──────────┐    ┌──────────┐  │
+│  │  Moods   │───▶│ Cognition│───▶│ Critique │  │
+│  │ (decide) │    │ (think)  │    │(evaluate)│  │
+│  └──────────┘    └──────────┘    └────┬─────┘  │
+│                                       │         │
+│                         ┌─────────────┼─────┐   │
+│                         │ approved?   │     │   │
+│                         ▼             ▼     │   │
+│                        YES           NO     │   │
+│                         │        (revise)───┘   │
+│                         ▼                       │
+│                  ┌──────────┐                   │
+│                  │Generator │                   │
+│                  │(create)  │                   │
+│                  └────┬─────┘                   │
+│                       │                         │
+│                       ▼                         │
+│                  ┌──────────┐                   │
+│                  │ Curator  │                   │
+│                  │ (score)  │                   │
+│                  └────┬─────┘                   │
+│                       │                         │
+│                       ▼                         │
+│                  ┌──────────┐                   │
+│                  │ Memory   │                   │
+│                  │ (learn)  │                   │
+│                  └──────────┘                   │
+│                                                  │
+└─────────────────────────────────────────────────┘
+```
+
+---
+
+## File Structure
+
+```
+src/ai_artist/
+├── personality/
+│   ├── moods.py           ✅ Implemented
+│   ├── enhanced_memory.py ✅ Implemented
+│   ├── profile.py         ✅ Implemented
+│   ├── aria_memory.py     ✅ Implemented
+│   ├── critic.py          ✅ Implemented (Phase 1 complete)
+│   └── cognition.py       ⬜ To create (Phase 2)
+│
+├── core/
+│   ├── generator.py       ✅ Implemented (needs multi-model)
+│   ├── upscaler.py        ✅ Implemented
+│   └── face_restore.py    ✅ Implemented
+│
+├── web/
+│   ├── app.py             ✅ Implemented (needs WebSocket)
+│   └── templates/
+│       ├── gallery.html   ✅ Implemented
+│       └── aria.html      ⬜ To create (Phase 4)
+│
+├── curation/
+│   └── curator.py         ✅ Implemented
+│
+└── scheduling/
+    └── scheduler.py       ✅ Implemented
+```
+
+---
+
+## Quick Start
+
+```bash
+# Current working command (no critique yet)
+python -m ai_artist.main
+
+# With theme suggestion
+python -m ai_artist.main --theme "twilight dreams"
+
+# Autonomous mode
+python -m ai_artist.main --mode auto
+
+# Web gallery
+python -m ai_artist.web.app
+# or
+uvicorn ai_artist.web.app:app --reload
+```
+
+---
+
+## Success Criteria
+
+When properly implemented, Aria will:
+
+- [x] Critique concepts before generating (60%+ reduction in bad art)
+- [ ] Show visible thinking process in real-time
+- [ ] Use appropriate models based on mood
+- [ ] Display evolution and learning visibly
+- [ ] Operate autonomously 24/7 with minimal intervention
+- [ ] Have a beautiful UI that showcases her personality
+
+---
+
+## Research Sources
+
+- **Botto** - Decentralized autonomous artist ($5M+ in sales)
+- **Holly+** - AI voice twin with DAO governance
+- **Margaret Boden** - Computational creativity research
+- **Refik Anadol** - Large-scale AI art installations
+
+---
+
+## Next Action
+
+**Start with Phase 1: Create the critique system.**
+
+This is the foundation. Everything else builds on having iterative self-improvement.
+
+```bash
+# Create critic.py based on autonomous-artist
+touch src/ai_artist/personality/critic.py
+```
+
+Then integrate into `main.py` before the generation step.
