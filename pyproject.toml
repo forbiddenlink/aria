@@ -42,6 +42,16 @@ ai-artist-gallery = "ai_artist.gallery.viewer:main"
 ai-artist-schedule = "ai_artist.scheduling.cli:main"
 ai-artist-web = "ai_artist.web.cli:main"
 
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
