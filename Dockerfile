@@ -45,8 +45,8 @@ COPY --from=builder /root/.local /home/aiartist/.local
 # Copy application code
 COPY --chown=aiartist:aiartist . .
 
-# Install package
-RUN pip install --no-cache-dir -e .
+# Install package in non-editable mode for production
+RUN pip install --no-cache-dir .
 
 # Create necessary directories with proper ownership
 RUN mkdir -p gallery models logs config data \
