@@ -169,13 +169,29 @@ class MoodSystem:
 
         return base_prompt
 
-    def get_mood_based_subject(self) -> str:
-        """Choose a subject based on current mood."""
+    def get_mood_based_subject(self, avoid: list[str] | None = None) -> str:
+        """Choose a subject based on current mood, avoiding recent subjects.
+
+        Args:
+            avoid: List of subjects to avoid (recently painted)
+        """
         influences = self.mood_influences[self.current_mood]
-        subject: str = random.choice(influences["subjects"])
+        subjects = influences["subjects"]
+
+        # Filter out subjects to avoid
+        if avoid:
+            available = [
+                s for s in subjects if s.lower() not in [a.lower() for a in avoid]
+            ]
+            subjects = available if available else subjects  # Fallback if all filtered
+
+        subject: str = random.choice(subjects)
 
         logger.info(
-            "mood_based_subject_chosen", mood=self.current_mood, subject=subject
+            "mood_based_subject_chosen",
+            mood=self.current_mood,
+            subject=subject,
+            avoided=len(avoid) if avoid else 0,
         )
 
         return subject

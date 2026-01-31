@@ -89,7 +89,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: 
+            background:
                 radial-gradient(circle at 20% 10%, rgba(0, 217, 255, 0.08) 0%, transparent 50%),
                 radial-gradient(circle at 80% 20%, rgba(192, 132, 252, 0.06) 0%, transparent 55%),
                 radial-gradient(circle at 50% 90%, rgba(255, 107, 157, 0.07) 0%, transparent 50%),
@@ -105,7 +105,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: 
+            background:
                 linear-gradient(135deg, transparent 0%, rgba(0, 217, 255, 0.02) 50%, transparent 100%),
                 linear-gradient(-135deg, transparent 0%, rgba(255, 107, 157, 0.02) 50%, transparent 100%);
             z-index: -1;
@@ -113,15 +113,15 @@
         }
 
         @keyframes backgroundFloat {
-            0%, 100% { 
+            0%, 100% {
                 opacity: 0.6;
                 transform: scale(1) translateY(0);
             }
-            33% { 
+            33% {
                 opacity: 0.8;
                 transform: scale(1.05) translateY(-10px);
             }
-            66% { 
+            66% {
                 opacity: 0.7;
                 transform: scale(1.08) translateY(5px);
             }
@@ -1615,6 +1615,27 @@
                     </svg>
                     Templates
                 </button>
+                <a href="/aria" style="
+                    margin-left: 12px;
+                    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2));
+                    border: 1px solid #8b5cf6;
+                    border-radius: 10px;
+                    padding: 10px 20px;
+                    color: var(--text-primary);
+                    cursor: pointer;
+                    font-weight: 600;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    transition: all 0.3s;
+                    text-decoration: none;
+                " onmouseover="this.style.background='linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(236, 72, 153, 0.3))'" onmouseout="this.style.background='linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2))'">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    ARIA
+                </a>
             </div>
         </div>
     </div>
@@ -1768,20 +1789,20 @@
             </div>
             <div class="progress-status" id="progress-status">In Progress</div>
         </div>
-        
+
         <div class="progress-bar-container">
             <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
         </div>
-        
+
         <div class="progress-info">
             <span id="progress-step-text">Step 0 of 0</span>
             <span id="progress-percent-text">0%</span>
         </div>
-        
+
         <div class="progress-message" id="progress-message">
             Initializing...
         </div>
-        
+
         <div class="progress-actions">
             <button class="progress-btn" onclick="hideProgressPanel()">Hide</button>
             <button class="progress-btn danger" id="cancel-btn" onclick="cancelGeneration()" disabled>
@@ -1793,10 +1814,10 @@
     <!-- Modal -->
     <div class="modal" id="modal">
         <button class="modal-close" onclick="closeModal()" style="position: absolute; top: 20px; left: 20px; z-index: 1001;">×</button>
-        
+
         <!-- Image counter -->
         <div class="modal-image-counter" id="modal-counter">1 of 10</div>
-        
+
         <!-- Info toggle -->
         <button class="modal-info-toggle" id="modal-info-toggle" onclick="toggleModalInfo()" aria-label="Toggle image information panel">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1805,11 +1826,11 @@
                 <line x1="12" y1="8" x2="12.01" y2="8"></line>
             </svg>
         </button>
-        
+
         <!-- Navigation arrows -->
         <button class="modal-nav-btn modal-nav-prev" id="modal-prev" onclick="navigateModal(-1)">‹</button>
         <button class="modal-nav-btn modal-nav-next" id="modal-next" onclick="navigateModal(1)">›</button>
-        
+
         <!-- Zoom controls -->
         <div class="modal-zoom-controls">
             <button class="modal-zoom-btn" onclick="zoomModal(-0.2)" title="Zoom out">−</button>
@@ -1818,13 +1839,13 @@
             <button class="modal-zoom-btn" onclick="resetZoom()" title="Reset zoom">⟲</button>
             <button class="modal-zoom-btn" onclick="startComparison()" title="Compare (C)" style="margin-left: 12px; font-size: 18px;">⇆</button>
         </div>
-        
+
         <div class="modal-content">
             <div class="modal-image-container" id="modal-image-container">
                 <img class="modal-image" id="modal-image" src="" alt="" draggable="false">
             </div>
         </div>
-        
+
         <!-- Info sidebar -->
         <div class="modal-info" id="modal-info">
             <div id="modal-info-content"></div>
@@ -1930,7 +1951,7 @@
                     </button>
                 </div>
                 <div id="templates-list" style="display: grid; gap: 12px; max-height: 500px; overflow-y: auto;"></div>
-                
+
                 <!-- Template Form (hidden by default) -->
                 <div id="template-form" style="display: none; margin-top: 20px; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 12px; border: 1px solid var(--border);">
                     <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 700; color: var(--text-primary);">Create Template</h3>
@@ -2317,7 +2338,7 @@
         function showTemplateForm(templateId = null) {
             const form = document.getElementById('template-form');
             const formTitle = form.querySelector('h3');
-            
+
             if (templateId) {
                 const template = currentTemplates.find(t => t.id === templateId);
                 if (template) {
@@ -2342,7 +2363,7 @@
                 document.getElementById('template-guidance').value = '7.5';
                 document.getElementById('template-tags').value = '';
             }
-            
+
             form.style.display = 'block';
             document.getElementById('templates-list').style.display = 'none';
         }
@@ -2371,7 +2392,7 @@
             try {
                 const url = templateId ? `/api/templates/${templateId}` : '/api/templates';
                 const method = templateId ? 'PUT' : 'POST';
-                
+
                 const response = await fetch(url, {
                     method: method,
                     headers: { 'Content-Type': 'application/json' },
@@ -2440,7 +2461,7 @@
                 justify-content: center;
                 padding: 20px;
             `;
-            
+
             const modalContent = document.createElement('div');
             modalContent.style.cssText = `
                 background: var(--bg-card);
@@ -2452,7 +2473,7 @@
                 max-height: 80vh;
                 overflow-y: auto;
             `;
-            
+
             // Build modal HTML
             let html = `
                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 24px;">
@@ -2471,7 +2492,7 @@
                         justify-content: center;
                     ">&times;</button>
                 </div>
-                
+
                 <div style="margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                         <label style="font-weight: 700; color: var(--text-primary);">Prompt:</label>
@@ -2498,7 +2519,7 @@
                     ">${template.prompt}</div>
                 </div>
             `;
-            
+
             if (template.negative_prompt) {
                 html += `
                 <div style="margin-bottom: 20px;">
@@ -2516,7 +2537,7 @@
                 </div>
                 `;
             }
-            
+
             html += `
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 20px;">
                     <div style="
@@ -2557,7 +2578,7 @@
                     </div>
                 </div>
             `;
-            
+
             if (template.tags && template.tags.length > 0) {
                 html += `
                 <div style="margin-bottom: 20px;">
@@ -2576,7 +2597,7 @@
                 </div>
                 `;
             }
-            
+
             html += `
                 <button id="copy-json-btn" style="
                     width: 100%;
@@ -2591,11 +2612,11 @@
                     box-shadow: 0 4px 12px var(--glow);
                 ">Copy All Settings as JSON</button>
             `;
-            
+
             modalContent.innerHTML = html;
             detailModal.appendChild(modalContent);
             document.body.appendChild(detailModal);
-            
+
             // Add event listeners
             document.getElementById('close-detail-modal').onclick = () => detailModal.remove();
             document.getElementById('copy-prompt-btn').onclick = () => {
@@ -2651,14 +2672,14 @@
 
             // Set first image as the currently opened image
             comparisonImage1 = filteredImages[currentImageIndex];
-            
+
             // Prompt user to select second image
             showToast('Click another image in the gallery to compare', 'info');
-            
+
             // Close modal and enable comparison selection mode
             document.getElementById('modal').style.display = 'none';
             document.body.style.cursor = 'crosshair';
-            
+
             // Add click handler to gallery items
             const galleryItems = document.querySelectorAll('.gallery-item');
             galleryItems.forEach((item, index) => {
@@ -2675,7 +2696,7 @@
         function selectComparisonImage(index) {
             // Set second image
             comparisonImage2 = filteredImages[index];
-            
+
             // Remove selection handlers and restore normal gallery behavior
             const galleryItems = document.querySelectorAll('.gallery-item');
             galleryItems.forEach((item, idx) => {
@@ -2684,7 +2705,7 @@
                 item.onclick = () => openModal(idx);
             });
             document.body.style.cursor = 'default';
-            
+
             // Show comparison mode
             showComparisonMode();
         }
@@ -2692,14 +2713,14 @@
         function showComparisonMode() {
             const modal = document.getElementById('comparison-mode');
             modal.style.display = 'block';
-            
+
             // Load images
             document.getElementById('compare-image-1').src = comparisonImage1.full_url;
             document.getElementById('compare-image-2').src = comparisonImage2.full_url;
-            
+
             // Set initial mode
             setComparisonMode('sideBySide');
-            
+
             // Render metadata
             renderComparisonMetadata();
         }
@@ -2711,36 +2732,36 @@
             const rightPanel = document.getElementById('comparison-right');
             const sideBySideBtn = document.getElementById('side-by-side-btn');
             const sliderBtn = document.getElementById('slider-btn');
-            
+
             // Update button states
             sideBySideBtn.classList.toggle('active', mode === 'sideBySide');
             sliderBtn.classList.toggle('active', mode === 'slider');
-            
+
             if (mode === 'sideBySide') {
                 // Side by side layout
                 leftPanel.style.display = 'flex';
                 rightPanel.style.display = 'flex';
                 leftPanel.classList.remove('slider-mode');
                 rightPanel.classList.remove('slider-mode');
-                
+
                 // Remove slider if exists
                 const existingSlider = content.querySelector('.comparison-slider');
                 if (existingSlider) existingSlider.remove();
-                
+
             } else if (mode === 'slider') {
                 // Slider overlay layout
                 leftPanel.classList.add('slider-mode');
                 rightPanel.classList.add('slider-mode');
                 leftPanel.style.display = 'block';
                 rightPanel.style.display = 'block';
-                
+
                 // Create slider
                 if (!content.querySelector('.comparison-slider')) {
                     const slider = document.createElement('div');
                     slider.className = 'comparison-slider';
                     slider.style.left = sliderPosition + '%';
                     content.appendChild(slider);
-                    
+
                     // Add slider drag functionality
                     let isDragging = false;
                     slider.addEventListener('mousedown', () => isDragging = true);
@@ -2756,7 +2777,7 @@
                         }
                     });
                 }
-                
+
                 // Apply clip path
                 rightPanel.style.clipPath = `inset(0 0 0 ${sliderPosition}%)`;
             }
@@ -2765,7 +2786,7 @@
         function renderComparisonMetadata() {
             const meta1 = comparisonImage1.metadata || {};
             const meta2 = comparisonImage2.metadata || {};
-            
+
             // Create diff table
             const fields = ['prompt', 'negative_prompt', 'width', 'height', 'num_inference_steps', 'guidance_scale', 'seed'];
             const labels = {
@@ -2777,29 +2798,29 @@
                 guidance_scale: 'Guidance',
                 seed: 'Seed'
             };
-            
+
             let tableHTML = '<table class="comparison-diff-table"><thead><tr><th>Property</th><th>Image 1</th><th>Image 2</th></tr></thead><tbody>';
-            
+
             fields.forEach(field => {
                 const val1 = meta1[field] || 'N/A';
                 const val2 = meta2[field] || 'N/A';
                 const isDiff = val1 !== val2;
                 const diffClass = isDiff ? ' class="diff"' : '';
-                
+
                 let displayVal1 = val1;
                 let displayVal2 = val2;
-                
+
                 // Truncate long prompts
                 if (field === 'prompt' || field === 'negative_prompt') {
                     displayVal1 = String(val1).substring(0, 50) + (String(val1).length > 50 ? '...' : '');
                     displayVal2 = String(val2).substring(0, 50) + (String(val2).length > 50 ? '...' : '');
                 }
-                
+
                 tableHTML += `<tr><td>${labels[field]}</td><td${diffClass}>${displayVal1}</td><td${diffClass}>${displayVal2}</td></tr>`;
             });
-            
+
             tableHTML += '</tbody></table>';
-            
+
             // Show in both panels
             document.getElementById('compare-metadata-1').innerHTML = tableHTML;
             document.getElementById('compare-metadata-2').innerHTML = tableHTML;
@@ -2849,14 +2870,14 @@
         function updateSelectionUI() {
             const bulkBar = document.getElementById('bulk-actions-bar');
             const selectionCount = document.getElementById('selection-count');
-            
+
             if (selectedImages.size > 0) {
                 bulkBar.style.display = 'flex';
                 selectionCount.textContent = `${selectedImages.size} image${selectedImages.size > 1 ? 's' : ''} selected`;
             } else {
                 bulkBar.style.display = 'none';
             }
-            
+
             // Update visual indicators
             renderGallery();
         }
@@ -2864,7 +2885,7 @@
         // Bulk actions
         async function bulkToggleFeatured() {
             if (selectedImages.size === 0) return;
-            
+
             let successCount = 0;
             for (const index of selectedImages) {
                 const image = allImages[index];
@@ -2876,7 +2897,7 @@
                     console.error(`Failed to toggle featured for ${image.path}:`, error);
                 }
             }
-            
+
             showToast(`Updated ${successCount} image(s)`, 'success');
             clearSelection();
             await loadImages();
@@ -2885,9 +2906,9 @@
 
         async function bulkDownload() {
             if (selectedImages.size === 0) return;
-            
+
             showToast('Preparing download...', 'info');
-            
+
             // Download each image individually
             for (const index of selectedImages) {
                 const image = allImages[index];
@@ -2902,25 +2923,25 @@
                     a.click();
                     window.URL.revokeObjectURL(url);
                     document.body.removeChild(a);
-                    
+
                     // Small delay between downloads to avoid browser blocking
                     await new Promise(resolve => setTimeout(resolve, 100));
                 } catch (error) {
                     console.error(`Failed to download ${image.filename}:`, error);
                 }
             }
-            
+
             showToast(`Downloaded ${selectedImages.size} image(s)`, 'success');
             clearSelection();
         }
 
         async function bulkDelete() {
             if (selectedImages.size === 0) return;
-            
+
             if (!confirm(`Are you sure you want to delete ${selectedImages.size} image(s)? This cannot be undone.`)) {
                 return;
             }
-            
+
             let successCount = 0;
             for (const index of selectedImages) {
                 const image = allImages[index];
@@ -2931,7 +2952,7 @@
                     console.error(`Failed to delete ${image.path}:`, error);
                 }
             }
-            
+
             showToast(`Deleted ${successCount} image(s)`, 'success');
             clearSelection();
             await loadImages();
@@ -2944,20 +2965,20 @@
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
                 return;
             }
-            
+
             // ? - Show shortcuts help
             if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
                 e.preventDefault();
                 showShortcutsModal();
                 return;
             }
-            
+
             // Escape - Close modal or clear selection
             if (e.key === 'Escape') {
                 const modal = document.getElementById('modal');
                 const shortcutsModal = document.getElementById('shortcuts-modal');
                 const comparisonModal = document.getElementById('comparison-mode');
-                
+
                 if (comparisonModal.style.display === 'block') {
                     exitComparison();
                 } else if (modal.classList.contains('active')) {
@@ -2969,7 +2990,7 @@
                 }
                 return;
             }
-            
+
             // Arrow keys - Navigate modal if open
             const modal = document.getElementById('modal');
             if (modal.classList.contains('active')) {
@@ -3011,21 +3032,21 @@
                 // Don't process other shortcuts when modal is open
                 return;
             }
-            
+
             // Ctrl/Cmd + A - Select all
             if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
                 e.preventDefault();
                 selectAll();
                 return;
             }
-            
+
             // Ctrl/Cmd + F - Focus search
             if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
                 e.preventDefault();
                 document.getElementById('search').focus();
                 return;
             }
-            
+
             // Space - Toggle selection mode
             if (e.key === ' ' && !e.ctrlKey && !e.metaKey) {
                 e.preventDefault();
@@ -3036,7 +3057,7 @@
                 showToast(isSelectionMode ? 'Selection mode ON - Click images to select' : 'Selection mode OFF', 'info');
                 return;
             }
-            
+
             // F - Toggle featured for selected or first
             if (e.key === 'f' && !e.ctrlKey && !e.metaKey) {
                 e.preventDefault();
@@ -3047,7 +3068,7 @@
                 }
                 return;
             }
-            
+
             // D - Download selected
             if (e.key === 'd' && !e.ctrlKey && !e.metaKey) {
                 e.preventDefault();
@@ -3056,7 +3077,7 @@
                 }
                 return;
             }
-            
+
             // Delete - Delete selected
             if (e.key === 'Delete') {
                 e.preventDefault();
@@ -3101,7 +3122,7 @@
                 renderGallery();
             } catch (error) {
                 console.error('Failed to load images:', error);
-                document.getElementById('gallery').innerHTML = 
+                document.getElementById('gallery').innerHTML =
                     '<div class="empty-state"><div class="empty-icon">😔</div><h2>Failed to load gallery</h2><p>Please refresh the page</p></div>';
             }
         }
@@ -3129,7 +3150,7 @@
         function toggleAdvancedFilters() {
             const panel = document.getElementById('advanced-filters');
             const btn = document.querySelector('.filter-toggle-btn');
-            
+
             if (panel.style.display === 'none' || !panel.style.display) {
                 panel.style.display = 'flex';
                 btn.classList.add('active');
@@ -3212,7 +3233,7 @@
         function updateFilterCount() {
             const activeFilters = Object.values(currentFilters).filter(v => v !== null).length;
             const countEl = document.getElementById('filter-count');
-            
+
             if (activeFilters > 0) {
                 countEl.textContent = `${activeFilters} filter${activeFilters > 1 ? 's' : ''} active`;
                 countEl.style.color = 'var(--accent)';
@@ -3224,7 +3245,7 @@
         function populateLoRAFilter() {
             const loraSelect = document.getElementById('filter-lora');
             const loraModels = [...new Set(allImages.map(img => img.lora_name).filter(Boolean))];
-            
+
             loraModels.forEach(lora => {
                 const option = document.createElement('option');
                 option.value = lora;
@@ -3236,14 +3257,14 @@
         // Toggle featured
         async function toggleFeatured(imagePath, currentFeatured, event) {
             event.stopPropagation();
-            
+
             const newFeatured = !currentFeatured;
-            
+
             try {
                 const response = await fetch(`/api/images/${imagePath}/featured?featured=${newFeatured}`, {
                     method: 'PUT'
                 });
-                
+
                 if (response.ok) {
                     showToast(newFeatured ? '⭐ Added to featured!' : 'Removed from featured', 'success');
                     loadImages();
@@ -3260,16 +3281,16 @@
         // Delete image
         async function deleteImage(imagePath, event) {
             event.stopPropagation();
-            
+
             if (!confirm('Are you sure you want to delete this image? This cannot be undone.')) {
                 return;
             }
-            
+
             try {
                 const response = await fetch(`/api/images/${imagePath}`, {
                     method: 'DELETE'
                 });
-                
+
                 if (response.ok) {
                     showToast('🗑️ Image deleted successfully', 'success');
                     loadImages();
@@ -3286,14 +3307,14 @@
         // Download image
         function downloadImage(imagePath, filename, event) {
             event.stopPropagation();
-            
+
             const link = document.createElement('a');
             link.href = `/api/images/file/${imagePath}`;
             link.download = filename;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
+
             showToast('⬇️ Download started', 'success');
         }
 
@@ -3306,7 +3327,7 @@
             const filteredImages = filterImages(allImages);
 
             if (filteredImages.length === 0) {
-                gallery.innerHTML = 
+                gallery.innerHTML =
                     '<div class="empty-state"><div class="empty-icon">🎨</div><h2>No artworks found</h2><p>Try adjusting your search or filters!</p></div>';
                 return;
             }
@@ -3314,19 +3335,19 @@
             filteredImages.forEach((image, index) => {
                 const item = document.createElement('div');
                 item.className = 'gallery-item';
-                
+
                 // Add selection highlight if selected
                 const originalIndex = allImages.indexOf(image);
                 if (selectedImages.has(originalIndex)) {
                     item.style.outline = '3px solid var(--accent)';
                     item.style.outlineOffset = '-3px';
                 }
-                
+
                 // Handle click with selection support
                 item.onclick = (e) => {
                     if (isSelectionMode || e.shiftKey || e.ctrlKey || e.metaKey) {
                         e.preventDefault();
-                        
+
                         if (e.shiftKey && lastSelectedIndex !== -1) {
                             // Range select
                             selectRange(lastSelectedIndex, originalIndex);
@@ -3337,7 +3358,7 @@
                             // Single toggle
                             toggleSelection(originalIndex);
                         }
-                        
+
                         lastSelectedIndex = index;
                     } else {
                         openModal(image, index);
@@ -3458,22 +3479,22 @@
             const modal = document.getElementById('modal');
             const modalInfo = document.getElementById('modal-info');
             const modalInfoToggle = document.getElementById('modal-info-toggle');
-            
+
             // Find image index if not provided
             if (index === null) {
                 currentModalIndex = allImages.findIndex(img => img.path === image.path);
             } else {
                 currentModalIndex = index;
             }
-            
+
             updateModalContent();
             modal.classList.add('active');
-            
+
             // Show info sidebar by default
             modalInfo.classList.add('visible');
             modalInfoToggle.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
             isModalInfoVisible = true;
-            
+
             document.body.style.overflow = 'hidden';
             resetZoom();
         }
@@ -3541,7 +3562,7 @@
             const modalInfo = document.getElementById('modal-info');
             const modalInfoToggle = document.getElementById('modal-info-toggle');
             isModalInfoVisible = !isModalInfoVisible;
-            
+
             if (isModalInfoVisible) {
                 modalInfo.classList.add('visible');
                 modalInfoToggle.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
@@ -3672,12 +3693,12 @@
         function updateMasonryLayout() {
             const gallery = document.getElementById('gallery');
             if (!gallery.classList.contains('masonry')) return;
-            
+
             const items = document.querySelectorAll('.gallery-item');
-            
+
             items.forEach(item => {
                 item.style.setProperty('--row-span', 'auto');
-                
+
                 const setRowSpan = () => {
                     requestAnimationFrame(() => {
                         requestAnimationFrame(() => {
@@ -3686,7 +3707,7 @@
                         });
                     });
                 };
-                
+
                 setRowSpan();
             });
         }
@@ -3722,7 +3743,7 @@
         // ============================================================
         // Live Preview - WebSocket Integration
         // ============================================================
-        
+
         let ws = null;
         let currentSessionId = null;
         let reconnectAttempts = 0;
@@ -3731,25 +3752,25 @@
         function connectWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${protocol}//${window.location.host}/ws`;
-            
+
             ws = new WebSocket(wsUrl);
-            
+
             ws.onopen = () => {
                 console.log('WebSocket connected');
                 reconnectAttempts = 0;
                 // Send ping to keep alive
                 ws.send(JSON.stringify({ type: 'ping' }));
             };
-            
+
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 handleWebSocketMessage(data);
             };
-            
+
             ws.onerror = (error) => {
                 console.error('WebSocket error:', error);
             };
-            
+
             ws.onclose = () => {
                 console.log('WebSocket disconnected');
                 // Attempt reconnect with exponential backoff
@@ -3786,16 +3807,16 @@
             const percentText = document.getElementById('progress-percent-text');
             const message = document.getElementById('progress-message');
             const cancelBtn = document.getElementById('cancel-btn');
-            
+
             panel.classList.add('active');
             cancelBtn.disabled = false;
-            
+
             const percent = data.progress_percent || Math.round((data.step / data.total_steps) * 100);
             bar.style.width = `${percent}%`;
             stepText.textContent = `Step ${data.step} of ${data.total_steps}`;
             percentText.textContent = `${percent}%`;
             message.textContent = data.message || 'Generating...';
-            
+
             currentSessionId = data.session_id;
         }
 
@@ -3806,7 +3827,7 @@
             const cancelBtn = document.getElementById('cancel-btn');
             const bar = document.getElementById('progress-bar');
             const percentText = document.getElementById('progress-percent-text');
-            
+
             bar.style.width = '100%';
             percentText.textContent = '100%';
             status.textContent = 'Complete';
@@ -3814,13 +3835,13 @@
             status.style.color = '#4caf50';
             message.textContent = `Generated ${data.image_paths.length} image(s) successfully!`;
             cancelBtn.disabled = true;
-            
+
             // Reload gallery to show new images
             setTimeout(() => {
                 loadImages();
                 showToast(`New artwork created!`, 'success');
             }, 1000);
-            
+
             // Auto-hide after 3 seconds
             setTimeout(() => {
                 panel.classList.remove('active');
@@ -3832,7 +3853,7 @@
                     status.style.color = 'var(--accent)';
                 }, 300);
             }, 3000);
-            
+
             currentSessionId = null;
         }
 
@@ -3840,15 +3861,15 @@
             const status = document.getElementById('progress-status');
             const message = document.getElementById('progress-message');
             const cancelBtn = document.getElementById('cancel-btn');
-            
+
             status.textContent = 'Error';
             status.style.background = 'rgba(244, 67, 54, 0.2)';
             status.style.color = '#f44336';
             message.textContent = `Error: ${data.error}`;
             cancelBtn.disabled = true;
-            
+
             showToast('Generation failed', 'error');
-            
+
             currentSessionId = null;
         }
 
@@ -3868,14 +3889,14 @@
                         console.error('Failed to cancel:', error);
                         showToast('Failed to cancel generation', 'error');
                     });
-                
+
                 currentSessionId = null;
             }
         }
 
         // Connect WebSocket on page load
         connectWebSocket();
-        
+
         // Keep connection alive with periodic pings
         setInterval(() => {
             if (ws && ws.readyState === WebSocket.OPEN) {

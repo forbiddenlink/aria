@@ -18,7 +18,31 @@
       "WebSearch",
       "Bash(source:*)",
       "Bash(PYTHONPATH=src python:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(xargs ls:*)",
+      "Bash(find:*)",
+      "Bash(python -m mypy:*)",
+      "Bash(uv run python:*)",
+      "WebFetch(domain:pypi.org)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(uv pip show:*)",
+      "Bash(/Volumes/LizsDisk/ai-artist/.venv/bin/python:*)",
+      "WebFetch(domain:medium.com)",
+      "Bash(/Volumes/LizsDisk/ai-artist/.venv/bin/pip install:*)",
+      "Bash(uv pip install:*)",
+      "Bash(git checkout:*)",
+      "Bash(bash:*)",
+      "Bash(python:*)",
+      "Bash(ls:*)",
+      "Bash(uv run pytest:*)",
+      "Bash(uv add:*)",
+      "Bash(wc:*)",
+      "Bash(uv sync:*)",
+      "Bash(uv run uvicorn:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(python3:*)"
     ]
   }
 }

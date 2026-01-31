@@ -11,6 +11,7 @@ Aria isn't a tool - she's an **artist** you collaborate with:
 - **Reflects**: Journals her thoughts after each creation
 - **Chooses**: Makes autonomous decisions about what to paint
 - **Evolves**: Artistic style develops through experience
+- **Ethical AI**: Built-in bias mitigation to ensure fair and diverse output
 
 ## Quick Start
 
@@ -69,6 +70,8 @@ ai-artist/
 - Autonomous scheduling
 - CLIP-based quality curation
 - FastAPI web gallery with WebSocket
+- Bias mitigation in prompt generation
+- Intelligent prompt filtering
 
 **In Progress:**
 

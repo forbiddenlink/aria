@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Aria - An autonomous AI artist with genuine personality, evolving moods, and creative independence.">
+    <title>Aria | Autonomous AI Artist</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+
+    <style>
+        :root {
+            --bg-dark: #0a0a0a;
+            --bg-panel: #141414;
+            --text-main: #e0e0e0;
+            --text-muted: #888888;
+            --accent: #bb86fc;
+            --accent-glow: rgba(187, 134, 252, 0.2);
+            --border: #333;
+            --success: #00ff64;
+            --warning: #ffc800;
+            --danger: #ff3264;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* === LEFT PANEL: THE MIND === */
+        .mind-panel {
+            width: 420px;
+            background-color: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+            z-index: 10;
+            box-shadow: 5px 0 30px rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+        }
+
+        header {
+            margin-bottom: 1.5rem;
+        }
+
+        h1 {
+            font-family: 'Space Mono', monospace;
+            font-size: 2rem;
+            margin: 0;
+            letter-spacing: -1px;
+            background: linear-gradient(45deg, #fff, var(--accent));
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-family: 'Space Mono', monospace;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Mood Orb */
+        .mood-container {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 1.25rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .orb {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 30px var(--accent-glow);
+            transition: all 1s ease;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .orb::after {
+            content: '';
+            position: absolute;
+            inset: -5px;
+            border-radius: 50%;
+            background: inherit;
+            filter: blur(10px);
+            opacity: 0.5;
+            z-index: -1;
+            animation: pulse 4s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.2); opacity: 0.3; }
+        }
+
+        .mood-info { flex: 1; }
+        .mood-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .mood-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 0.75rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-bottom: 0.3rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-family: 'Space Mono', monospace;
+            font-size: 1rem;
+        }
+
+        /* Personality Traits */
+        .personality-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .section-header {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 0.75rem;
+        }
+
+        .trait-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            gap: 0.5rem;
+        }
+
+        .trait-name {
+            font-size: 0.7rem;
+            width: 100px;
+            color: var(--text-muted);
+        }
+
+        .trait-track {
+            flex: 1;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .trait-fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 2px;
+            transition: width 1s ease;
+        }
+
+        .trait-value {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7rem;
+            width: 35px;
+            text-align: right;
+        }
+
+        /* Stream of Consciousness */
+        .stream-container {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+            padding-right: 0.5rem;
+            border-top: 1px solid var(--border);
+            padding-top: 1rem;
+            min-height: 150px;
+        }
+
+        .stream-container::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .stream-container::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 2px;
+        }
+
+        .log-entry {
+            margin-bottom: 1rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .log-meta {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--accent);
+            margin-bottom: 0.2rem;
+            opacity: 0.7;
+        }
+
+        .log-content {
+            color: #ccc;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: auto;
+        }
+
+        button {
+            background: var(--text-main);
+            color: #000;
+            border: none;
+            padding: 0.875rem 1.25rem;
+            border-radius: 8px;
+            font-family: 'Space Mono', monospace;
+            font-weight: 700;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+            flex: 1;
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        button:active { transform: translateY(0); }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+        }
+
+        .btn-outline:hover {
+            border-color: var(--text-main);
+        }
+
+        /* === RIGHT PANEL: GALLERY === */
+        .gallery-panel {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+            background: radial-gradient(circle at top right, #1a1a1a, #0a0a0a);
+        }
+
+        .masonry-grid {
+            column-count: 3;
+            column-gap: 1.5rem;
+        }
+
+        .art-card {
+            break-inside: avoid;
+            margin-bottom: 1.5rem;
+            background: var(--bg-panel);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .art-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .art-img {
+            width: 100%;
+            display: block;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .art-info {
+            padding: 1rem;
+        }
+
+        .art-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.4rem;
+            text-transform: uppercase;
+        }
+
+        .art-prompt {
+            font-size: 0.85rem;
+            color: #ddd;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin-bottom: 0.75rem;
+        }
+
+        .tags {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            font-size: 0.65rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #aaa;
+        }
+
+        /* Loading Overlay */
+        #creating-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        #creating-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .loader {
+            color: var(--accent);
+            font-family: 'Space Mono', monospace;
+            font-size: 1.5rem;
+            letter-spacing: 5px;
+            animation: pulseText 1.5s infinite;
+        }
+
+        @keyframes pulseText {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        /* Lightbox */
+        .lightbox {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            padding: 2rem;
+        }
+
+        .lightbox.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .lightbox-content {
+            background: var(--bg-panel);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 1200px;
+            max-height: 90vh;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+
+        .lightbox.active .lightbox-content {
+            transform: scale(1);
+        }
+
+        .lightbox-body {
+            display: flex;
+            width: 100%;
+        }
+
+        .lightbox-img-container {
+            flex: 1.5;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .lightbox-img-container img {
+            max-width: 100%;
+            max-height: 80vh;
+            object-fit: contain;
+        }
+
+        .lightbox-details {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            border-left: 1px solid var(--border);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 2rem;
+            cursor: pointer;
+            z-index: 10;
+            padding: 0.5rem;
+            line-height: 1;
+        }
+
+        #lb-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 1.5rem;
+            margin-top: 0;
+            text-transform: capitalize;
+            color: #fff;
+        }
+
+        .lb-meta {
+            margin-top: 1.5rem;
+        }
+
+        .lb-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+            margin-bottom: 0.4rem;
+            text-transform: uppercase;
+        }
+
+        #lb-reflection {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: #ddd;
+        }
+
+        /* Thinking Section */
+        .thinking-section {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .thinking-header {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-transform: uppercase;
+        }
+
+        .thinking-icon {
+            width: 10px;
+            height: 10px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .thinking-content {
+            font-size: 0.8rem;
+            line-height: 1.6;
+            color: var(--text-main);
+            white-space: pre-wrap;
+        }
+
+        /* Critique Dialogue */
+        .critique-entry {
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            border-left: 3px solid var(--accent);
+        }
+
+        .critique-speaker {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--accent);
+            margin-bottom: 0.4rem;
+            text-transform: uppercase;
+        }
+
+        .critique-text {
+            font-size: 0.8rem;
+            line-height: 1.5;
+            color: var(--text-main);
+        }
+
+        .approval-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.6rem;
+            font-family: 'Space Mono', monospace;
+            margin-left: 0.5rem;
+        }
+
+        .approved { background: rgba(0, 255, 100, 0.2); color: var(--success); }
+        .revised { background: rgba(255, 200, 0, 0.2); color: var(--warning); }
+
+        /* Statement Modal */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2.5rem;
+            max-width: 600px;
+            position: relative;
+        }
+
+        .modal-content h2 {
+            font-family: 'Space Mono', monospace;
+            color: var(--accent);
+            margin-top: 0;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .modal-text {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #ddd;
+            font-style: italic;
+        }
+
+        .modal-meta {
+            margin-top: 1.5rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .modal-close:hover { color: #fff; }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .masonry-grid { column-count: 2; }
+        }
+
+        @media (max-width: 900px) {
+            body { flex-direction: column; height: auto; overflow: auto; }
+            .mind-panel {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                max-height: 50vh;
+            }
+            .masonry-grid { column-count: 1; }
+            .lightbox-body { flex-direction: column; }
+            .lightbox-content { flex-direction: column; max-height: 95vh; overflow-y: auto; }
+            .lightbox-img-container img { max-height: 50vh; }
+        }
+
+        @media (max-width: 480px) {
+            .mind-panel { padding: 1rem; }
+            h1 { font-size: 1.5rem; }
+            .orb { width: 50px; height: 50px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- LEFT PANEL: MIND -->
+    <div class="mind-panel">
+        <header>
+            <a href="/aria" style="text-decoration: none; color: inherit;"><h1>ARIA</h1></a>
+            <div class="subtitle">Autonomous AI Artist</div>
+        </header>
+
+        <!-- Mood Orb -->
+        <div class="mood-container">
+            <div id="mood-orb" class="orb"></div>
+            <div class="mood-info">
+                <div class="mood-label">Current Mood</div>
+                <div id="mood-text" class="mood-value">Awakening...</div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Energy</div>
+                <div id="energy-val" class="stat-value">--%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Creations</div>
+                <div id="count-val" class="stat-value">--</div>
+            </div>
+        </div>
+
+        <!-- Personality Traits (OCEAN) -->
+        <div class="personality-section" id="personality-section">
+            <div class="section-header">Personality</div>
+            <div id="personality-traits">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- Stream of Consciousness -->
+        <div class="section-header">Stream of Consciousness</div>
+        <div id="thought-stream" class="stream-container">
+            <div class="log-entry">
+                <div class="log-meta">SYSTEM</div>
+                <div class="log-content">Neural pathways initializing...</div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button id="create-btn" onclick="triggerCreate()">CREATE</button>
+            <button class="btn-outline" onclick="showStatement()" title="Artist Statement">?</button>
+        </div>
+        <div class="controls" style="margin-top: 0.75rem;">
+            <button class="btn-outline" onclick="forceEvolve()">EVOLVE</button>
+            <button class="btn-outline" onclick="showEvolution()">TIMELINE</button>
+            <button class="btn-outline" onclick="window.open('/', '_blank')">FULL GALLERY</button>
+        </div>
+    </div>
+
+    <!-- RIGHT PANEL: GALLERY -->
+    <div class="gallery-panel">
+        <div id="gallery-grid" class="masonry-grid">
+            <!-- Art cards injected here -->
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="creating-overlay">
+        <div style="text-align: center;">
+            <div class="loader" id="loader-text">DREAMING...</div>
+            <div style="margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted); font-family: 'Space Mono';" id="loader-status">Beginning creative process</div>
+        </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
+        <div class="lightbox-content" onclick="event.stopPropagation()">
+            <button class="close-btn" onclick="closeLightbox()">&times;</button>
+            <div class="lightbox-body">
+                <div class="lightbox-img-container">
+                    <img id="lb-img" src="" alt="Artwork">
+                </div>
+                <div class="lightbox-details">
+                    <h2 id="lb-title"></h2>
+                    <div class="tags" id="lb-tags"></div>
+                    <div class="lb-meta">
+                        <div class="lb-label">Reflection</div>
+                        <p id="lb-reflection"></p>
+                    </div>
+                    <div id="lb-thinking" class="thinking-section" style="display:none;">
+                        <div class="thinking-header">
+                            <div class="thinking-icon"></div>
+                            Thought Process
+                        </div>
+                        <div id="lb-thinking-content" class="thinking-content"></div>
+                    </div>
+                    <div id="lb-critique" class="thinking-section" style="display:none;">
+                        <div class="thinking-header">
+                            <div class="thinking-icon"></div>
+                            Creative Dialogue
+                        </div>
+                        <div id="lb-critique-content"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Utility: Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Mood colors
+        const MOOD_COLORS = {
+            contemplative: "#7B8FA1",
+            energized: "#FFD93D",
+            melancholic: "#4B56D2",
+            chaotic: "#FF6B6B",
+            serene: "#A8D1D1",
+            restless: "#FF8E4F",
+            introspective: "#5F6F94",
+            rebellious: "#FF0032",
+            playful: "#F7A4A4",
+            bold: "#FFD700"
+        };
+
+        // State
+        let paintingsData = {};
+        let ws = null;
+
+        // WebSocket connection
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(protocol + '//' + window.location.host + '/ws');
+
+            ws.onopen = function() {
+                addLog('SYSTEM', 'Connected to Aria\'s consciousness');
+            };
+
+            ws.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleWebSocketMessage(data);
+                } catch (e) {
+                    console.error('WebSocket parse error:', e);
+                }
+            };
+
+            ws.onclose = function() {
+                addLog('SYSTEM', 'Connection lost, reconnecting...');
+                setTimeout(connectWebSocket, 3000);
+            };
+
+            ws.onerror = function(error) {
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        function handleWebSocketMessage(data) {
+            switch (data.type) {
+                case 'thinking_update':
+                    addLog('THINKING', data.thought || data.message || '');
+                    break;
+                case 'aria_state':
+                    updateMoodDisplay(data);
+                    break;
+                case 'critique_update':
+                    if (data.critique) {
+                        var status = data.approved ? 'APPROVED' : 'REVISION';
+                        addLog('CRITIQUE', '[' + status + '] ' + data.critique);
+                    }
+                    break;
+                case 'creation_complete':
+                    addLog('ARIA', data.reflection || 'Creation complete');
+                    fetchState(true);
+                    break;
+                case 'progress':
+                    document.getElementById('loader-status').textContent = data.message || 'Processing...';
+                    break;
+                case 'generation_progress':
+                    var pct = data.progress_percent || Math.round((data.step / data.total_steps) * 100);
+                    document.getElementById('loader-status').textContent =
+                        'Generating: ' + pct + '% (' + data.step + '/' + data.total_steps + ')';
+                    if (data.step % 10 === 0) {
+                        addLog('GENERATING', 'Step ' + data.step + '/' + data.total_steps + ' (' + pct + '%)');
+                    }
+                    break;
+                case 'generation_complete':
+                    addLog('ARIA', 'Generation complete');
+                    fetchState(true);
+                    break;
+                case 'error':
+                    addLog('ERROR', data.error || data.message || 'Unknown error');
+                    break;
+            }
+        }
+
+        function addLog(source, text) {
+            var stream = document.getElementById('thought-stream');
+            var entry = document.createElement('div');
+            entry.className = 'log-entry';
+            var time = new Date().toLocaleTimeString();
+
+            var meta = document.createElement('div');
+            meta.className = 'log-meta';
+            meta.textContent = source + ' \u2022 ' + time;
+
+            var content = document.createElement('div');
+            content.className = 'log-content';
+            content.textContent = text;
+
+            entry.appendChild(meta);
+            entry.appendChild(content);
+            stream.insertBefore(entry, stream.firstChild);
+
+            // Keep only last 50 entries
+            while (stream.children.length > 50) {
+                stream.removeChild(stream.lastChild);
+            }
+        }
+
+        function updateMoodDisplay(data) {
+            var mood = data.mood || 'contemplative';
+            var color = MOOD_COLORS[mood] || '#bb86fc';
+
+            document.getElementById('mood-text').textContent = mood;
+            var orb = document.getElementById('mood-orb');
+            orb.style.backgroundColor = color;
+            orb.style.boxShadow = '0 0 30px ' + color + '66';
+
+            if (data.energy !== undefined) {
+                document.getElementById('energy-val').textContent = Math.round(data.energy * 100) + '%';
+            }
+        }
+
+        function updatePersonalityDisplay(personality) {
+            if (!personality) return;
+
+            var traits = [
+                { key: 'openness', label: 'Openness' },
+                { key: 'conscientiousness', label: 'Conscientious' },
+                { key: 'extraversion', label: 'Extraversion' },
+                { key: 'agreeableness', label: 'Agreeable' },
+                { key: 'neuroticism', label: 'Neuroticism' }
+            ];
+
+            var container = document.getElementById('personality-traits');
+            container.textContent = ''; // Clear safely
+
+            traits.forEach(function(t) {
+                var value = personality[t.key] || 0.5;
+                var pct = Math.round(value * 100);
+
+                var bar = document.createElement('div');
+                bar.className = 'trait-bar';
+
+                var name = document.createElement('span');
+                name.className = 'trait-name';
+                name.textContent = t.label;
+
+                var track = document.createElement('div');
+                track.className = 'trait-track';
+
+                var fill = document.createElement('div');
+                fill.className = 'trait-fill';
+                fill.style.width = pct + '%';
+                track.appendChild(fill);
+
+                var val = document.createElement('span');
+                val.className = 'trait-value';
+                val.textContent = pct + '%';
+
+                bar.appendChild(name);
+                bar.appendChild(track);
+                bar.appendChild(val);
+                container.appendChild(bar);
+            });
+        }
+
+        function fetchState(loadGallery) {
+            fetch('/api/aria/state')
+                .then(function(res) {
+                    if (!res.ok) throw new Error('Failed to fetch state');
+                    return res.json();
+                })
+                .then(function(data) {
+                    updateMoodDisplay(data);
+
+                    if (data.paintings_created !== undefined) {
+                        document.getElementById('count-val').textContent = data.paintings_created;
+                    }
+
+                    if (data.personality) {
+                        updatePersonalityDisplay(data.personality);
+                    }
+
+                    if (loadGallery && data.portfolio) {
+                        renderGallery(data.portfolio);
+                    }
+                })
+                .catch(function(e) {
+                    console.error('Error fetching state:', e);
+                    // Fallback to images API
+                    if (loadGallery) {
+                        fetch('/api/images?limit=50')
+                            .then(function(res) { return res.json(); })
+                            .then(function(images) { renderGalleryFromImages(images); })
+                            .catch(function(err) { console.error('Error fetching images:', err); });
+                    }
+                });
+        }
+
+        function renderGallery(portfolio) {
+            var grid = document.getElementById('gallery-grid');
+            grid.textContent = '';
+
+            var reversed = portfolio.slice().reverse();
+            reversed.forEach(function(p, i) {
+                var id = p.number || i;
+                paintingsData[id] = p;
+                grid.appendChild(createArtCard(p, id));
+            });
+        }
+
+        function renderGalleryFromImages(images) {
+            var grid = document.getElementById('gallery-grid');
+            grid.textContent = '';
+
+            images.forEach(function(img, i) {
+                var painting = {
+                    number: i,
+                    subject: (img.prompt && img.prompt.split(',')[0]) || 'Artwork',
+                    prompt: img.prompt || '',
+                    image_url: img.full_url || img.thumbnail_url,
+                    mood: (img.metadata && img.metadata.mood) || 'contemplative',
+                    style: (img.metadata && img.metadata.style) || 'digital art',
+                    reflection: (img.metadata && img.metadata.reflection) || img.prompt
+                };
+                paintingsData[i] = painting;
+                grid.appendChild(createArtCard(painting, i));
+            });
+        }
+
+        function createArtCard(painting, id) {
+            var div = document.createElement('div');
+            div.className = 'art-card';
+            div.onclick = function() { openLightbox(id); };
+
+            var imgSrc = painting.image_url || painting.full_url;
+            if (!imgSrc) {
+                imgSrc = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" fill="%23333"><rect width="400" height="300"/><text x="50%" y="50%" fill="%23666" text-anchor="middle">No Image</text></svg>';
+            } else if (imgSrc.indexOf('http') !== 0 && imgSrc.indexOf('/') !== 0 && imgSrc.indexOf('data:') !== 0) {
+                imgSrc = '/' + imgSrc;
+            }
+
+            var mood = painting.mood || 'contemplative';
+            var moodColor = MOOD_COLORS[mood] || '#888';
+
+            var img = document.createElement('img');
+            img.src = imgSrc;
+            img.className = 'art-img';
+            img.loading = 'lazy';
+            img.onerror = function() { this.style.display = 'none'; };
+            div.appendChild(img);
+
+            var info = document.createElement('div');
+            info.className = 'art-info';
+
+            var title = document.createElement('div');
+            title.className = 'art-title';
+            title.textContent = painting.subject || 'Untitled';
+            info.appendChild(title);
+
+            var prompt = document.createElement('div');
+            prompt.className = 'art-prompt';
+            prompt.textContent = painting.reflection || painting.prompt || '';
+            info.appendChild(prompt);
+
+            var tags = document.createElement('div');
+            tags.className = 'tags';
+
+            var moodTag = document.createElement('span');
+            moodTag.className = 'tag';
+            moodTag.style.background = moodColor + '33';
+            moodTag.style.color = moodColor;
+            moodTag.textContent = mood;
+            tags.appendChild(moodTag);
+
+            var styleTag = document.createElement('span');
+            styleTag.className = 'tag';
+            styleTag.textContent = painting.style || 'digital';
+            tags.appendChild(styleTag);
+
+            info.appendChild(tags);
+            div.appendChild(info);
+
+            return div;
+        }
+
+        function openLightbox(id) {
+            var painting = paintingsData[id];
+            if (!painting) return;
+
+            var imgSrc = painting.image_url || painting.full_url;
+            if (imgSrc && imgSrc.indexOf('http') !== 0 && imgSrc.indexOf('/') !== 0) {
+                imgSrc = '/' + imgSrc;
+            }
+
+            document.getElementById('lb-img').src = imgSrc || '';
+            document.getElementById('lb-title').textContent = painting.subject || 'Untitled';
+            document.getElementById('lb-reflection').textContent = painting.reflection || painting.prompt || '';
+
+            var mood = painting.mood || 'contemplative';
+            var moodColor = MOOD_COLORS[mood] || '#888';
+
+            var tagsEl = document.getElementById('lb-tags');
+            tagsEl.textContent = '';
+
+            var moodTag = document.createElement('span');
+            moodTag.className = 'tag';
+            moodTag.style.background = moodColor + '33';
+            moodTag.style.color = moodColor;
+            moodTag.textContent = mood;
+            tagsEl.appendChild(moodTag);
+
+            var styleTag = document.createElement('span');
+            styleTag.className = 'tag';
+            styleTag.textContent = painting.style || 'digital';
+            tagsEl.appendChild(styleTag);
+
+            // Show thinking if available
+            var thinkingEl = document.getElementById('lb-thinking');
+            var thinkingContent = document.getElementById('lb-thinking-content');
+            if (painting.thinking && painting.thinking.narrative) {
+                thinkingContent.textContent = painting.thinking.narrative;
+                thinkingEl.style.display = 'block';
+            } else {
+                thinkingEl.style.display = 'none';
+            }
+
+            // Show critique if available
+            var critiqueEl = document.getElementById('lb-critique');
+            var critiqueContent = document.getElementById('lb-critique-content');
+            if (painting.critique_history && painting.critique_history.length > 0) {
+                critiqueContent.textContent = '';
+                painting.critique_history.forEach(function(c) {
+                    var entry = document.createElement('div');
+                    entry.className = 'critique-entry';
+
+                    var speaker = document.createElement('div');
+                    speaker.className = 'critique-speaker';
+                    speaker.textContent = (c.critic_name || 'Critic') + ' ';
+
+                    var badge = document.createElement('span');
+                    badge.className = 'approval-badge ' + (c.approved ? 'approved' : 'revised');
+                    badge.textContent = c.approved ? 'APPROVED' : 'REVISION';
+                    speaker.appendChild(badge);
+                    entry.appendChild(speaker);
+
+                    var text = document.createElement('div');
+                    text.className = 'critique-text';
+                    text.textContent = c.critique;
+                    entry.appendChild(text);
+
+                    critiqueContent.appendChild(entry);
+                });
+                critiqueEl.style.display = 'block';
+            } else {
+                critiqueEl.style.display = 'none';
+            }
+
+            document.getElementById('lightbox').classList.add('active');
+        }
+
+        function closeLightbox(e) {
+            if (e && e.target !== e.currentTarget) return;
+            document.getElementById('lightbox').classList.remove('active');
+        }
+
+        function triggerCreate() {
+            var btn = document.getElementById('create-btn');
+            var overlay = document.getElementById('creating-overlay');
+
+            btn.disabled = true;
+            overlay.classList.add('active');
+            addLog('SYSTEM', 'Initiating creative process...');
+
+            var progressSteps = [
+                'Contemplating the void...',
+                'Channeling emotions...',
+                'Mixing digital pigments...',
+                'Applying brushstrokes...',
+                'Adding final touches...'
+            ];
+
+            var stepIndex = 0;
+            var progressInterval = setInterval(function() {
+                if (stepIndex < progressSteps.length) {
+                    document.getElementById('loader-status').textContent = progressSteps[stepIndex];
+                    stepIndex++;
+                }
+            }, 3000);
+
+            fetch('/api/aria/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(function(res) {
+                clearInterval(progressInterval);
+                if (!res.ok) {
+                    return res.json().then(function(err) {
+                        throw new Error(err.detail || 'Creation failed');
+                    });
+                }
+                return res.json();
+            })
+            .then(function(data) {
+                if (data.thinking) {
+                    addLog('THINKING', data.thinking);
+                }
+
+                if (data.critique_history && data.critique_history.length > 0) {
+                    data.critique_history.forEach(function(c) {
+                        var status = c.approved ? 'APPROVED' : 'REVISION';
+                        addLog('CRITIQUE', '[' + status + '] ' + c.critique);
+                    });
+                }
+
+                addLog('ARIA', data.reflection || 'Creation complete');
+
+                // Refresh gallery
+                fetchState(true);
+            })
+            .catch(function(err) {
+                clearInterval(progressInterval);
+                addLog('ERROR', err.message);
+            })
+            .finally(function() {
+                overlay.classList.remove('active');
+                btn.disabled = false;
+            });
+        }
+
+        function forceEvolve() {
+            fetch('/api/aria/evolve', { method: 'POST' })
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data.mood) {
+                        updateMoodDisplay(data);
+                        addLog('EVOLUTION', 'Mood shifted to ' + data.mood);
+                    }
+                    if (data.personality) {
+                        updatePersonalityDisplay(data.personality);
+                    }
+                })
+                .catch(function(e) {
+                    addLog('ERROR', 'Evolution failed');
+                });
+        }
+
+        function showStatement() {
+            fetch('/api/aria/statement')
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    var modal = document.createElement('div');
+                    modal.className = 'modal';
+                    modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+
+                    var content = document.createElement('div');
+                    content.className = 'modal-content';
+
+                    var closeBtn = document.createElement('button');
+                    closeBtn.className = 'modal-close';
+                    closeBtn.textContent = '\u00D7';
+                    closeBtn.onclick = function() { modal.remove(); };
+                    content.appendChild(closeBtn);
+
+                    var h2 = document.createElement('h2');
+                    h2.textContent = 'Artist Statement';
+                    content.appendChild(h2);
+
+                    var text = document.createElement('p');
+                    text.className = 'modal-text';
+                    text.textContent = data.statement || 'I am still finding my words...';
+                    content.appendChild(text);
+
+                    var meta = document.createElement('div');
+                    meta.className = 'modal-meta';
+                    meta.textContent = '- Aria, Autonomous AI Artist';
+                    content.appendChild(meta);
+
+                    modal.appendChild(content);
+                    document.body.appendChild(modal);
+                })
+                .catch(function(e) {
+                    addLog('ERROR', 'Could not fetch artist statement');
+                });
+        }
+
+        function showEvolution() {
+            fetch('/api/aria/evolution')
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    var modal = document.createElement('div');
+                    modal.className = 'modal';
+                    modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+
+                    var content = document.createElement('div');
+                    content.className = 'modal-content';
+                    content.style.maxWidth = '800px';
+                    content.style.maxHeight = '90vh';
+                    content.style.overflow = 'auto';
+
+                    var closeBtn = document.createElement('button');
+                    closeBtn.className = 'modal-close';
+                    closeBtn.textContent = '\u00D7';
+                    closeBtn.onclick = function() { modal.remove(); };
+                    content.appendChild(closeBtn);
+
+                    var h2 = document.createElement('h2');
+                    h2.textContent = 'Artistic Evolution';
+                    h2.style.marginBottom = '1.5rem';
+                    content.appendChild(h2);
+
+                    // Summary stats
+                    if (data.summary) {
+                        var summary = document.createElement('div');
+                        summary.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-bottom: 2rem;';
+
+                        var stats = [
+                            { label: 'Creations', value: data.summary.total_creations || 0 },
+                            { label: 'Styles', value: data.summary.unique_styles || 0 },
+                            { label: 'Phases', value: data.summary.phases_count || 0 }
+                        ];
+
+                        stats.forEach(function(stat) {
+                            var statBox = document.createElement('div');
+                            statBox.style.cssText = 'background: rgba(139, 92, 246, 0.1); padding: 1rem; border-radius: 8px; text-align: center;';
+                            var val = document.createElement('div');
+                            val.style.cssText = 'font-size: 1.5rem; font-weight: 700; color: var(--accent);';
+                            val.textContent = stat.value;
+                            var lbl = document.createElement('div');
+                            lbl.style.cssText = 'font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;';
+                            lbl.textContent = stat.label;
+                            statBox.appendChild(val);
+                            statBox.appendChild(lbl);
+                            summary.appendChild(statBox);
+                        });
+                        content.appendChild(summary);
+                    }
+
+                    // Milestones
+                    if (data.milestones && data.milestones.length > 0) {
+                        var milestonesSection = document.createElement('div');
+                        milestonesSection.style.marginBottom = '2rem';
+
+                        var milestonesTitle = document.createElement('h3');
+                        milestonesTitle.textContent = 'Milestones';
+                        milestonesTitle.style.cssText = 'font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.1em;';
+                        milestonesSection.appendChild(milestonesTitle);
+
+                        data.milestones.forEach(function(milestone) {
+                            var item = document.createElement('div');
+                            item.style.cssText = 'padding: 0.75rem 1rem; background: rgba(255,255,255,0.03); border-left: 3px solid var(--accent); margin-bottom: 0.5rem; border-radius: 0 4px 4px 0;';
+
+                            var date = document.createElement('div');
+                            date.style.cssText = 'font-size: 0.75rem; color: var(--text-muted);';
+                            date.textContent = milestone.date || 'Unknown date';
+                            item.appendChild(date);
+
+                            var desc = document.createElement('div');
+                            desc.style.cssText = 'font-size: 0.9rem; margin-top: 0.25rem;';
+                            desc.textContent = milestone.description || milestone.type;
+                            item.appendChild(desc);
+
+                            milestonesSection.appendChild(item);
+                        });
+                        content.appendChild(milestonesSection);
+                    }
+
+                    // Phases
+                    if (data.phases && data.phases.length > 0) {
+                        var phasesSection = document.createElement('div');
+                        phasesSection.style.marginBottom = '2rem';
+
+                        var phasesTitle = document.createElement('h3');
+                        phasesTitle.textContent = 'Artistic Phases';
+                        phasesTitle.style.cssText = 'font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.1em;';
+                        phasesSection.appendChild(phasesTitle);
+
+                        data.phases.forEach(function(phase) {
+                            var item = document.createElement('div');
+                            item.style.cssText = 'display: flex; align-items: center; gap: 1rem; padding: 0.5rem 0;';
+
+                            var dot = document.createElement('div');
+                            dot.style.cssText = 'width: 12px; height: 12px; border-radius: 50%; background: var(--accent); flex-shrink: 0;';
+                            item.appendChild(dot);
+
+                            var info = document.createElement('div');
+                            var name = document.createElement('div');
+                            name.style.fontWeight = '500';
+                            name.textContent = phase.name || (phase.mood + ' Period');
+                            info.appendChild(name);
+
+                            var dates = document.createElement('div');
+                            dates.style.cssText = 'font-size: 0.75rem; color: var(--text-muted);';
+                            dates.textContent = (phase.start_date || '') + ' \u2192 ' + (phase.end_date || 'Present');
+                            info.appendChild(dates);
+
+                            item.appendChild(info);
+                            phasesSection.appendChild(item);
+                        });
+                        content.appendChild(phasesSection);
+                    }
+
+                    // Mood Distribution
+                    if (data.mood_distribution && Object.keys(data.mood_distribution).length > 0) {
+                        var moodSection = document.createElement('div');
+                        moodSection.style.marginBottom = '2rem';
+
+                        var moodTitle = document.createElement('h3');
+                        moodTitle.textContent = 'Mood Distribution';
+                        moodTitle.style.cssText = 'font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.1em;';
+                        moodSection.appendChild(moodTitle);
+
+                        var total = Object.values(data.mood_distribution).reduce(function(a, b) { return a + b; }, 0);
+                        var sorted = Object.entries(data.mood_distribution).sort(function(a, b) { return b[1] - a[1]; });
+
+                        sorted.forEach(function(entry) {
+                            var mood = entry[0];
+                            var count = entry[1];
+                            var pct = Math.round((count / total) * 100);
+
+                            var bar = document.createElement('div');
+                            bar.style.cssText = 'margin-bottom: 0.5rem;';
+
+                            var label = document.createElement('div');
+                            label.style.cssText = 'display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.25rem;';
+                            var moodName = document.createElement('span');
+                            moodName.textContent = mood;
+                            var moodPct = document.createElement('span');
+                            moodPct.style.color = 'var(--text-muted)';
+                            moodPct.textContent = pct + '%';
+                            label.appendChild(moodName);
+                            label.appendChild(moodPct);
+                            bar.appendChild(label);
+
+                            var track = document.createElement('div');
+                            track.style.cssText = 'height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;';
+                            var fill = document.createElement('div');
+                            fill.style.cssText = 'height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.3s;';
+                            fill.style.width = pct + '%';
+                            track.appendChild(fill);
+                            bar.appendChild(track);
+
+                            moodSection.appendChild(bar);
+                        });
+                        content.appendChild(moodSection);
+                    }
+
+                    // Empty state
+                    if (!data.milestones || data.milestones.length === 0) {
+                        var empty = document.createElement('p');
+                        empty.style.cssText = 'text-align: center; color: var(--text-muted); padding: 2rem;';
+                        empty.textContent = 'My evolution story is just beginning... Create more art to see my journey unfold.';
+                        content.appendChild(empty);
+                    }
+
+                    modal.appendChild(content);
+                    document.body.appendChild(modal);
+                })
+                .catch(function(e) {
+                    console.error('Evolution fetch error:', e);
+                    addLog('ERROR', 'Could not fetch evolution data');
+                });
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeLightbox();
+                var modal = document.querySelector('.modal');
+                if (modal) modal.remove();
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchState(true);
+            connectWebSocket();
+            setInterval(function() { fetchState(false); }, 10000);
+        });
+    </script>
+</body>
+</html>

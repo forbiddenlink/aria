@@ -295,8 +295,13 @@ app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(ErrorHandlingMiddleware)
 
-# Include health check router
+# Include routers
 app.include_router(health_router)
+
+# Import and include Aria routes
+from .aria_routes import router as aria_router
+
+app.include_router(aria_router)
 
 # Templates directory
 templates_dir = Path(__file__).parent / "templates"
@@ -309,6 +314,15 @@ async def root(request: Request):
     return templates.TemplateResponse(
         "gallery_modern.html",
         {"request": request, "title": "AI Artist Gallery"},
+    )
+
+
+@app.get("/aria", response_class=HTMLResponse)
+async def aria_page(request: Request):
+    """Serve Aria's creative studio - personality, mood, and creation interface."""
+    return templates.TemplateResponse(
+        "aria.html",
+        {"request": request, "title": "Aria | Autonomous AI Artist"},
     )
 
 

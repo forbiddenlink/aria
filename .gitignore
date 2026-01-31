@@ -48,6 +48,16 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Quality tools
+.qlty/
+.ruff_cache/
+.mypy_cache/
+
+# IDE / Editor
+.history/
+.serena/
+MagicMock/
 .tox/
 
 # Config (keep example)

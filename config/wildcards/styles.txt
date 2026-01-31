@@ -1,21 +1,20 @@
-# Artistic Styles
+# Artistic Styles - Realistic, Fine Art, and Abstract
 masterpiece, highly detailed, professional photography
-oil painting by Van Gogh, impasto, vivid colors
-cyberpunk, neon lights, futuristic, high tech
-watercolor painting, soft blending, artistic, dreamy
-digital art, trending on artstation, unreal engine 5 render
 cinematic lighting, dramatic atmosphere, 8k resolution
 studio lighting, professional portrait, soft focus
-concept art, matte painting, epic scale
-anime style, studio ghibli, vibrant, detailed background
 vintage photo, film grain, kodak portra 400
-pop art, vibrant colors, bold lines, comic style
-minimalist, clean lines, simple composition, elegant
+oil painting by Van Gogh, impasto, vivid colors
+watercolor painting, soft blending, artistic, dreamy
+digital art, trending on artstation, unreal engine 5 render
+concept art, matte painting, epic scale
 dark fantasy, gloomy, detailed, mysterious
-steampunk, brass gears, steam, victorian industrial
-vaporwave, pink and blue gradients, retro aesthetic
 surrealism, dreamlike, salvador dali style
-pencil sketch, graphite, charcoal, detailed shading
-pixel art, 16-bit, retro game style
-isometric 3d, clean rendering, blender chartroom
-ukiyo-e, japanese woodblock print style
+abstract expressionism, bold brushstrokes, emotional
+impressionist painting, monet style, soft light
+renaissance painting, classical composition, dramatic
+minimalist, clean lines, simple composition, elegant
+contemporary art, gallery quality, refined
+mixed media, textured, layered, artistic
+fine art photography, dramatic contrast, gallery print
+ethereal, atmospheric, dreamscape
+luminous, radiant light, glowing atmosphere

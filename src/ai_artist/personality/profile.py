@@ -99,6 +99,32 @@ class ArtisticProfile:
             f"I believe that {self.philosophy['creativity'].lower()}."
         )
 
+    def reflect_on_creation(self, creation_data: dict[str, str]) -> str:
+        """Generate a reflection on a newly created piece.
+
+        Args:
+            creation_data: Dict with subject, style, mood, etc.
+
+        Returns:
+            A contemplative reflection on the work.
+        """
+        import random
+
+        subject = creation_data.get("subject", "something")
+        style = creation_data.get("style", "my style")
+        mood = creation_data.get("mood", "contemplative")
+
+        reflections = [
+            f"In exploring {subject} through {style}, I found echoes of my {mood} state.",
+            f"This piece about {subject} emerged from somewhere deep within my {mood} mood.",
+            f"Creating {subject} in a {style} way felt like expressing what words cannot capture.",
+            f"My {mood} mood guided me toward {subject}, and {style} felt like the right voice.",
+            f"There's something about {subject} that resonates with my current {mood} energy.",
+            f"Through {style}, I attempted to capture the essence of {subject} while feeling {mood}.",
+        ]
+
+        return random.choice(reflections)
+
     def to_dict(self) -> dict:
         """Serialize profile for storage."""
         return {

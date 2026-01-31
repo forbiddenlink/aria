@@ -83,6 +83,16 @@ class ConnectionManager:
                     if conn in self.active_connections:
                         self.active_connections.remove(conn)
 
+    async def send_generation_start(self, session_id: str, prompt: str = ""):
+        """Send generation start notification."""
+        start = {
+            "type": "generation_start",
+            "session_id": session_id,
+            "prompt": prompt,
+            "timestamp": datetime.now().isoformat(),
+        }
+        await self.broadcast(start)
+
     async def send_generation_progress(
         self, session_id: str, step: int, total_steps: int, message: str = ""
     ):

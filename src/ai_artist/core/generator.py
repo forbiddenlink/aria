@@ -1,7 +1,10 @@
 """Image generation using Stable Diffusion + LoRA."""
 
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 import torch
 from diffusers import (
@@ -68,7 +71,9 @@ class ImageGenerator:
         self.unload()
         return False
 
-    def get_model_for_mood(self, mood: str, mood_models: dict[str, str] | None = None) -> str:
+    def get_model_for_mood(
+        self, mood: str, mood_models: dict[str, str] | None = None
+    ) -> str:
         """Get the appropriate model ID for a given mood.
 
         Args:
@@ -85,7 +90,9 @@ class ImageGenerator:
         logger.debug("model_for_mood", mood=mood, model=model_id)
         return model_id
 
-    def switch_model(self, new_model_id: str, controlnet_model: str | None = None) -> bool:
+    def switch_model(
+        self, new_model_id: str, controlnet_model: str | None = None
+    ) -> bool:
         """Switch to a different model, using cache if available.
 
         Args:
@@ -114,7 +121,9 @@ class ImageGenerator:
 
         return True
 
-    def load_model(self, controlnet_model: str | None = None, model_override: str | None = None):
+    def load_model(
+        self, controlnet_model: str | None = None, model_override: str | None = None
+    ):
         """Load the diffusion pipeline.
 
         Args:
@@ -194,7 +203,33 @@ class ImageGenerator:
                     ),
                 )
             else:
-                # Enable memory-efficient slicing for CUDA/CPU
+                # Enable memory-efficient optimizations for CUDA/CPU
+                logger.info("applying_memory_optimizations", device=self.device)
+
+                # Enable attention slicing for memory efficiency
+                try:
+                    pipeline.enable_attention_slicing(1)
+                    logger.debug("attention_slicing_enabled")
+                except Exception as e:
+                    logger.warning("attention_slicing_failed", error=str(e))
+
+                # Enable VAE slicing for large images
+                try:
+                    pipeline.enable_vae_slicing()
+                    logger.debug("vae_slicing_enabled")
+                except Exception as e:
+                    logger.warning("vae_slicing_failed", error=str(e))
+
+                # Try to enable xformers memory efficient attention
+                try:
+                    pipeline.enable_xformers_memory_efficient_attention()
+                    logger.info("xformers_enabled", benefit="reduced_memory_usage")
+                except Exception as e:
+                    logger.debug(
+                        "xformers_not_available",
+                        hint="pip install xformers",
+                        error=str(e),
+                    )
                 pipeline.enable_attention_slicing()
                 pipeline.enable_vae_slicing()
 
@@ -275,6 +310,8 @@ class ImageGenerator:
         use_refiner: bool = False,
         control_image: Image.Image | None = None,
         controlnet_conditioning_scale: float = 1.0,
+        on_progress: "Callable[[int, int, str], None] | None" = None,
+        avoid_people: bool = True,
     ) -> list[Image.Image]:
         """Generate images from prompt.
 
@@ -290,12 +327,36 @@ class ImageGenerator:
             use_refiner: Whether to use the refiner model (if loaded)
             control_image: Optional PIL Image for ControlNet guidance (e.g. Canny edge map)
             controlnet_conditioning_scale: Strength of ControlNet guidance (0.0-1.0)
-
+            on_progress: Optional callback(step, total_steps, message) for progress updates            avoid_people: If True, adds negative prompts to avoid generating people when not explicitly requested
         Returns:
             List of generated PIL images
         """
         if not self.pipeline:
             raise RuntimeError("Load model first using load_model()")
+
+        # Add people avoidance to negative prompt if not explicitly wanted
+        person_keywords = [
+            "person",
+            "people",
+            "man",
+            "woman",
+            "men",
+            "women",
+            "human",
+            "portrait",
+            "face",
+            "selfie",
+        ]
+        prompt_lower = prompt.lower()
+        has_people_in_prompt = any(kw in prompt_lower for kw in person_keywords)
+
+        if avoid_people and not has_people_in_prompt:
+            # Add to negative prompt to avoid unwanted human generation
+            people_negative = "person, people, human, portrait, face, man, woman"
+            if negative_prompt:
+                negative_prompt = f"{negative_prompt}, {people_negative}"
+            else:
+                negative_prompt = people_negative
 
         logger.info(
             "generating_images",
@@ -304,6 +365,7 @@ class ImageGenerator:
             steps=num_inference_steps,
             use_refiner=use_refiner,
             has_control_image=bool(control_image),
+            avoid_people=avoid_people,
         )
 
         # Set seed for reproducibility
@@ -322,6 +384,10 @@ class ImageGenerator:
                 end="",
                 flush=True,
             )
+            # Call external progress callback if provided (for WebSocket updates)
+            if on_progress is not None:
+                message = f"Generating: step {step}/{num_inference_steps}"
+                on_progress(step, num_inference_steps, message)
 
         # If using refiner, we need to output latents from base
         output_type = "pil"
@@ -411,11 +477,24 @@ class ImageGenerator:
         # Return only valid images
         images = valid_images
 
-        # Clear MPS cache after generation to prevent memory buildup
-        if self.device == "mps":
-            torch.mps.empty_cache()
+        # Clear GPU cache after generation to prevent memory buildup
+        self.clear_vram()
 
         return images
+
+    def clear_vram(self):
+        """Clear GPU memory cache to prevent memory leaks in long-running sessions.
+
+        Should be called after each generation cycle, especially in 24/7 operation.
+        This helps prevent VRAM fragmentation and out-of-memory errors.
+        """
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+            logger.debug("cuda_vram_cleared")
+        elif torch.backends.mps.is_available():
+            torch.mps.empty_cache()
+            logger.debug("mps_vram_cleared")
 
     def unload(self):
         """Unload model from memory and cleanup resources."""
@@ -437,11 +516,7 @@ class ImageGenerator:
             del self.pipeline
             self.pipeline = None
 
-            # Clear GPU cache if available
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            elif torch.backends.mps.is_available():
-                # MPS cleanup
-                torch.mps.empty_cache()
+            # Clear GPU cache
+            self.clear_vram()
 
             logger.info("model_unloaded")

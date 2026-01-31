@@ -1,20 +1,18 @@
 """Aria - Autonomous AI Artist with personality and soul."""
 
 import asyncio
-import io
+import random
 import sys
 from pathlib import Path
 
-from PIL import Image
-
 from .api.unsplash import UnsplashClient
-from .core.controlnet import ControlNetPreprocessor
 from .core.face_restore import FaceRestorer
 from .core.generator import ImageGenerator
 from .core.inpainter import ImageInpainter
 from .core.upscaler import ImageUpscaler
 from .curation.curator import ImageCurator
 from .gallery.manager import GalleryManager
+from .inspiration.autonomous import AutonomousInspiration
 from .models.manager import ModelManager
 from .personality.cognition import ThinkingProcess
 from .personality.critic import ArtistCritic
@@ -156,7 +154,10 @@ class AIArtist:
         # Initialize gallery
         self.gallery = GalleryManager(Path("gallery"))
 
-        # Initialize Unsplash
+        # Initialize autonomous inspiration for original prompts
+        self.autonomous_inspiration = AutonomousInspiration()
+
+        # Initialize Unsplash (kept optional for reference images)
         self.unsplash = UnsplashClient(
             access_key=self.config.api_keys.unsplash_access_key.get_secret_value(),
         )
@@ -185,6 +186,7 @@ class AIArtist:
         if self._ws_manager is None:
             try:
                 from .web.websocket import manager
+
                 self._ws_manager = manager
             except ImportError:
                 logger.debug("websocket_manager_not_available")
@@ -203,6 +205,7 @@ class AIArtist:
         ws_manager = self._get_ws_manager()
         if ws_manager:
             import asyncio
+
             try:
                 # Get or create event loop
                 try:
@@ -256,6 +259,7 @@ class AIArtist:
         # === VISIBLE THINKING: OBSERVE ===
         # Determine time of day for context
         from datetime import datetime as dt
+
         hour = dt.now().hour
         if 5 <= hour < 12:
             time_of_day = "morning"
@@ -267,16 +271,20 @@ class AIArtist:
             time_of_day = "night"
 
         # Get recent work for context
-        recent_episodes = self.enhanced_memory.episodic.get_recent_episodes(3, "creation")
+        recent_episodes = self.enhanced_memory.episodic.get_recent_episodes(
+            3, "creation"
+        )
         recent_work = None
         if recent_episodes:
             recent_work = recent_episodes[-1].get("details", {}).get("subject")
 
-        self.thinking.observe({
-            "time_of_day": time_of_day,
-            "theme": theme,
-            "recent_work": recent_work,
-        })
+        self.thinking.observe(
+            {
+                "time_of_day": time_of_day,
+                "theme": theme,
+                "recent_work": recent_work,
+            }
+        )
 
         logger.info(
             "aria_creating",
@@ -393,29 +401,67 @@ class AIArtist:
                 )
             # === END CRITIQUE LOOP ===
 
-            if self.unsplash is None:
-                raise RuntimeError("Unsplash client not initialized")
-            photo = await self.unsplash.get_random_photo(query=query)
-
-            # Build enhanced prompt with artistic styles using PromptEngine
-            description = (
-                photo.get("description") or photo.get("alt_description") or query
+            # Check for repetitive subjects - ensure variety!
+            recent_episodes = self.enhanced_memory.episodic.get_recent_episodes(
+                5, "creation"
             )
+            recent_subjects = [
+                ep.get("details", {}).get("subject", "") for ep in recent_episodes
+            ]
 
-            # Use dynamic prompt template
-            # If description matches query exactly,
-            # it might mean no description was found
-            if description.lower() == query.lower():
-                # Fallback to a rich template
-                template = (
-                    "{masterpiece|best quality}, __styles__, "
-                    "__lighting__, __composition__, " + query
+            # If we've painted this subject recently, try something different
+            attempts = 0
+            while (
+                query.lower() in [s.lower() for s in recent_subjects[-3:]]
+                and attempts < 5
+            ):
+                logger.info(
+                    "avoiding_repetition", subject=query, reason="painted_recently"
+                )
+                # Get a fresh subject from a different mood influence
+                mood_subjects = self.mood_system.mood_influences[
+                    self.mood_system.current_mood
+                ]["subjects"]
+                query = random.choice(
+                    [s for s in mood_subjects if s.lower() != query.lower()]
+                )
+                attempts += 1
+
+            # === TRULY AUTONOMOUS PROMPT GENERATION ===
+            # Aria creates her own original vision, not based on existing photos
+            if self.autonomous_inspiration is None:
+                raise RuntimeError("Autonomous inspiration not initialized")
+
+            # Aria generates her own creative concept
+            # Use different generation modes for variety
+            generation_modes = ["surprise", "exploration", "fusion", "mashup"]
+            mode = random.choice(generation_modes)
+
+            # Generate original artistic prompt
+            if mode == "exploration":
+                base_prompt = self.autonomous_inspiration.generate_exploration(
+                    theme=query
                 )
             else:
-                template = (
-                    f"{description}, __styles__, __lighting__, "
-                    "{detailed|intricate|complex}"
-                )
+                base_prompt = self.autonomous_inspiration.generate_from_mode(mode)
+
+            logger.info(
+                "aria_original_vision",
+                subject=query,
+                mode=mode,
+                base_prompt=base_prompt[:100],
+            )
+
+            # Enhance with mood-specific elements
+            mood_style = self.mood_system.get_mood_style()
+            mood_colors = ", ".join(self.mood_system.get_mood_colors()[:2])
+
+            # Build the complete artistic vision
+            template = (
+                f"{base_prompt}, {mood_style}, "
+                f"color palette: {mood_colors}, "
+                "{masterpiece|highly detailed|professional quality}"
+            )
 
             if self.prompt_engine is None:
                 raise RuntimeError("Prompt engine not initialized")
@@ -445,50 +491,21 @@ class AIArtist:
                     )
 
                 logger.info(
-                    "got_inspiration",
+                    "got_original_vision",
                     query=query,
-                    photo_id=photo["id"],
+                    generation_mode=mode,
                     final_prompt=prompt,
                 )
 
-                # Prepare ControlNet image if enabled
+                # ControlNet disabled in autonomous mode
+                # (Could be enabled later with reference images if needed)
                 control_image = None
-                if (
-                    self.config.controlnet.enabled and attempt == 0
-                ):  # Only load once usually, but keeping it simple
-                    try:
-                        logger.info(
-                            "downloading_control_image",
-                            url=photo["urls"]["regular"],
-                        )
-                        if self.unsplash is None:
-                            msg = "Unsplash client not initialized"
-                            raise RuntimeError(msg)
-                        image_data = await self.unsplash.download_image(
-                            photo["urls"]["regular"]
-                        )
-
-                        source_image = Image.open(io.BytesIO(image_data))
-
-                        with PerformanceTimer(logger, "controlnet_preprocessing"):
-                            control_image = ControlNetPreprocessor.get_canny_image(
-                                source_image,
-                                low_threshold=self.config.controlnet.low_threshold,
-                                high_threshold=self.config.controlnet.high_threshold,
-                            )
-                            # Resize to target generation size
-                            control_image = control_image.resize(
-                                (
-                                    self.config.generation.width,
-                                    self.config.generation.height,
-                                )
-                            )
-                    except Exception as e:
-                        logger.error("control_image_preparation_failed", error=str(e))
 
                 # Select model based on current mood
                 current_mood = self.mood_system.current_mood.value
-                mood_model = self.config.model.mood_models.get_model_for_mood(current_mood)
+                mood_model = self.config.model.mood_models.get_model_for_mood(
+                    current_mood
+                )
                 used_model = mood_model  # Track for metadata
 
                 # Switch to mood-appropriate model if different
@@ -504,14 +521,18 @@ class AIArtist:
                         # Broadcast model selection via WebSocket
                         if ws_manager:
                             try:
-                                await ws_manager.broadcast({
-                                    "type": "model_selection",
-                                    "session_id": request_id,
-                                    "mood": current_mood,
-                                    "model": mood_model,
-                                })
+                                await ws_manager.broadcast(
+                                    {
+                                        "type": "model_selection",
+                                        "session_id": request_id,
+                                        "mood": current_mood,
+                                        "model": mood_model,
+                                    }
+                                )
                             except Exception as e:
-                                logger.debug("model_selection_broadcast_failed", error=str(e))
+                                logger.debug(
+                                    "model_selection_broadcast_failed", error=str(e)
+                                )
 
                 # Generate images with performance tracking
                 logger.info(
@@ -525,6 +546,26 @@ class AIArtist:
                     if self.generator is None:
                         msg = "Generator not initialized"
                         raise RuntimeError(msg)
+
+                    # Create progress callback for WebSocket updates
+                    # Store tasks to prevent garbage collection
+                    _progress_tasks: list = []
+
+                    def on_progress(step: int, total_steps: int, message: str):
+                        ws = self._get_ws_manager()
+                        if ws:
+                            try:
+                                loop = asyncio.get_event_loop()
+                                if loop.is_running():
+                                    task = asyncio.create_task(
+                                        ws.send_generation_progress(
+                                            request_id, step, total_steps, message
+                                        )
+                                    )
+                                    _progress_tasks.append(task)
+                            except Exception as e:
+                                logger.debug("progress_broadcast_failed", error=str(e))
+
                     images = self.generator.generate(
                         prompt=prompt,
                         negative_prompt=self.config.generation.negative_prompt,
@@ -536,6 +577,7 @@ class AIArtist:
                         use_refiner=self.config.model.use_refiner,
                         control_image=control_image,
                         controlnet_conditioning_scale=self.config.controlnet.conditioning_scale,
+                        on_progress=on_progress,
                     )
 
                 # Evaluate and select best image
@@ -631,9 +673,10 @@ class AIArtist:
                 image=best_image,
                 prompt=prompt,
                 metadata={
-                    "source_url": photo["urls"]["regular"],
-                    "source_id": photo["id"],
+                    "creation_type": "autonomous_original",
+                    "generation_mode": mode,
                     "theme": theme,
+                    "subject": query,
                     "model": used_model,
                     "quality_score": float(best_score),
                     "mood": self.mood_system.current_mood.value,
@@ -648,14 +691,15 @@ class AIArtist:
             extracted_style = self._extract_style_from_prompt(prompt)
             self.memory.remember_artwork(
                 prompt=prompt,
-                subject=theme,
+                subject=theme or query,
                 style=extracted_style,
                 mood=self.mood_system.current_mood.value,
                 colors=self.mood_system.get_mood_colors(),
                 score=best_score,
                 image_path=str(saved_path),
                 metadata={
-                    "source_id": photo["id"],
+                    "creation_type": "autonomous_original",
+                    "generation_mode": mode,
                     "model": used_model,
                     "energy_level": self.mood_system.energy_level,
                     "reflection": reflection,
@@ -667,12 +711,16 @@ class AIArtist:
                 artwork_details={
                     "prompt": prompt,
                     "style": extracted_style,
-                    "subject": theme,
+                    "subject": query,  # Track actual subject for diversity checking
+                    "theme": theme,
+                    "generation_mode": mode,
                     "colors": self.mood_system.get_mood_colors(),
                     "reflection": reflection,
                     "image_path": str(saved_path),
                     "critique_iterations": len(critique_history),
-                    "final_critique": critique_history[-1] if critique_history else None,
+                    "final_critique": (
+                        critique_history[-1] if critique_history else None
+                    ),
                     "thinking_narrative": self.thinking.get_thinking_narrative(),
                 },
                 emotional_state={
@@ -692,17 +740,13 @@ class AIArtist:
 
             logger.info(
                 "artwork_created",
+                creation_type="autonomous_original",
                 path=str(saved_path),
                 mood=self.mood_system.current_mood.value,
                 reflection=reflection[:100],
             )
 
-        # Track download
-        if self.unsplash is None:
-            msg = "Unsplash client not initialized"
-            raise RuntimeError(msg)
-        await self.unsplash.trigger_download(photo["links"]["download_location"])
-
+        # This is Aria's original artwork - no external attribution needed
         return saved_path
 
     def _extract_style_from_prompt(self, prompt: str) -> str:

@@ -338,3 +338,217 @@ class EnhancedMemorySystem:
             "best_styles": self.semantic.get_best_styles()[:3],
             "recent_insights": self.semantic.knowledge["learned_associations"][-limit:],
         }
+
+    def get_evolution_timeline(self) -> dict[str, Any]:
+        """Get evolution timeline showing artistic growth over time.
+
+        Returns data for Phase 5 Evolution Display:
+        - Timeline of creations grouped by date
+        - Style preference evolution
+        - Mood distribution over time
+        - Milestone creations
+        """
+        timeline: dict[str, Any] = {
+            "phases": [],  # Artistic phases
+            "milestones": [],  # Notable creations
+            "style_evolution": [],  # How style preferences changed
+            "mood_distribution": {},  # Mood counts by period
+            "score_trend": [],  # Quality scores over time
+        }
+
+        if not self.episodic.episodes:
+            return timeline
+
+        # Group creations by date
+        creations_by_date: dict[str, list[dict]] = defaultdict(list)
+        for ep in self.episodic.episodes:
+            if ep["event_type"] == "creation":
+                # Extract date from timestamp
+                ts = ep.get("timestamp", "")
+                date = ts[:10] if len(ts) >= 10 else "unknown"
+                creations_by_date[date].append(ep)
+
+        # Build timeline with aggregated data
+        sorted_dates = sorted(creations_by_date.keys())
+        running_styles: dict[str, int] = defaultdict(int)
+
+        for date in sorted_dates:
+            day_creations = creations_by_date[date]
+            day_scores = []
+            day_moods: dict[str, int] = defaultdict(int)
+            day_styles: dict[str, int] = defaultdict(int)
+
+            for creation in day_creations:
+                # Extract score
+                score = creation.get("details", {}).get("score", 0)
+                if score == 0:
+                    # Try alternate location
+                    score = creation.get("outcome", {}).get("score", 0)
+                day_scores.append(score)
+
+                # Extract mood
+                mood = creation.get("emotional_state", {}).get("mood", "unknown")
+                day_moods[mood] += 1
+
+                # Extract style
+                style = creation.get("details", {}).get("style", "unknown")
+                day_styles[style] += 1
+                running_styles[style] += 1
+
+            # Add to timeline
+            avg_score = sum(day_scores) / len(day_scores) if day_scores else 0
+            timeline["score_trend"].append(
+                {
+                    "date": date,
+                    "avg_score": round(avg_score, 3),
+                    "count": len(day_creations),
+                }
+            )
+
+            # Update mood distribution
+            for mood, count in day_moods.items():
+                timeline["mood_distribution"][mood] = (
+                    timeline["mood_distribution"].get(mood, 0) + count
+                )
+
+            # Track style evolution
+            if day_styles:
+                dominant_style = max(day_styles, key=day_styles.get)  # type: ignore[arg-type]
+                timeline["style_evolution"].append(
+                    {
+                        "date": date,
+                        "dominant_style": dominant_style,
+                        "styles_used": dict(day_styles),
+                    }
+                )
+
+        # Identify milestones (high scores, first of each style, etc.)
+        all_creations = [
+            ep for ep in self.episodic.episodes if ep["event_type"] == "creation"
+        ]
+        if all_creations:
+            # Best creation
+            best = max(
+                all_creations,
+                key=lambda x: x.get("details", {}).get("score", 0),
+            )
+            best_score = best.get("details", {}).get("score", 0)
+            if best_score > 0:
+                timeline["milestones"].append(
+                    {
+                        "type": "best_creation",
+                        "date": best.get("timestamp", "")[:10],
+                        "description": f"Highest quality creation (score: {best_score:.2f})",
+                        "details": {
+                            "style": best.get("details", {}).get("style"),
+                            "mood": best.get("emotional_state", {}).get("mood"),
+                        },
+                    }
+                )
+
+            # First creation
+            first = all_creations[0]
+            timeline["milestones"].append(
+                {
+                    "type": "first_creation",
+                    "date": first.get("timestamp", "")[:10],
+                    "description": "First artwork created",
+                    "details": {
+                        "style": first.get("details", {}).get("style"),
+                        "mood": first.get("emotional_state", {}).get("mood"),
+                    },
+                }
+            )
+
+            # Style discoveries (first use of each style)
+            seen_styles: set[str] = set()
+            for creation in all_creations:
+                style = creation.get("details", {}).get("style", "unknown")
+                if style != "unknown" and style not in seen_styles:
+                    seen_styles.add(style)
+                    if len(seen_styles) > 1:  # Skip the very first
+                        timeline["milestones"].append(
+                            {
+                                "type": "style_discovery",
+                                "date": creation.get("timestamp", "")[:10],
+                                "description": f"First experimented with {style} style",
+                                "details": {"style": style},
+                            }
+                        )
+
+        # Identify artistic phases (clusters of similar moods/styles)
+        if len(sorted_dates) >= 3:
+            # Simple phase detection: group consecutive days with same dominant mood
+            current_phase_mood = None
+            phase_start = None
+            phases: list[dict] = []
+
+            for entry in timeline["score_trend"]:
+                date = entry["date"]
+                day_creations = creations_by_date.get(date, [])
+                if day_creations:
+                    moods = [
+                        c.get("emotional_state", {}).get("mood") for c in day_creations
+                    ]
+                    dominant_mood = max(set(moods), key=moods.count) if moods else None
+
+                    if dominant_mood != current_phase_mood:
+                        if current_phase_mood and phase_start:
+                            phases.append(
+                                {
+                                    "mood": current_phase_mood,
+                                    "start_date": phase_start,
+                                    "end_date": date,
+                                    "name": f"{current_phase_mood.title()} Period",
+                                }
+                            )
+                        current_phase_mood = dominant_mood
+                        phase_start = date
+
+            # Close final phase
+            if current_phase_mood and phase_start:
+                phases.append(
+                    {
+                        "mood": current_phase_mood,
+                        "start_date": phase_start,
+                        "end_date": sorted_dates[-1] if sorted_dates else phase_start,
+                        "name": f"{current_phase_mood.title()} Period",
+                    }
+                )
+
+            timeline["phases"] = phases
+
+        return timeline
+
+    def get_style_preferences_over_time(self) -> list[dict[str, Any]]:
+        """Track how style preferences evolved over time."""
+        style_by_month: dict[str, dict[str, float]] = defaultdict(
+            lambda: defaultdict(float)
+        )
+
+        for ep in self.episodic.episodes:
+            if ep["event_type"] == "creation":
+                ts = ep.get("timestamp", "")
+                month = ts[:7] if len(ts) >= 7 else "unknown"  # YYYY-MM
+                style = ep.get("details", {}).get("style", "unknown")
+                score = ep.get("details", {}).get("score", 0.5)
+
+                # Weight by score - better creations influence preferences more
+                style_by_month[month][style] += score
+
+        # Convert to sorted list
+        result = []
+        for month in sorted(style_by_month.keys()):
+            styles = style_by_month[month]
+            if styles:
+                total = sum(styles.values())
+                preferences = {s: round(v / total, 2) for s, v in styles.items()}
+                result.append(
+                    {
+                        "month": month,
+                        "preferences": preferences,
+                        "dominant": max(preferences, key=preferences.get),  # type: ignore[arg-type]
+                    }
+                )
+
+        return result
