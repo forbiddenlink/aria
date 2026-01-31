@@ -1,4 +1,4 @@
-"""Vercel serverless function - Simple HTTP handler."""
+"""Vercel serverless function - Aria Gallery."""
 
 from http.server import BaseHTTPRequestHandler
 import json
@@ -8,6 +8,17 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         """Handle GET requests."""
         path = self.path
+        
+        if path == "/api/gallery":
+            # Return gallery data endpoint
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            # This will be called by JavaScript to fetch images + metadata from GitHub
+            response = {"message": "Use client-side fetch from GitHub API"}
+            self.wfile.write(json.dumps(response).encode())
+            return
         
         if path == "/health":
             self.send_response(200)
@@ -140,6 +151,70 @@ class handler(BaseHTTPRequestHandler):
             font-size: 0.9em;
             margin-top: 5px;
         }
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 30px 0;
+        }
+        .artwork-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        .artwork-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        .artwork-img {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+        }
+        .artwork-info {
+            padding: 20px;
+        }
+        .artwork-mood {
+            display: inline-block;
+            background: #f0f0f0;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .artwork-feeling {
+            color: #666;
+            font-size: 0.9em;
+            line-height: 1.5;
+            font-style: italic;
+        }
+        .artwork-prompt {
+            color: #999;
+            font-size: 0.85em;
+            margin-top: 10px;
+            line-height: 1.4;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
         footer {
             margin-top: 40px;
             color: #999;
@@ -192,14 +267,11 @@ class handler(BaseHTTPRequestHandler):
         </div>
 
         <div class="info-box">
-            <h3>🖼️ Recent Artwork</h3>
-            <div id="gallery" style="margin-top: 20px;">
-                <p style="color: #999;">Loading artwork...</p>
+            <h3>🎨 Aria's Gallery</h3>
+            <div id="gallery" class="loading">
+                <div class="spinner"></div>
+                <p>Loading Aria's artwork...</p>
             </div>
-        </div>
-
-        <div class="cta">
-            <a href="https://github.com/forbiddenlink/aria" class="btn" target="_blank">View Full Collection on GitHub</a>
         </div>
 
         <footer>
@@ -209,40 +281,78 @@ class handler(BaseHTTPRequestHandler):
     </div>
 
     <script>
-        // Fetch gallery images from GitHub
+        // Fetch gallery images and metadata from GitHub
         async function loadGallery() {
             const gallery = document.getElementById('gallery');
             try {
-                // Fetch from GitHub API
+                // Fetch all files from the archive folder
                 const response = await fetch('https://api.github.com/repos/forbiddenlink/aria/contents/gallery/2026/01/30/archive');
                 const files = await response.json();
                 
-                // Filter for image files
-                const images = files.filter(f => f.name.match(/\\.(jpg|jpeg|png|gif)$/i));
+                // Group files by base name (image + json pairs)
+                const artworks = {};
+                files.forEach(file => {
+                    const baseName = file.name.replace(/\\.(png|jpg|json)$/i, '');
+                    if (!artworks[baseName]) artworks[baseName] = {};
+                    if (file.name.endsWith('.json')) {
+                        artworks[baseName].metadataUrl = file.download_url;
+                    } else if (file.name.match(/\\.(png|jpg)$/i)) {
+                        artworks[baseName].imageUrl = file.download_url;
+                        artworks[baseName].name = file.name;
+                    }
+                });
                 
-                if (images.length === 0) {
-                    gallery.innerHTML = '<p style="color: #999;">No artwork available yet. Aria is preparing her first pieces!</p>';
+                // Filter complete artworks (have both image and metadata)
+                const completeArtworks = Object.values(artworks).filter(a => a.imageUrl && a.metadataUrl);
+                
+                if (completeArtworks.length === 0) {
+                    gallery.innerHTML = '<p style="color: #999;">No artwork available yet.</p>';
                     return;
                 }
                 
-                // Display images
-                gallery.innerHTML = images.slice(0, 6).map(img => `
-                    <div style="margin: 15px 0;">
-                        <img src="${img.download_url}" 
-                             alt="${img.name}" 
-                             style="width: 100%; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);"
-                             loading="lazy">
-                        <p style="font-size: 0.85em; color: #999; margin-top: 8px;">${img.name.replace(/\\.[^/.]+$/, "").replace(/_/g, " ")}</p>
-                    </div>
-                `).join('');
+                // Fetch metadata for each artwork
+                const artworkData = await Promise.all(
+                    completeArtworks.slice(0, 20).map(async (artwork) => {
+                        try {
+                            const metaResponse = await fetch(artwork.metadataUrl);
+                            const metadata = await metaResponse.json();
+                            return { ...artwork, ...metadata };
+                        } catch (e) {
+                            return artwork;
+                        }
+                    })
+                );
+                
+                // Display artworks
+                gallery.className = 'gallery-grid';
+                gallery.innerHTML = artworkData.map(art => {
+                    const mood = art.metadata?.mood || 'creative';
+                    const feeling = art.metadata?.feeling || 'Creating with intention';
+                    const prompt = art.prompt || 'Untitled';
+                    const date = art.created_at ? new Date(art.created_at).toLocaleDateString() : '';
+                    
+                    return `
+                        <div class="artwork-card">
+                            <img src="${art.imageUrl}" alt="${prompt}" class="artwork-img" loading="lazy">
+                            <div class="artwork-info">
+                                <span class="artwork-mood">💭 ${mood}</span>
+                                <p class="artwork-feeling">"${feeling}"</p>
+                                <p class="artwork-prompt">${prompt.substring(0, 100)}${prompt.length > 100 ? '...' : ''}</p>
+                                ${date ? `<p style="color: #ccc; font-size: 0.8em; margin-top: 10px;">${date}</p>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
                 
             } catch (error) {
                 console.error('Error loading gallery:', error);
+                gallery.className = '';
                 gallery.innerHTML = `
-                    <p style="color: #999;">Gallery images available at:</p>
+                    <p style="color: #ff6b6b;">Unable to load gallery</p>
+                    <p style="color: #999; font-size: 0.9em;">Error: ${error.message}</p>
                     <a href="https://github.com/forbiddenlink/aria/tree/main/gallery" 
                        target="_blank" 
-                       style="color: #667eea;">View on GitHub →</a>
+                       style="color: #667eea; display: inline-block; margin-top: 15px;">View on GitHub →</a>
                 `;
             }
         }
