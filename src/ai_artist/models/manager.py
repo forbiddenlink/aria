@@ -46,7 +46,7 @@ class ModelManager:
         self, query: str = "", limit: int = 10, types: str = "LORA"
     ) -> list[dict[str, Any]]:
         """Search CivitAI for models."""
-        params = {
+        params: dict[str, str | int] = {
             "limit": limit,
             "sort": "Most Downloaded",
             "types": types,
@@ -59,7 +59,8 @@ class ModelManager:
             response = await self.client.get(f"{self.base_url}/models", params=params)
             response.raise_for_status()
             data = response.json()
-            return data.get("items", [])
+            items: list[dict[str, Any]] = data.get("items", [])
+            return items
         except Exception as e:
             logger.error("model_search_failed", error=str(e))
             return []

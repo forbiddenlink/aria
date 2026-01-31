@@ -85,7 +85,7 @@ class MoodSystem:
 
         logger.info("mood_system_initialized", initial_mood=self.current_mood)
 
-    def update_mood(self, external_factors: dict = None) -> Mood:
+    def update_mood(self, external_factors: dict | None = None) -> Mood:
         """Update Aria's mood based on time, energy, and external factors."""
         self.mood_duration += 1
 
@@ -105,7 +105,7 @@ class MoodSystem:
             duration=self.mood_duration,
         )
 
-        return self.current_mood
+        return Mood(self.current_mood)
 
     def _shift_mood(self):
         """Shift to a new mood organically."""
@@ -172,7 +172,7 @@ class MoodSystem:
     def get_mood_based_subject(self) -> str:
         """Choose a subject based on current mood."""
         influences = self.mood_influences[self.current_mood]
-        subject = random.choice(influences["subjects"])
+        subject: str = random.choice(influences["subjects"])
 
         logger.info(
             "mood_based_subject_chosen", mood=self.current_mood, subject=subject
@@ -267,9 +267,11 @@ class MoodSystem:
     def get_mood_colors(self) -> list[str]:
         """Get the color palette for current mood."""
         influences = self.mood_influences[self.current_mood]
-        return influences["colors"]
+        colors: list[str] = influences["colors"]
+        return colors
 
     def get_mood_style(self) -> str:
         """Get a style appropriate for current mood."""
         influences = self.mood_influences[self.current_mood]
-        return random.choice(influences["styles"])
+        style: str = random.choice(influences["styles"])
+        return style

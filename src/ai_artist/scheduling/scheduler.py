@@ -73,14 +73,20 @@ class CreationScheduler:
             return str(topic)
 
         # Autonomous mode!
+        actual_mode: Literal["surprise", "exploration", "fusion", "mashup"]
         if mode == "auto":
             # Let the AI pick the mode!
-            mode = self.autonomous.get_random_mode()
-            logger.info("auto_mode_selected", chosen_mode=mode)
+            random_mode = self.autonomous.get_random_mode()
+            # get_random_mode returns one of the valid generation modes
+            actual_mode = random_mode  # type: ignore[assignment]
+            logger.info("auto_mode_selected", chosen_mode=actual_mode)
+        else:
+            # mode is already one of the valid generation modes
+            actual_mode = mode  # type: ignore[assignment]
 
         # Generate autonomous prompt
-        prompt = self.autonomous.generate_from_mode(mode)
-        logger.info("autonomous_topic_generated", prompt=prompt, mode=mode)
+        prompt = self.autonomous.generate_from_mode(actual_mode)
+        logger.info("autonomous_topic_generated", prompt=prompt, mode=actual_mode)
         return prompt
 
     async def get_wikipedia_topic(self) -> str:

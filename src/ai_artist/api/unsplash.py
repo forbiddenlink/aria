@@ -46,7 +46,7 @@ class UnsplashClient:
         orientation: str | None = None,
     ) -> dict[str, Any]:
         """Search photos with retry logic."""
-        params = {"query": query, "per_page": per_page}
+        params: dict[str, str | int] = {"query": query, "per_page": per_page}
         if orientation:
             params["orientation"] = orientation
 

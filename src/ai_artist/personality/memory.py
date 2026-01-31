@@ -71,7 +71,7 @@ class ArtistMemory:
         colors: list[str],
         score: float,
         image_path: str,
-        metadata: dict = None,
+        metadata: dict | None = None,
     ):
         """Remember a piece Aria created."""
         artwork = {
@@ -142,7 +142,8 @@ class ArtistMemory:
 
     def get_recent_works(self, limit: int = 10) -> list[dict]:
         """Get Aria's recent artwork."""
-        return self.memory["paintings"][-limit:]
+        works: list[dict] = self.memory["paintings"][-limit:]
+        return works
 
     def get_best_works(self, limit: int = 10) -> list[dict]:
         """Get Aria's highest-scored artwork."""
@@ -153,17 +154,17 @@ class ArtistMemory:
 
     def get_favorite_subject(self) -> str | None:
         """What subject does Aria paint most?"""
-        subjects = self.memory["preferences"]["favorite_subjects"]
+        subjects: dict[str, int] = self.memory["preferences"]["favorite_subjects"]
         if not subjects:
             return None
-        return max(subjects, key=subjects.get)
+        return max(subjects, key=lambda k: subjects[k])
 
     def get_favorite_style(self) -> str | None:
         """What style does Aria prefer?"""
-        styles = self.memory["preferences"]["favorite_styles"]
+        styles: dict[str, int] = self.memory["preferences"]["favorite_styles"]
         if not styles:
             return None
-        return max(styles, key=styles.get)
+        return max(styles, key=lambda k: styles[k])
 
     def has_painted_recently(self, subject: str, threshold: int = 5) -> bool:
         """Check if Aria has painted this subject recently."""

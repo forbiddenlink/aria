@@ -57,7 +57,7 @@ class EpisodicMemory:
 
     def count_episodes_by_type(self) -> dict[str, int]:
         """Get statistics on episode types."""
-        counts = defaultdict(int)
+        counts: dict[str, int] = defaultdict(int)
         for ep in self.episodes:
             counts[ep["event_type"]] += 1
         return dict(counts)
@@ -263,7 +263,7 @@ class EnhancedMemorySystem:
 
     def generate_insights(self) -> dict[str, Any]:
         """Generate insights from accumulated memory."""
-        insights = {
+        insights: dict[str, Any] = {
             "total_creations": 0,
             "style_effectiveness": {},
             "mood_patterns": {},
@@ -290,7 +290,7 @@ class EnhancedMemorySystem:
                 )
 
         # Best performing mood
-        mood_scores = {}
+        mood_scores: dict[str, list[float]] = {}
         for episode in self.episodic.episodes:
             if episode["event_type"] == "creation":
                 mood = episode["emotional_state"].get("mood", "unknown")
@@ -301,7 +301,7 @@ class EnhancedMemorySystem:
 
         if mood_scores:
             best_mood = None
-            best_avg = -1
+            best_avg: float = -1.0
             for mood, scores in mood_scores.items():
                 avg = sum(scores) / len(scores)
                 if avg > best_avg:

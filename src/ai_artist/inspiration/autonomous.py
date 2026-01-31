@@ -1,6 +1,7 @@
 """Autonomous inspiration generation - Let the AI choose what to create!"""
 
 import random
+from collections.abc import Callable
 from typing import Literal
 
 from ..utils.logging import get_logger
@@ -307,7 +308,7 @@ class AutonomousInspiration:
         self, mode: Literal["surprise", "exploration", "fusion", "mashup"] = "surprise"
     ) -> str:
         """Generate based on autonomous mode."""
-        modes = {
+        modes: dict[str, Callable[[], str]] = {
             "surprise": self.generate_surprise,
             "exploration": self.generate_exploration,
             "fusion": self.generate_style_fusion,
@@ -315,7 +316,8 @@ class AutonomousInspiration:
         }
 
         generator = modes.get(mode, self.generate_surprise)
-        return generator()
+        result: str = generator()
+        return result
 
     def get_random_mode(self) -> str:
         """Pick a random generation mode."""

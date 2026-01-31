@@ -80,9 +80,12 @@ class ImageInpainter:
         if not self.pipeline:
             self.load_model()
 
+        if self.pipeline is None:
+            raise RuntimeError("Failed to load inpainting pipeline")
+
         logger.info("inpainting_image", prompt=prompt[:50])
 
-        result = self.pipeline(
+        result: Image.Image = self.pipeline(
             prompt=prompt,
             negative_prompt=negative_prompt,
             image=image,

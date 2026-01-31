@@ -280,10 +280,12 @@ app = FastAPI(
 app.state.limiter = limiter
 
 # Add exception handlers
-app.add_exception_handler(HTTPException, http_exception_handler)
-app.add_exception_handler(RequestValidationError, validation_exception_handler)
+# Note: type: ignore needed because FastAPI's exception handler typing is overly strict
+# The handlers are correctly typed for their specific exception types
+app.add_exception_handler(HTTPException, http_exception_handler)  # type: ignore[arg-type]
+app.add_exception_handler(RequestValidationError, validation_exception_handler)  # type: ignore[arg-type]
 app.add_exception_handler(Exception, general_exception_handler)
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
 # Add middleware (added in reverse order of execution)
 # CORS must be added last so it processes requests first
@@ -565,7 +567,8 @@ def load_templates() -> list[dict]:
         return []
     try:
         with open(TEMPLATES_FILE) as f:
-            return json.load(f)
+            templates: list[dict] = json.load(f)
+            return templates
     except json.JSONDecodeError:
         return []
 
