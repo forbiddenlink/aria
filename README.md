@@ -72,6 +72,7 @@ ai-artist/
 - FastAPI web gallery with WebSocket
 - Bias mitigation in prompt generation
 - Intelligent prompt filtering
+- **Advanced Prompt Features**: Matrix, Emphasis, Style Presets
 
 **In Progress:**
 
@@ -80,7 +81,8 @@ ai-artist/
 - Multi-model support
 - Beautiful dark UI
 
-See [ARIA.md](ARIA.md) for the complete roadmap.
+See [ARIA.md](ARIA.md) for the complete roadmap and
+[docs/ADVANCED_PROMPTS.md](docs/ADVANCED_PROMPTS.md) for prompt utilities.
 
 ## Tech Stack
 
