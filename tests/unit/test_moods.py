@@ -1,11 +1,18 @@
 """Tests for Aria's mood system."""
 
 import random
+from datetime import datetime, timedelta
 from unittest.mock import patch
 
 import pytest
 
-from ai_artist.personality.moods import Mood, MoodSystem
+from ai_artist.personality.moods import (
+    MOOD_INTENSITY_BASELINE,
+    NEUTRAL_MOODS,
+    Mood,
+    MoodSystem,
+    StyleAxes,
+)
 
 
 class TestMood:
@@ -304,12 +311,22 @@ class TestMoodReflections:
     def test_low_score_adds_growth_sentiment(self, mood_system):
         """Test low scores add growth-oriented sentiment."""
         reflection = mood_system.reflect_on_work(score=0.3, subject="test")
-        assert "journey" in reflection or "envision" in reflection
+        # Updated to match new intensity-aware language
+        assert (
+            "learn" in reflection
+            or "failures" in reflection
+            or "successes" in reflection
+        )
 
     def test_medium_score_is_neutral(self, mood_system):
         """Test medium scores are neutral."""
         reflection = mood_system.reflect_on_work(score=0.5, subject="test")
-        assert "interesting" in reflection or "best" in reflection
+        # Updated to match new intensity-aware language
+        assert (
+            "challenged" in reflection
+            or "Growth" in reflection
+            or "struggle" in reflection
+        )
 
 
 class TestMoodColorAndStyle:
@@ -346,3 +363,264 @@ class TestMoodColorAndStyle:
             style = mood_system.get_mood_style()
             expected_styles = mood_system.mood_influences[mood]["styles"]
             assert style in expected_styles
+
+
+# ============================================================================
+# NEW TESTS: StyleAxes, Mood Decay, Intensity, Serialization
+# ============================================================================
+
+
+class TestStyleAxes:
+    """Test the StyleAxes class for granular creative control."""
+
+    def test_default_values(self):
+        """Test StyleAxes initializes with default 0.5 values."""
+        axes = StyleAxes()
+        assert axes.abstraction == 0.5
+        assert axes.saturation == 0.5
+        assert axes.complexity == 0.5
+        assert axes.drama == 0.5
+        assert axes.symmetry == 0.5
+        assert axes.novelty == 0.5
+        assert axes.line_quality == 0.5
+        assert axes.palette_temperature == 0.5
+        assert axes.motion == 0.5
+        assert axes.symbolism == 0.5
+
+    def test_custom_values(self):
+        """Test StyleAxes with custom values."""
+        axes = StyleAxes(abstraction=0.9, drama=0.1, novelty=0.8)
+        assert axes.abstraction == 0.9
+        assert axes.drama == 0.1
+        assert axes.novelty == 0.8
+        assert axes.saturation == 0.5  # Default
+
+    def test_to_dict(self):
+        """Test StyleAxes serialization."""
+        axes = StyleAxes(abstraction=0.75, complexity=0.25)
+        d = axes.to_dict()
+        assert isinstance(d, dict)
+        assert len(d) == 10  # All 10 axes
+        assert d["abstraction"] == 0.75
+        assert d["complexity"] == 0.25
+        assert d["saturation"] == 0.5
+
+    def test_from_dict(self):
+        """Test StyleAxes deserialization."""
+        data = {"abstraction": 0.8, "drama": 0.9, "motion": 0.1}
+        axes = StyleAxes.from_dict(data)
+        assert axes.abstraction == 0.8
+        assert axes.drama == 0.9
+        assert axes.motion == 0.1
+
+    def test_from_mood_returns_style_axes(self):
+        """Test StyleAxes.from_mood creates axes based on mood."""
+        for mood in Mood:
+            axes = StyleAxes.from_mood(mood)
+            assert isinstance(axes, StyleAxes)
+            # All values should be 0-1
+            for key, value in axes.to_dict().items():
+                assert 0.0 <= value <= 1.0, f"{key} out of bounds: {value}"
+
+    def test_from_mood_intensity_affects_extremity(self):
+        """Test that higher intensity produces more extreme values."""
+        # Chaotic mood with high intensity should have extreme values
+        high_intensity = StyleAxes.from_mood(Mood.CHAOTIC, intensity=1.0)
+
+        # High intensity should be more extreme (further from 0.5)
+        # Due to randomness, just verify high intensity produces some extremity
+        high_extremity = sum(abs(v - 0.5) for v in high_intensity.to_dict().values())
+        assert high_extremity > 0  # At least some extremity
+
+    def test_to_prompt_modifiers_returns_list(self):
+        """Test to_prompt_modifiers returns a list of strings."""
+        axes = StyleAxes(abstraction=0.9, drama=0.9, saturation=0.1)
+        modifiers = axes.to_prompt_modifiers()
+        assert isinstance(modifiers, list)
+        assert all(isinstance(m, str) for m in modifiers)
+
+    def test_extreme_values_generate_modifiers(self):
+        """Test that extreme values generate appropriate modifiers."""
+        # Very abstract
+        axes = StyleAxes(abstraction=0.9)
+        modifiers = axes.to_prompt_modifiers()
+        assert any("abstract" in m.lower() for m in modifiers)
+
+        # Very low saturation
+        axes = StyleAxes(saturation=0.1)
+        modifiers = axes.to_prompt_modifiers()
+        assert any(
+            "muted" in m.lower() or "desaturated" in m.lower() for m in modifiers
+        )
+
+
+class TestMoodDecay:
+    """Test mood decay over time."""
+
+    @pytest.fixture
+    def mood_system(self):
+        return MoodSystem()
+
+    def test_no_decay_under_six_minutes(self, mood_system):
+        """Test that short time periods don't trigger decay."""
+        mood_system.current_mood = Mood.CHAOTIC
+        mood_system.mood_intensity = 0.9
+        initial_intensity = mood_system.mood_intensity
+
+        # Set last_update to 5 minutes ago
+        mood_system.last_update = datetime.now() - timedelta(minutes=5)
+        mood_system.apply_decay()
+
+        assert mood_system.mood_intensity == initial_intensity
+
+    def test_decay_after_hours(self, mood_system):
+        """Test that mood decays after hours pass."""
+        mood_system.current_mood = Mood.CHAOTIC  # High intensity baseline
+        mood_system.mood_intensity = 0.9
+        initial_intensity = mood_system.mood_intensity
+
+        # Set last_update to 2 hours ago
+        mood_system.last_update = datetime.now() - timedelta(hours=2)
+        mood_system.apply_decay()
+
+        assert mood_system.mood_intensity < initial_intensity
+
+    def test_intense_moods_decay_faster(self, mood_system):
+        """Test that intense moods (chaotic) decay faster than calm moods (serene)."""
+        # Test chaotic (high baseline)
+        mood_system.current_mood = Mood.CHAOTIC
+        mood_system.mood_intensity = 0.9
+        mood_system.last_update = datetime.now() - timedelta(hours=1)
+        mood_system.apply_decay()
+        chaotic_decay = 0.9 - mood_system.mood_intensity
+
+        # Test serene (low baseline)
+        mood_system_serene = MoodSystem()
+        mood_system_serene.current_mood = Mood.SERENE
+        mood_system_serene.mood_intensity = 0.9
+        mood_system_serene.last_update = datetime.now() - timedelta(hours=1)
+        mood_system_serene.apply_decay()
+        serene_decay = 0.9 - mood_system_serene.mood_intensity
+
+        assert chaotic_decay > serene_decay
+
+    def test_decay_to_neutral_when_intensity_low(self, mood_system):
+        """Test mood shifts to neutral when intensity drops below threshold."""
+        mood_system.current_mood = Mood.CHAOTIC
+        mood_system.mood_intensity = 0.25  # Below threshold
+        mood_system._decay_to_neutral()
+
+        assert mood_system.current_mood in NEUTRAL_MOODS
+        assert mood_system.mood_intensity == 0.5  # Reset to moderate
+
+    def test_neutral_moods_dont_decay_to_neutral(self, mood_system):
+        """Test that neutral moods don't shift when intensity is low."""
+        mood_system.current_mood = Mood.CONTEMPLATIVE  # Already neutral
+        mood_system.mood_intensity = 0.2
+        original_mood = mood_system.current_mood
+        mood_system._decay_to_neutral()
+
+        assert mood_system.current_mood == original_mood
+
+
+class TestMoodIntensity:
+    """Test mood intensity tracking."""
+
+    @pytest.fixture
+    def mood_system(self):
+        return MoodSystem()
+
+    def test_initial_intensity(self, mood_system):
+        """Test initial mood intensity is 0.7."""
+        assert mood_system.mood_intensity == 0.7
+
+    def test_intensity_in_describe_feeling(self, mood_system):
+        """Test intensity is reflected in describe_feeling output."""
+        feeling = mood_system.describe_feeling()
+        assert "Intensity:" in feeling
+
+    def test_high_intensity_language(self, mood_system):
+        """Test high intensity produces strong language."""
+        mood_system.mood_intensity = 0.9
+        feeling = mood_system.describe_feeling()
+        assert "consumed" in feeling or "overwhelming" in feeling
+
+    def test_low_intensity_language(self, mood_system):
+        """Test low intensity produces mild language."""
+        mood_system.mood_intensity = 0.3
+        feeling = mood_system.describe_feeling()
+        assert "faint" in feeling or "fading" in feeling
+
+
+class TestMoodSerialization:
+    """Test mood system serialization/deserialization."""
+
+    @pytest.fixture
+    def mood_system(self):
+        return MoodSystem()
+
+    def test_to_dict_contains_all_fields(self, mood_system):
+        """Test to_dict includes all required fields."""
+        d = mood_system.to_dict()
+        assert "current_mood" in d
+        assert "energy_level" in d
+        assert "mood_intensity" in d
+        assert "mood_duration" in d
+        assert "last_update" in d
+        assert "style_axes" in d
+
+    def test_from_dict_restores_state(self, mood_system):
+        """Test from_dict restores mood state."""
+        mood_system.current_mood = Mood.REBELLIOUS
+        mood_system.energy_level = 0.8
+        mood_system.mood_intensity = 0.95
+        mood_system.mood_duration = 5
+
+        data = mood_system.to_dict()
+        restored = MoodSystem.from_dict(data)
+
+        assert restored.current_mood == Mood.REBELLIOUS
+        assert restored.energy_level == 0.8
+        # Intensity may have decayed slightly due to from_dict calling apply_decay
+        assert restored.mood_duration == 5
+
+    def test_from_dict_handles_missing_fields(self):
+        """Test from_dict handles missing optional fields gracefully."""
+        data = {"current_mood": "serene"}
+        restored = MoodSystem.from_dict(data)
+
+        assert restored.current_mood == Mood.SERENE
+        assert restored.energy_level == 0.5  # Default
+        assert restored.mood_intensity == 0.7  # Default
+
+    def test_style_axes_persist(self, mood_system):
+        """Test style axes survive serialization round-trip."""
+        mood_system.style_axes = StyleAxes(abstraction=0.9, drama=0.1)
+
+        data = mood_system.to_dict()
+        restored = MoodSystem.from_dict(data)
+
+        assert restored.style_axes.abstraction == 0.9
+        assert restored.style_axes.drama == 0.1
+
+
+class TestMoodIntensityBaseline:
+    """Test the MOOD_INTENSITY_BASELINE constants."""
+
+    def test_all_moods_have_baseline(self):
+        """Test every mood has an intensity baseline defined."""
+        for mood in Mood:
+            assert mood in MOOD_INTENSITY_BASELINE
+
+    def test_baselines_are_valid_range(self):
+        """Test all baselines are between 0 and 1."""
+        for mood, baseline in MOOD_INTENSITY_BASELINE.items():
+            assert 0.0 <= baseline <= 1.0, f"{mood} baseline out of range: {baseline}"
+
+    def test_chaotic_has_high_baseline(self):
+        """Test chaotic mood has high intensity baseline."""
+        assert MOOD_INTENSITY_BASELINE[Mood.CHAOTIC] >= 0.8
+
+    def test_serene_has_low_baseline(self):
+        """Test serene mood has low intensity baseline."""
+        assert MOOD_INTENSITY_BASELINE[Mood.SERENE] <= 0.3

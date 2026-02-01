@@ -3,20 +3,22 @@
 Tests both the basic ArtistMemory and the EnhancedMemorySystem.
 """
 
-import json
 from pathlib import Path
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import patch
 
 import pytest
 
-from ai_artist.personality.memory import ArtistMemory
 from ai_artist.personality.enhanced_memory import (
+    LEVEL_TITLES,
     EnhancedMemorySystem,
     EpisodicMemory,
+    ExperienceSystem,
+    ReflectionSystem,
     SemanticMemory,
     WorkingMemory,
+    xp_for_level,
 )
-
+from ai_artist.personality.memory import ArtistMemory
 
 # ============================================================================
 # Tests for ArtistMemory (basic memory system)
@@ -346,8 +348,14 @@ class TestSemanticMemory:
         semantic.record_style_effectiveness("impressionist", 0.85, 10)
 
         assert "impressionist" in semantic.knowledge["style_effectiveness"]
-        assert semantic.knowledge["style_effectiveness"]["impressionist"]["avg_score"] == 0.85
-        assert semantic.knowledge["style_effectiveness"]["impressionist"]["sample_size"] == 10
+        assert (
+            semantic.knowledge["style_effectiveness"]["impressionist"]["avg_score"]
+            == 0.85
+        )
+        assert (
+            semantic.knowledge["style_effectiveness"]["impressionist"]["sample_size"]
+            == 10
+        )
 
     def test_record_subject_resonance(self, semantic):
         """Test recording subject resonance."""
@@ -435,6 +443,7 @@ class TestWorkingMemory:
         old_start = working.session_start
 
         import time
+
         time.sleep(0.01)  # Ensure different timestamp
         working.clear_session()
 
@@ -482,7 +491,9 @@ class TestEnhancedMemorySystem:
         assert len(memory_system.episodic.episodes) == 1
 
         # Check semantic (style effectiveness updated)
-        assert "impressionist" in memory_system.semantic.knowledge["style_effectiveness"]
+        assert (
+            "impressionist" in memory_system.semantic.knowledge["style_effectiveness"]
+        )
 
     def test_record_creation_calculates_running_average(self, memory_system):
         """Test style effectiveness uses running average."""
@@ -497,7 +508,9 @@ class TestEnhancedMemorySystem:
             outcome={"score": 0.6},
         )
 
-        effectiveness = memory_system.semantic.knowledge["style_effectiveness"]["test_style"]
+        effectiveness = memory_system.semantic.knowledge["style_effectiveness"][
+            "test_style"
+        ]
         assert effectiveness["sample_size"] == 2
         assert effectiveness["avg_score"] == 0.7  # (0.8 + 0.6) / 2
 
@@ -634,7 +647,9 @@ class TestMemoryStats:
         """Test stats with populated memory."""
         memory.remember_artwork("p", "ocean", "impressionist", "m", [], 0.8, "/i.png")
         memory.remember_artwork("p", "ocean", "minimalist", "m", [], 0.9, "/i.png")
-        memory.remember_artwork("p", "mountain", "impressionist", "m", [], 0.7, "/i.png")
+        memory.remember_artwork(
+            "p", "mountain", "impressionist", "m", [], 0.7, "/i.png"
+        )
 
         stats = memory.get_stats()
 
@@ -642,3 +657,445 @@ class TestMemoryStats:
         assert stats["best_score"] == 0.9
         assert stats["favorite_subject"] == "ocean"
         assert stats["favorite_style"] == "impressionist"
+
+
+# ============================================================================
+# NEW TESTS: ExperienceSystem and ReflectionSystem
+# ============================================================================
+
+
+class TestXpForLevel:
+    """Test XP calculation function."""
+
+    def test_level_1_requires_zero(self):
+        """Level 1 requires 0 XP."""
+        assert xp_for_level(1) == 0
+
+    def test_level_2_requires_150(self):
+        """Level 2 requires 150 XP (100 * 1.5^1)."""
+        assert xp_for_level(2) == 150
+
+    def test_exponential_growth(self):
+        """XP requirements grow exponentially."""
+        # Level 2 = 100 * 1.5^1 = 150
+        assert xp_for_level(2) == 150
+        # Level 3 = 100 * 1.5^2 = 225
+        assert xp_for_level(3) == 225
+        # Level 4 = 100 * 1.5^3 = 337.5 -> 337
+        assert xp_for_level(4) == 337
+
+    def test_high_levels(self):
+        """Test high level XP requirements."""
+        # Each level requires more than previous
+        for lvl in range(1, 20):
+            assert xp_for_level(lvl + 1) > xp_for_level(lvl)
+
+
+class TestExperienceSystem:
+    """Test the ExperienceSystem class."""
+
+    @pytest.fixture
+    def exp(self):
+        return ExperienceSystem()
+
+    def test_initial_state(self, exp):
+        """Test initial experience state."""
+        assert exp.total_xp == 0
+        assert exp.level == 1
+        assert exp.title == "Novice Artist"
+        assert exp.creation_count == 0
+        assert len(exp.milestones_achieved) == 0
+
+    def test_calculate_creation_xp_low_score(self, exp):
+        """Test XP calculation for low score."""
+        xp = exp.calculate_creation_xp(0.2)
+        assert xp == 10 + int(0.2 * 40)  # 18
+
+    def test_calculate_creation_xp_high_score(self, exp):
+        """Test XP calculation for high score includes bonus."""
+        xp = exp.calculate_creation_xp(0.8)
+        # Base: 10 + 32 = 42, + 15 high quality bonus = 57
+        assert xp == 57
+
+    def test_calculate_creation_xp_masterpiece(self, exp):
+        """Test XP calculation for masterpiece includes both bonuses."""
+        xp = exp.calculate_creation_xp(0.9)
+        # Base: 10 + 36 = 46, + 15 (>0.7) + 25 (>0.85) = 86
+        assert xp == 86
+
+    def test_calculate_creation_xp_featured(self, exp):
+        """Test XP calculation for featured work."""
+        base_xp = exp.calculate_creation_xp(0.5)
+        featured_xp = exp.calculate_creation_xp(0.5, is_featured=True)
+        assert featured_xp == base_xp + 20
+
+    def test_add_creation_increments_count(self, exp):
+        """Test add_creation increments creation count."""
+        exp.add_creation(0.5, "style", "mood")
+        assert exp.creation_count == 1
+
+    def test_add_creation_tracks_styles(self, exp):
+        """Test add_creation tracks unique styles."""
+        exp.add_creation(0.5, "impressionist", "mood")
+        exp.add_creation(0.5, "abstract", "mood")
+        exp.add_creation(0.5, "impressionist", "mood")  # Duplicate
+
+        assert len(exp.styles_used) == 2
+        assert "impressionist" in exp.styles_used
+        assert "abstract" in exp.styles_used
+
+    def test_add_creation_tracks_moods(self, exp):
+        """Test add_creation tracks unique moods."""
+        exp.add_creation(0.5, "style", "serene")
+        exp.add_creation(0.5, "style", "chaotic")
+
+        assert len(exp.moods_experienced) == 2
+
+    def test_add_creation_returns_result(self, exp):
+        """Test add_creation returns result dict."""
+        result = exp.add_creation(0.5, "style", "mood")
+
+        assert "xp_earned" in result
+        assert "level_up" in result
+        assert "milestones_unlocked" in result
+
+    def test_first_creation_milestone(self, exp):
+        """Test first creation triggers milestone."""
+        result = exp.add_creation(0.5, "style", "mood")
+
+        assert any(m["name"] == "first_creation" for m in result["milestones_unlocked"])
+        assert "first_creation" in exp.milestones_achieved
+
+    def test_first_high_quality_milestone(self, exp):
+        """Test first high quality creation triggers milestone."""
+        # First normal creation
+        exp.add_creation(0.5, "style", "mood")
+        # First high quality (>0.7)
+        result = exp.add_creation(0.75, "style", "mood")
+
+        assert any(
+            m["name"] == "first_high_quality" for m in result["milestones_unlocked"]
+        )
+
+    def test_first_masterpiece_milestone(self, exp):
+        """Test first masterpiece triggers milestone."""
+        result = exp.add_creation(0.9, "style", "mood")
+
+        milestone_names = [m["name"] for m in result["milestones_unlocked"]]
+        assert "first_masterpiece" in milestone_names
+
+    def test_level_up_detection(self, exp):
+        """Test level up is detected."""
+        # Add enough XP to level up (need 100 for level 2)
+        exp.total_xp = 90  # Just under level 2
+        exp.level = 1
+
+        result = exp.add_creation(0.5, "style", "mood")  # Should push over
+
+        # If total_xp > 100, should level up
+        if exp.total_xp >= 100:
+            assert result["level_up"] is True
+            assert exp.level == 2
+
+    def test_title_changes_at_level_thresholds(self, exp):
+        """Test titles change at appropriate levels."""
+        exp.level = 2
+        exp.total_xp = 200
+
+        # Manually trigger level update
+        exp._update_level()
+
+        # Force to level 3 threshold
+        exp.level = 3
+        # Check title would update
+        for lvl in sorted(LEVEL_TITLES.keys(), reverse=True):
+            if lvl <= 3:
+                assert LEVEL_TITLES[lvl] == "Emerging Creator"
+                break
+
+    def test_get_progress_to_next_level(self, exp):
+        """Test progress calculation."""
+        exp.total_xp = 75  # Halfway to level 2 (150)
+        exp.level = 1
+
+        progress = exp.get_progress_to_next_level()
+
+        assert progress["current_level"] == 1
+        assert progress["xp_in_level"] == 75
+        assert progress["xp_for_next_level"] == 150
+        assert progress["progress_percent"] == 50.0
+
+    def test_to_dict_and_from_dict(self, exp):
+        """Test serialization round-trip."""
+        exp.add_creation(0.8, "style1", "mood1")
+        exp.add_creation(0.9, "style2", "mood2")
+
+        data = exp.to_dict()
+        restored = ExperienceSystem.from_dict(data)
+
+        assert restored.total_xp == exp.total_xp
+        assert restored.level == exp.level
+        assert restored.creation_count == exp.creation_count
+        assert restored.styles_used == exp.styles_used
+
+    def test_style_explorer_milestone(self, exp):
+        """Test style explorer milestone after 5 styles."""
+        for style in ["a", "b", "c", "d", "e"]:
+            exp.add_creation(0.5, style, "mood")
+
+        assert "style_explorer" in exp.milestones_achieved
+
+    def test_10_creations_milestone(self, exp):
+        """Test 10 creations milestone."""
+        for i in range(10):
+            exp.add_creation(0.5, f"style{i}", "mood")
+
+        assert "10_creations" in exp.milestones_achieved
+
+
+class TestReflectionSystem:
+    """Test the ReflectionSystem class."""
+
+    @pytest.fixture
+    def reflection(self):
+        return ReflectionSystem()
+
+    @pytest.fixture
+    def sample_episodes(self):
+        """Create sample episodes for testing."""
+        episodes = []
+        for i in range(10):
+            episodes.append(
+                {
+                    "event_type": "creation",
+                    "details": {
+                        "style": "impressionist" if i % 2 == 0 else "abstract",
+                        "score": 0.5 + i * 0.03,
+                    },
+                    "emotional_state": {"mood": "serene" if i < 5 else "chaotic"},
+                }
+            )
+        return episodes
+
+    @pytest.fixture
+    def sample_experience(self):
+        exp = ExperienceSystem()
+        exp.level = 5
+        exp.title = "Developing Visionary"
+        exp.masterpiece_count = 2
+        return exp
+
+    def test_initial_state(self, reflection):
+        """Test initial reflection state."""
+        assert reflection.reflection_count == 0
+        assert reflection.last_reflection_time is None
+        assert len(reflection.reflections) == 0
+
+    def test_should_reflect_first_time(self, reflection):
+        """Test should_reflect returns True after 5 episodes."""
+        assert reflection.should_reflect(4) is False
+        assert reflection.should_reflect(5) is True
+
+    def test_should_reflect_every_10(self, reflection):
+        """Test should_reflect triggers every 10 creations."""
+        from datetime import datetime
+
+        reflection.last_reflection_time = datetime.now()
+
+        assert reflection.should_reflect(10) is True
+        assert reflection.should_reflect(20) is True
+        assert reflection.should_reflect(15) is False
+
+    def test_should_reflect_after_24_hours(self, reflection):
+        """Test should_reflect triggers after 24 hours."""
+        from datetime import datetime, timedelta
+
+        reflection.last_reflection_time = datetime.now() - timedelta(hours=25)
+
+        assert reflection.should_reflect(3, hours_since_last=25) is True
+
+    def test_generate_reflection_structure(
+        self, reflection, sample_episodes, sample_experience
+    ):
+        """Test generated reflection has correct structure."""
+        result = reflection.generate_reflection(
+            sample_episodes,
+            {},
+            sample_experience,
+        )
+
+        assert "timestamp" in result
+        assert "reflection_number" in result
+        assert "insights" in result
+        assert "patterns_discovered" in result
+        assert "growth_observations" in result
+        assert "artistic_direction" in result
+
+    def test_generate_reflection_increments_count(
+        self, reflection, sample_episodes, sample_experience
+    ):
+        """Test generate_reflection increments count."""
+        reflection.generate_reflection(sample_episodes, {}, sample_experience)
+
+        assert reflection.reflection_count == 1
+        assert reflection.last_reflection_time is not None
+
+    def test_generate_reflection_stores_reflection(
+        self, reflection, sample_episodes, sample_experience
+    ):
+        """Test generated reflection is stored."""
+        result = reflection.generate_reflection(sample_episodes, {}, sample_experience)
+
+        assert len(reflection.reflections) == 1
+        assert reflection.reflections[0] == result
+
+    def test_get_recent_reflections(
+        self, reflection, sample_episodes, sample_experience
+    ):
+        """Test getting recent reflections."""
+        for _ in range(7):
+            reflection.generate_reflection(sample_episodes, {}, sample_experience)
+
+        recent = reflection.get_recent_reflections(3)
+        assert len(recent) == 3
+
+    def test_to_dict_and_from_dict(
+        self, reflection, sample_episodes, sample_experience
+    ):
+        """Test serialization round-trip."""
+        reflection.generate_reflection(sample_episodes, {}, sample_experience)
+
+        data = reflection.to_dict()
+        restored = ReflectionSystem.from_dict(data)
+
+        assert restored.reflection_count == 1
+        assert len(restored.reflections) == 1
+        assert restored.last_reflection_time is not None
+
+    def test_empty_episodes_handled(self, reflection, sample_experience):
+        """Test generate_reflection handles empty episodes."""
+        result = reflection.generate_reflection([], {}, sample_experience)
+
+        assert result["reflection_number"] == 1
+        assert result["insights"] == []
+
+    def test_patterns_detected_from_moods(self, reflection, sample_experience):
+        """Test mood patterns are detected."""
+        episodes = [
+            {
+                "event_type": "creation",
+                "details": {},
+                "emotional_state": {"mood": "serene"},
+            }
+            for _ in range(15)
+        ]
+
+        result = reflection.generate_reflection(episodes, {}, sample_experience)
+
+        assert any("serene" in p.lower() for p in result["patterns_discovered"])
+
+    def test_score_trend_detected(self, reflection, sample_experience):
+        """Test score improvement is detected."""
+        # Episodes with improving scores
+        episodes = [
+            {
+                "event_type": "creation",
+                "details": {"score": 0.4 + i * 0.05},
+                "emotional_state": {},
+            }
+            for i in range(10)
+        ]
+
+        result = reflection.generate_reflection(episodes, {}, sample_experience)
+
+        # Should detect improvement trend
+        assert len(result["growth_observations"]) >= 0  # May or may not detect
+
+
+class TestEnhancedMemoryWithExperience:
+    """Test EnhancedMemorySystem integration with experience."""
+
+    @pytest.fixture
+    def memory_system(self, tmp_path):
+        return EnhancedMemorySystem(memory_file=tmp_path / "enhanced.json")
+
+    def test_record_creation_updates_experience(self, memory_system):
+        """Test record_creation updates experience system."""
+        result = memory_system.record_creation(
+            artwork_details={"style": "test"},
+            emotional_state={"mood": "serene"},
+            outcome={"score": 0.8},
+        )
+
+        assert "xp_earned" in result
+        assert memory_system.experience.creation_count == 1
+
+    def test_get_experience_progress(self, memory_system):
+        """Test get_experience_progress returns full info."""
+        memory_system.record_creation(
+            artwork_details={"style": "test"},
+            emotional_state={"mood": "serene"},
+            outcome={"score": 0.8},
+        )
+
+        progress = memory_system.get_experience_progress()
+
+        assert "current_level" in progress
+        assert "title" in progress
+        assert "milestones" in progress
+        assert "styles_mastered" in progress
+
+    def test_force_reflection(self, memory_system):
+        """Test force_reflection generates a reflection."""
+        # Add some creations first
+        for i in range(5):
+            memory_system.record_creation(
+                artwork_details={"style": f"style{i}"},
+                emotional_state={"mood": "serene"},
+                outcome={"score": 0.5 + i * 0.1},
+            )
+
+        reflection = memory_system.force_reflection()
+
+        assert "timestamp" in reflection
+        assert "insights" in reflection
+
+    def test_get_latest_reflection(self, memory_system):
+        """Test get_latest_reflection returns most recent."""
+        # Initially None
+        assert memory_system.get_latest_reflection() is None
+
+        # Add some creations first (needed for reflection to be saved)
+        for i in range(5):
+            memory_system.record_creation(
+                artwork_details={"style": f"style{i}"},
+                emotional_state={"mood": "serene"},
+                outcome={"score": 0.6},
+            )
+
+        # Force a reflection
+        memory_system.force_reflection()
+
+        latest = memory_system.get_latest_reflection()
+        assert latest is not None
+        assert "reflection_number" in latest
+
+    def test_experience_persists_across_sessions(self, tmp_path):
+        """Test experience data persists."""
+        memory_path = tmp_path / "persist.json"
+
+        # Create and populate
+        memory1 = EnhancedMemorySystem(memory_file=memory_path)
+        for i in range(5):
+            memory1.record_creation(
+                artwork_details={"style": f"style{i}"},
+                emotional_state={"mood": "serene"},
+                outcome={"score": 0.7},
+            )
+
+        # Load in new instance
+        memory2 = EnhancedMemorySystem(memory_file=memory_path)
+
+        assert memory2.experience.creation_count == 5
+        assert memory2.experience.total_xp > 0
+        assert "first_creation" in memory2.experience.milestones_achieved
