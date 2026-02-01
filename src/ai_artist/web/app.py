@@ -1,11 +1,13 @@
 """FastAPI web gallery application with modern best practices."""
 
 import asyncio
+import contextlib
 import json
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
+import aiofiles
 from fastapi import (
     Depends,
     FastAPI,
@@ -546,19 +548,20 @@ async def toggle_featured(
     if not full_image_path.exists():
         raise HTTPException(status_code=404, detail="Image not found")
 
-    # Load or create metadata
+    # Load or create metadata (async file I/O)
     if metadata_path.exists():
-        with open(metadata_path) as f:
-            metadata = json.load(f)
+        async with aiofiles.open(metadata_path) as f:
+            content = await f.read()
+            metadata = json.loads(content)
     else:
         metadata = {"prompt": "Unknown", "created_at": full_image_path.stat().st_mtime}
 
     # Update featured status
     metadata["featured"] = featured
 
-    # Save metadata
-    with open(metadata_path, "w") as f:
-        json.dump(metadata, f, indent=2)
+    # Save metadata (async file I/O)
+    async with aiofiles.open(metadata_path, "w") as f:
+        await f.write(json.dumps(metadata, indent=2))
 
     logger.info("image_featured_toggled", path=str(file_path), featured=featured)
 
@@ -578,69 +581,69 @@ async def upload_image(
     _api_key: str | None = Depends(verify_api_key),
 ):
     """Upload a single image with optional metadata.
-    
+
     Expects multipart/form-data with:
     - image: PNG/JPG file
     - metadata: Optional JSON string with prompt, model, etc.
     """
-    from fastapi import File, Form, UploadFile
-    
+    from fastapi import UploadFile
+
     # Parse multipart data manually since we need Depends
     form = await request.form()
-    
+
     if "image" not in form:
         raise HTTPException(status_code=400, detail="No image file provided")
-    
+
     image_file: UploadFile = form["image"]
     metadata_str: str | None = form.get("metadata")
-    
+
     # Validate file type
     if not image_file.content_type or not image_file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="Invalid file type")
-    
+
     # Read image data
     image_data = await image_file.read()
-    
+
     # Parse metadata if provided
     metadata = {}
     if metadata_str:
         try:
             metadata = json.loads(metadata_str)
-        except json.JSONDecodeError:
-            raise HTTPException(status_code=400, detail="Invalid metadata JSON")
-    
+        except json.JSONDecodeError as e:
+            raise HTTPException(status_code=400, detail="Invalid metadata JSON") from e
+
     # Generate filename based on timestamp if not provided
     import hashlib
     from datetime import datetime
-    
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    file_hash = hashlib.md5(image_data).hexdigest()[:8]
+    file_hash = hashlib.md5(image_data, usedforsecurity=False).hexdigest()[:8]
     filename = f"{timestamp}_{file_hash}.png"
-    
+
     # Determine save path (featured or regular)
     gallery_path_obj = Path(gallery_path)
     year_month = datetime.now().strftime("%Y/%m")
-    
+
     if metadata.get("featured"):
         save_dir = gallery_path_obj / year_month / "featured"
     else:
         save_dir = gallery_path_obj / year_month
-    
+
     save_dir.mkdir(parents=True, exist_ok=True)
     image_path = save_dir / filename
-    
-    # Save image
-    with open(image_path, "wb") as f:
-        f.write(image_data)
-    
-    # Save metadata if provided
+
+    # Save image (async file I/O)
+    async with aiofiles.open(image_path, "wb") as f:
+        await f.write(image_data)
+
+    # Save metadata if provided (async file I/O)
     if metadata:
         metadata_path = image_path.with_suffix(".json")
-        with open(metadata_path, "w") as f:
-            json.dump(metadata, f, indent=2)
-    
+        async with aiofiles.open(metadata_path, "w") as f:
+            await f.write(json.dumps(metadata, indent=2))
+
     logger.info("image_uploaded", path=str(image_path), size=len(image_data))
-    
+
     return {
         "message": "Image uploaded successfully",
         "path": str(image_path.relative_to(gallery_path_obj)),
@@ -656,83 +659,85 @@ async def upload_batch(
     _api_key: str | None = Depends(verify_api_key),
 ):
     """Upload multiple images in a single request.
-    
+
     Expects multipart/form-data with multiple 'images' files.
     Each image can have corresponding metadata in 'metadata_<index>' field.
     """
     form = await request.form()
-    
+
     # Collect all image files
     images = []
     for key, value in form.items():
         if key.startswith("image") and hasattr(value, "content_type"):
             images.append(value)
-    
+
     if not images:
         raise HTTPException(status_code=400, detail="No images provided")
-    
+
     results = []
     errors = []
-    
+
     for idx, image_file in enumerate(images):
         try:
             # Read and validate
-            if not image_file.content_type or not image_file.content_type.startswith("image/"):
+            if not image_file.content_type or not image_file.content_type.startswith(
+                "image/"
+            ):
                 errors.append({"index": idx, "error": "Invalid file type"})
                 continue
-            
+
             image_data = await image_file.read()
-            
+
             # Check for corresponding metadata
             metadata = {}
             metadata_key = f"metadata_{idx}"
             if metadata_key in form:
-                try:
+                with contextlib.suppress(json.JSONDecodeError):
                     metadata = json.loads(form[metadata_key])
-                except json.JSONDecodeError:
-                    pass
-            
+
             # Generate filename
             import hashlib
             from datetime import datetime
-            
+
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            file_hash = hashlib.md5(image_data).hexdigest()[:8]
+            file_hash = hashlib.md5(image_data, usedforsecurity=False).hexdigest()[:8]
             filename = f"{timestamp}_{file_hash}_{idx}.png"
-            
+
             # Save paths
             gallery_path_obj = Path(gallery_path)
             year_month = datetime.now().strftime("%Y/%m")
-            
+
             if metadata.get("featured"):
                 save_dir = gallery_path_obj / year_month / "featured"
             else:
                 save_dir = gallery_path_obj / year_month
-            
+
             save_dir.mkdir(parents=True, exist_ok=True)
             image_path = save_dir / filename
-            
-            # Save image
-            with open(image_path, "wb") as f:
-                f.write(image_data)
-            
-            # Save metadata
+
+            # Save image (async file I/O)
+            async with aiofiles.open(image_path, "wb") as f:
+                await f.write(image_data)
+
+            # Save metadata (async file I/O)
             if metadata:
                 metadata_path = image_path.with_suffix(".json")
-                with open(metadata_path, "w") as f:
-                    json.dump(metadata, f, indent=2)
-            
-            results.append({
-                "index": idx,
-                "path": str(image_path.relative_to(gallery_path_obj)),
-                "filename": filename,
-            })
-            
+                async with aiofiles.open(metadata_path, "w") as f:
+                    await f.write(json.dumps(metadata, indent=2))
+
+            results.append(
+                {
+                    "index": idx,
+                    "path": str(image_path.relative_to(gallery_path_obj)),
+                    "filename": filename,
+                }
+            )
+
         except Exception as e:
             errors.append({"index": idx, "error": str(e)})
-    
+
     logger.info("batch_upload_completed", success=len(results), errors=len(errors))
-    
+
     return {
         "message": f"Uploaded {len(results)} images",
         "success": results,
@@ -905,14 +910,14 @@ async def generate_artwork(
         try:
             gallery_path_local = Path("gallery")
             config_path = Path("config/config.yaml")
-            
+
             # Check if config exists - if not, we're in gallery-only mode
             if not config_path.exists():
                 raise ValueError(
                     "Image generation is not available. This instance is running in gallery-only mode. "
                     "To enable generation, provide a config/config.yaml file with model settings."
                 )
-            
+
             config = load_config(config_path)
 
             # Use context manager for automatic cleanup
@@ -1067,4 +1072,4 @@ async def health_check():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")  # nosec B104

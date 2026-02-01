@@ -1,12 +1,14 @@
 """Aria API routes - personality, state, and creation endpoints."""
 
 import asyncio
+import json
 import random
 import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import aiofiles
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 from slowapi import Limiter
@@ -67,6 +69,59 @@ class AriaStatementResponse(BaseModel):
     name: str
 
 
+class AriaEvolveResponse(BaseModel):
+    """Response from evolve endpoint."""
+
+    mood: str
+    energy: float
+    feeling: str
+    personality: dict[str, float]
+    evolved: bool
+
+
+class PortfolioPainting(BaseModel):
+    """A single painting in the portfolio."""
+
+    number: int
+    subject: str
+    prompt: str
+    image_url: str
+    mood: str
+    style: str
+    reflection: str
+    created_at: str
+    thinking: str | None = None
+    critique_history: list[dict[str, Any]] | None = None
+
+
+class AriaPortfolioResponse(BaseModel):
+    """Response from portfolio endpoint."""
+
+    count: int
+    paintings: list[PortfolioPainting]
+
+
+class EvolutionSummary(BaseModel):
+    """Summary statistics for evolution timeline."""
+
+    total_creations: int
+    unique_styles: int
+    dominant_moods: list[tuple[str, int]]
+    phases_count: int
+
+
+class AriaEvolutionResponse(BaseModel):
+    """Response from evolution endpoint."""
+
+    phases: list[dict[str, Any]] = []
+    milestones: list[dict[str, Any]] = []
+    style_evolution: list[dict[str, Any]] = []
+    mood_distribution: dict[str, int] = {}
+    score_trend: list[dict[str, Any]] = []
+    style_preferences: list[dict[str, Any]] = []
+    summary: EvolutionSummary | None = None
+
+
 def _get_aria_state() -> dict[str, Any]:
     """Get or initialize Aria's state."""
     global _aria_state
@@ -97,8 +152,8 @@ def _get_aria_state() -> dict[str, Any]:
     return _aria_state
 
 
-def _load_portfolio_from_gallery() -> list[dict]:
-    """Load portfolio from gallery directory."""
+async def _load_portfolio_from_gallery() -> list[dict]:
+    """Load portfolio from gallery directory using async file I/O."""
     portfolio: list[dict] = []
     gallery_path = Path("gallery")
 
@@ -108,10 +163,9 @@ def _load_portfolio_from_gallery() -> list[dict]:
     # Find all JSON metadata files
     for json_file in gallery_path.rglob("*.json"):
         try:
-            import json
-
-            with open(json_file) as f:
-                metadata = json.load(f)
+            async with aiofiles.open(json_file) as f:
+                content = await f.read()
+                metadata = json.loads(content)
 
             # Find corresponding image
             image_path = json_file.with_suffix(".png")
@@ -156,7 +210,7 @@ async def get_aria_state(request: Request):
     mood_system.apply_decay()
 
     # Load portfolio from gallery
-    portfolio = _load_portfolio_from_gallery()
+    portfolio = await _load_portfolio_from_gallery()
     state["portfolio"] = portfolio
     state["paintings_created"] = len(portfolio)
 
@@ -385,7 +439,7 @@ async def create_artwork(request: Request):
         return AriaCreateResponse(success=False, error=str(e))
 
 
-@router.post("/evolve")
+@router.post("/evolve", response_model=AriaEvolveResponse)
 @limiter.limit("10/minute")
 async def evolve_state(request: Request):
     """Force Aria's state to evolve."""
@@ -410,13 +464,13 @@ async def evolve_state(request: Request):
         energy=mood_system.energy_level,
     )
 
-    return {
-        "mood": new_mood.value,
-        "energy": mood_system.energy_level,
-        "feeling": mood_system.describe_feeling(),
-        "personality": personality,
-        "evolved": old_mood != new_mood,
-    }
+    return AriaEvolveResponse(
+        mood=new_mood.value,
+        energy=mood_system.energy_level,
+        feeling=mood_system.describe_feeling(),
+        personality=personality,
+        evolved=old_mood != new_mood,
+    )
 
 
 @router.get("/statement", response_model=AriaStatementResponse)
@@ -450,15 +504,16 @@ async def get_artist_statement(request: Request):
     return AriaStatementResponse(statement=full_statement, name=state["name"])
 
 
-@router.get("/portfolio")
+@router.get("/portfolio", response_model=AriaPortfolioResponse)
 @limiter.limit("30/minute")
 async def get_portfolio(request: Request, limit: int = 20):
     """Get Aria's portfolio of creations."""
-    portfolio = _load_portfolio_from_gallery()
-    return {"count": len(portfolio), "paintings": portfolio[:limit]}
+    portfolio_dicts = await _load_portfolio_from_gallery()
+    paintings = [PortfolioPainting.model_validate(p) for p in portfolio_dicts[:limit]]
+    return AriaPortfolioResponse(count=len(portfolio_dicts), paintings=paintings)
 
 
-@router.get("/evolution")
+@router.get("/evolution", response_model=AriaEvolutionResponse)
 @limiter.limit("30/minute")
 async def get_evolution(request: Request):
     """Get Aria's artistic evolution timeline.
@@ -478,26 +533,23 @@ async def get_evolution(request: Request):
     evolution = memory.get_evolution_timeline()
     style_preferences = memory.get_style_preferences_over_time()
 
-    # Add style preferences to evolution data
-    evolution["style_preferences"] = style_preferences
-
-    # Add summary statistics
-    evolution["summary"] = {
-        "total_creations": len(evolution.get("score_trend", [])),
-        "unique_styles": len(
+    # Build summary statistics
+    summary = EvolutionSummary(
+        total_creations=len(evolution.get("score_trend", [])),
+        unique_styles=len(
             {
                 s
                 for entry in evolution.get("style_evolution", [])
                 for s in entry.get("styles_used", {})
             }
         ),
-        "dominant_moods": sorted(
+        dominant_moods=sorted(
             evolution.get("mood_distribution", {}).items(),
             key=lambda x: x[1],
             reverse=True,
         )[:3],
-        "phases_count": len(evolution.get("phases", [])),
-    }
+        phases_count=len(evolution.get("phases", [])),
+    )
 
     logger.info(
         "evolution_data_retrieved",
@@ -505,4 +557,12 @@ async def get_evolution(request: Request):
         milestones=len(evolution.get("milestones", [])),
     )
 
-    return evolution
+    return AriaEvolutionResponse(
+        phases=evolution.get("phases", []),
+        milestones=evolution.get("milestones", []),
+        style_evolution=evolution.get("style_evolution", []),
+        mood_distribution=evolution.get("mood_distribution", {}),
+        score_trend=evolution.get("score_trend", []),
+        style_preferences=style_preferences,
+        summary=summary,
+    )
