@@ -44,6 +44,7 @@ from .helpers import (
     is_valid_image,
     load_image_metadata,
 )
+from .metrics_routes import router as metrics_router
 from .middleware import (
     ErrorHandlingMiddleware,
     RequestLoggingMiddleware,
@@ -338,6 +339,7 @@ app.include_router(health_router)
 app.include_router(aria_router)
 app.include_router(prompt_router)
 app.include_router(feedback_router)
+app.include_router(metrics_router)
 
 # Templates directory
 templates_dir = Path(__file__).parent / "templates"
