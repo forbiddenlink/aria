@@ -67,7 +67,9 @@ class UnsplashClient:
         async with httpx.AsyncClient() as client:
             response = await client.get(url, follow_redirects=True)
             response.raise_for_status()
-            return response.content
+            # Cast to bytes to satisfy mypy
+            content: bytes = response.content
+            return content
 
     async def get_random_photo(self, query: str | None = None) -> dict[str, Any]:
         """Get a random photo."""
