@@ -1,8 +1,17 @@
-"""Gallery management for storing generated images."""
+"""Gallery management for storing generated images.
 
+Enhanced with:
+- Comprehensive EXIF-style metadata embedding in PNG chunks
+- Full reproducibility information (seed, model, parameters)
+- Mood, style axes, and experience level tracking
+- Metadata extraction utilities
+"""
+
+import contextlib
 import json
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from PIL import Image, PngImagePlugin
 
@@ -10,6 +19,32 @@ from ..curation.curator import is_black_or_blank
 from ..utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+# Standard PNG text chunk keys for AI art metadata
+METADATA_KEYS = {
+    "prompt": "prompt",
+    "negative_prompt": "negative_prompt",
+    "seed": "seed",
+    "model": "model",
+    "model_hash": "model_hash",
+    "lora": "lora",
+    "lora_scale": "lora_scale",
+    "steps": "steps",
+    "cfg_scale": "cfg_scale",
+    "width": "width",
+    "height": "height",
+    "sampler": "sampler",
+    "mood": "aria_mood",
+    "mood_intensity": "aria_mood_intensity",
+    "energy": "aria_energy",
+    "style_axes": "aria_style_axes",
+    "experience_level": "aria_level",
+    "experience_title": "aria_title",
+    "aesthetic_score": "aria_aesthetic_score",
+    "clip_score": "aria_clip_score",
+    "critique": "aria_critique",
+}
 
 
 class GalleryManager:
@@ -23,23 +58,29 @@ class GalleryManager:
         self,
         image: Image.Image,
         prompt: str,
-        metadata: dict,
+        metadata: dict[str, Any],
         featured: bool = False,
+        aria_state: dict[str, Any] | None = None,
     ) -> Path:
-        """Save image with metadata."""
+        """Save image with comprehensive metadata for reproducibility.
+
+        Args:
+            image: PIL Image to save
+            prompt: The generation prompt
+            metadata: Generation parameters (seed, steps, cfg, model, etc.)
+            featured: Whether this is a featured/high-quality piece
+            aria_state: Optional Aria personality state (mood, style_axes, experience)
+
+        Returns:
+            Path to saved image
+        """
         # Create directory structure: year/month/day
         now = datetime.now()
         save_dir = (
-            self.gallery_path
-            / f"{now.year}"
-            / f"{now.month:02d}"
-            / f"{now.day:02d}"
+            self.gallery_path / f"{now.year}" / f"{now.month:02d}" / f"{now.day:02d}"
         )
 
-        if featured:
-            save_dir = save_dir / "featured"
-        else:
-            save_dir = save_dir / "archive"
+        save_dir = save_dir / "featured" if featured else save_dir / "archive"
 
         save_dir.mkdir(parents=True, exist_ok=True)
 
@@ -48,32 +89,185 @@ class GalleryManager:
         filename = f"{timestamp}_{metadata.get('seed', 'noseed')}.png"
         image_path = save_dir / filename
 
-        # Add metadata to PNG
+        # Build comprehensive PNG metadata
         pnginfo = PngImagePlugin.PngInfo()
+
+        # Core generation parameters
         pnginfo.add_text("prompt", prompt)
+        pnginfo.add_text("negative_prompt", metadata.get("negative_prompt", ""))
+        pnginfo.add_text("seed", str(metadata.get("seed", "")))
+        pnginfo.add_text("model", metadata.get("model", ""))
+        pnginfo.add_text("model_hash", metadata.get("model_hash", ""))
+        pnginfo.add_text("steps", str(metadata.get("steps", "")))
+        pnginfo.add_text(
+            "cfg_scale",
+            str(metadata.get("guidance_scale", metadata.get("cfg_scale", ""))),
+        )
+        pnginfo.add_text("width", str(metadata.get("width", image.width)))
+        pnginfo.add_text("height", str(metadata.get("height", image.height)))
+        pnginfo.add_text(
+            "sampler", metadata.get("sampler", metadata.get("scheduler", ""))
+        )
+
+        # LoRA information
+        if metadata.get("lora"):
+            pnginfo.add_text("lora", metadata["lora"])
+            pnginfo.add_text("lora_scale", str(metadata.get("lora_scale", 0.8)))
+
+        # Aria personality state (for reproducibility and analysis)
+        if aria_state:
+            pnginfo.add_text("aria_mood", aria_state.get("mood", ""))
+            pnginfo.add_text(
+                "aria_mood_intensity", str(aria_state.get("mood_intensity", ""))
+            )
+            pnginfo.add_text("aria_energy", str(aria_state.get("energy", "")))
+
+            # Style axes as JSON
+            if aria_state.get("style_axes"):
+                pnginfo.add_text(
+                    "aria_style_axes", json.dumps(aria_state["style_axes"])
+                )
+
+            # Experience level
+            pnginfo.add_text("aria_level", str(aria_state.get("level", 1)))
+            pnginfo.add_text("aria_title", aria_state.get("title", ""))
+
+            # Quality scores
+            if aria_state.get("aesthetic_score"):
+                pnginfo.add_text(
+                    "aria_aesthetic_score", str(aria_state["aesthetic_score"])
+                )
+            if aria_state.get("clip_score"):
+                pnginfo.add_text("aria_clip_score", str(aria_state["clip_score"]))
+
+            # Critique summary
+            if aria_state.get("critique"):
+                pnginfo.add_text(
+                    "aria_critique", aria_state["critique"][:500]
+                )  # Limit length
+
+        # Full metadata as JSON (backup/detailed)
         pnginfo.add_text("metadata", json.dumps(metadata))
-        pnginfo.add_text("AI-Generated", "true")  # EU AI Act compliance
+
+        # EU AI Act compliance
+        pnginfo.add_text("AI-Generated", "true")
+        pnginfo.add_text("generator", "ARIA - Autonomous AI Artist")
+        pnginfo.add_text("generation_timestamp", now.isoformat())
 
         # Save image
         image.save(image_path, pnginfo=pnginfo)
 
-        # Save sidecar metadata file
+        # Save sidecar metadata file (human-readable, complete)
+        sidecar_data = {
+            "prompt": prompt,
+            "negative_prompt": metadata.get("negative_prompt", ""),
+            "generation_params": {
+                "seed": metadata.get("seed"),
+                "steps": metadata.get("steps"),
+                "cfg_scale": metadata.get("guidance_scale", metadata.get("cfg_scale")),
+                "width": metadata.get("width", image.width),
+                "height": metadata.get("height", image.height),
+                "sampler": metadata.get("sampler", metadata.get("scheduler")),
+                "model": metadata.get("model"),
+                "lora": metadata.get("lora"),
+                "lora_scale": metadata.get("lora_scale"),
+            },
+            "aria_state": aria_state or {},
+            "created_at": now.isoformat(),
+            "featured": featured,
+            "reproducibility_hash": self._generate_reproducibility_hash(
+                prompt, metadata
+            ),
+        }
+
         metadata_path = image_path.with_suffix(".json")
-        metadata_path.write_text(
-            json.dumps(
-                {
-                    "prompt": prompt,
-                    "metadata": metadata,
-                    "created_at": now.isoformat(),
-                    "featured": featured,
-                },
-                indent=2,
-            )
+        metadata_path.write_text(json.dumps(sidecar_data, indent=2, default=str))
+
+        logger.info(
+            "image_saved",
+            path=str(image_path),
+            featured=featured,
+            has_aria_state=aria_state is not None,
         )
 
-        logger.info("image_saved", path=str(image_path), featured=featured)
-
         return image_path
+
+    def _generate_reproducibility_hash(self, prompt: str, metadata: dict) -> str:
+        """Generate a hash for reproducibility verification."""
+        import hashlib
+
+        key_params = f"{prompt}|{metadata.get('seed')}|{metadata.get('model')}|{metadata.get('steps')}"
+        return hashlib.sha256(key_params.encode()).hexdigest()[:16]
+
+    @staticmethod
+    def extract_metadata(image_path: Path) -> dict[str, Any]:
+        """Extract all metadata from a saved image.
+
+        Args:
+            image_path: Path to PNG image
+
+        Returns:
+            Dict with all embedded metadata
+        """
+        metadata: dict[str, Any] = {
+            "prompt": "",
+            "generation_params": {},
+            "aria_state": {},
+            "raw_metadata": {},
+        }
+
+        try:
+            with Image.open(image_path) as img:
+                if hasattr(img, "text"):
+                    png_text = img.text
+
+                    # Extract prompt
+                    metadata["prompt"] = png_text.get("prompt", "")
+                    metadata["negative_prompt"] = png_text.get("negative_prompt", "")
+
+                    # Extract generation params
+                    metadata["generation_params"] = {
+                        "seed": png_text.get("seed"),
+                        "model": png_text.get("model"),
+                        "steps": png_text.get("steps"),
+                        "cfg_scale": png_text.get("cfg_scale"),
+                        "sampler": png_text.get("sampler"),
+                        "width": png_text.get("width"),
+                        "height": png_text.get("height"),
+                        "lora": png_text.get("lora"),
+                        "lora_scale": png_text.get("lora_scale"),
+                    }
+
+                    # Extract Aria state
+                    metadata["aria_state"] = {
+                        "mood": png_text.get("aria_mood"),
+                        "mood_intensity": png_text.get("aria_mood_intensity"),
+                        "energy": png_text.get("aria_energy"),
+                        "level": png_text.get("aria_level"),
+                        "title": png_text.get("aria_title"),
+                        "aesthetic_score": png_text.get("aria_aesthetic_score"),
+                        "clip_score": png_text.get("aria_clip_score"),
+                        "critique": png_text.get("aria_critique"),
+                    }
+
+                    # Parse style axes if present
+                    if png_text.get("aria_style_axes"):
+                        with contextlib.suppress(json.JSONDecodeError):
+                            metadata["aria_state"]["style_axes"] = json.loads(
+                                png_text["aria_style_axes"]
+                            )
+
+                    # Full metadata JSON if present
+                    if png_text.get("metadata"):
+                        with contextlib.suppress(json.JSONDecodeError):
+                            metadata["raw_metadata"] = json.loads(png_text["metadata"])
+
+        except Exception as e:
+            logger.error(
+                "metadata_extraction_failed", path=str(image_path), error=str(e)
+            )
+
+        return metadata
 
     def list_images(self, featured_only: bool = False) -> list[Path]:
         """List all images in gallery, sorted by modification time (newest first)."""
@@ -82,7 +276,9 @@ class GalleryManager:
         # Sort by modification time, newest first
         return sorted(images, key=lambda p: p.stat().st_mtime, reverse=True)
 
-    def cleanup_invalid_images(self, dry_run: bool = False) -> dict[str, int | list[str]]:
+    def cleanup_invalid_images(
+        self, dry_run: bool = False
+    ) -> dict[str, int | list[str]]:
         """Scan gallery and remove black/blank/invalid images.
 
         Args:
@@ -149,4 +345,3 @@ class GalleryManager:
             "deleted_files": deleted_files,
             "error_files": error_files,
         }
-

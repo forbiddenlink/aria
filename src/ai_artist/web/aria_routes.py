@@ -35,11 +35,14 @@ class AriaStateResponse(BaseModel):
 
     name: str
     mood: str
+    mood_intensity: float = 0.7
     energy: float
     feeling: str
     paintings_created: int
     personality: dict[str, float]
     portfolio: list[dict] | None = None
+    experience: dict[str, Any] | None = None
+    style_axes: dict[str, float] | None = None
 
 
 class AriaCreateResponse(BaseModel):
@@ -96,7 +99,7 @@ def _get_aria_state() -> dict[str, Any]:
 
 def _load_portfolio_from_gallery() -> list[dict]:
     """Load portfolio from gallery directory."""
-    portfolio = []
+    portfolio: list[dict] = []
     gallery_path = Path("gallery")
 
     if not gallery_path.exists():
@@ -144,23 +147,38 @@ def _load_portfolio_from_gallery() -> list[dict]:
 @router.get("/state", response_model=AriaStateResponse)
 @limiter.limit("60/minute")
 async def get_aria_state(request: Request):
-    """Get Aria's current state including mood, energy, and personality."""
+    """Get Aria's current state including mood, energy, personality, and experience."""
     state = _get_aria_state()
     mood_system = state["mood_system"]
+    memory = state["memory"]
+
+    # Apply mood decay (emotions fade over time)
+    mood_system.apply_decay()
 
     # Load portfolio from gallery
     portfolio = _load_portfolio_from_gallery()
     state["portfolio"] = portfolio
     state["paintings_created"] = len(portfolio)
 
+    # Get experience progress
+    experience_progress = memory.get_experience_progress()
+
+    # Get style axes
+    style_axes = (
+        mood_system.style_axes.to_dict() if hasattr(mood_system, "style_axes") else None
+    )
+
     return AriaStateResponse(
         name=state["name"],
         mood=mood_system.current_mood.value,
+        mood_intensity=getattr(mood_system, "mood_intensity", 0.7),
         energy=mood_system.energy_level,
         feeling=mood_system.describe_feeling(),
         paintings_created=state["paintings_created"],
         personality=state["personality"],
         portfolio=portfolio,
+        experience=experience_progress,
+        style_axes=style_axes,
     )
 
 
@@ -467,11 +485,11 @@ async def get_evolution(request: Request):
     evolution["summary"] = {
         "total_creations": len(evolution.get("score_trend", [])),
         "unique_styles": len(
-            set(
+            {
                 s
                 for entry in evolution.get("style_evolution", [])
-                for s in entry.get("styles_used", {}).keys()
-            )
+                for s in entry.get("styles_used", {})
+            }
         ),
         "dominant_moods": sorted(
             evolution.get("mood_distribution", {}).items(),

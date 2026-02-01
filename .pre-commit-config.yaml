@@ -48,7 +48,7 @@ repos:
     rev: 1.7.6
     hooks:
       - id: bandit
-        args: ["-r", "src/", "-ll"]
+        args: ["-ll"]
         exclude: tests/
 
   - repo: https://github.com/igorshubovych/markdownlint-cli

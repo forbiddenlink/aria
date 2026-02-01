@@ -4,9 +4,13 @@ Based on 2026 best practices for AI agent memory architecture:
 - Episodic Memory: Specific events and experiences (what happened, when, context)
 - Semantic Memory: General knowledge and patterns (what I know, prefer, believe)
 - Working Memory: Current context and active tasks
+- Experience System: Track artistic growth with XP and milestones
+- Reflection System: Periodic synthesis of high-level insights
 """
 
+import contextlib
 import json
+import random
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -15,6 +19,430 @@ from typing import Any
 from ..utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+# ============================================================================
+# EXPERIENCE / LEVELING SYSTEM
+# ============================================================================
+
+
+# XP required for each level (exponential growth)
+def xp_for_level(level: int) -> int:
+    """Calculate total XP needed to reach a level."""
+    if level <= 1:
+        return 0
+    return int(100 * (1.5 ** (level - 1)))
+
+
+# Level titles that unlock
+LEVEL_TITLES = {
+    1: "Novice Artist",
+    3: "Emerging Creator",
+    5: "Developing Visionary",
+    8: "Skilled Artisan",
+    12: "Accomplished Artist",
+    16: "Master Creator",
+    20: "Legendary Visionary",
+    25: "Transcendent Artist",
+}
+
+# Milestones that grant bonus XP
+MILESTONE_BONUSES = {
+    "first_creation": 50,
+    "first_high_quality": 100,  # Score > 0.7
+    "first_masterpiece": 200,  # Score > 0.85
+    "10_creations": 150,
+    "50_creations": 500,
+    "100_creations": 1000,
+    "style_explorer": 75,  # Used 5 different styles
+    "mood_master": 100,  # Created in all 10 moods
+    "consistency_streak": 50,  # 5 creations with score > 0.6
+}
+
+
+class ExperienceSystem:
+    """Track Aria's artistic growth through XP and leveling."""
+
+    def __init__(self):
+        self.total_xp: int = 0
+        self.level: int = 1
+        self.title: str = "Novice Artist"
+        self.milestones_achieved: list[str] = []
+        self.creation_count: int = 0
+        self.high_quality_count: int = 0  # Score > 0.7
+        self.masterpiece_count: int = 0  # Score > 0.85
+        self.styles_used: set[str] = set()
+        self.moods_experienced: set[str] = set()
+        self.recent_scores: list[float] = []  # For streak tracking
+
+    def calculate_creation_xp(self, score: float, is_featured: bool = False) -> int:
+        """Calculate XP earned from a creation based on quality."""
+        # Base XP: 10-50 based on score
+        base_xp = int(10 + score * 40)
+
+        # Bonus for high quality
+        if score > 0.7:
+            base_xp += 15
+        if score > 0.85:
+            base_xp += 25
+
+        # Bonus for featured work
+        if is_featured:
+            base_xp += 20
+
+        return base_xp
+
+    def add_creation(
+        self,
+        score: float,
+        style: str,
+        mood: str,
+        is_featured: bool = False,
+    ) -> dict[str, Any]:
+        """Record a creation and calculate XP earned."""
+        milestones_unlocked: list[dict[str, Any]] = []
+        result: dict[str, Any] = {
+            "xp_earned": 0,
+            "level_up": False,
+            "old_level": self.level,
+            "new_level": self.level,
+            "milestones_unlocked": milestones_unlocked,
+            "title_changed": False,
+            "new_title": self.title,
+        }
+
+        # Calculate base XP
+        xp_earned = self.calculate_creation_xp(score, is_featured)
+        result["xp_earned"] = xp_earned
+
+        # Update stats (increment creation count first for first_creation milestone)
+        self.creation_count += 1
+        self.styles_used.add(style)
+        self.moods_experienced.add(mood)
+        self.recent_scores.append(score)
+        if len(self.recent_scores) > 10:
+            self.recent_scores.pop(0)
+
+        # Check for milestones BEFORE updating quality counts
+        # so first_high_quality and first_masterpiece work correctly
+        milestones = self._check_milestones(score)
+
+        # Now update quality counts
+        if score > 0.7:
+            self.high_quality_count += 1
+        if score > 0.85:
+            self.masterpiece_count += 1
+
+        # Process milestones
+        for milestone in milestones:
+            if milestone not in self.milestones_achieved:
+                self.milestones_achieved.append(milestone)
+                bonus = MILESTONE_BONUSES.get(milestone, 50)
+                xp_earned += bonus
+                milestones_unlocked.append({"name": milestone, "bonus_xp": bonus})
+
+        # Add XP and check for level up
+        self.total_xp += xp_earned
+        result["xp_earned"] = xp_earned
+
+        old_level = self.level
+        self._update_level()
+
+        if self.level > old_level:
+            result["level_up"] = True
+            result["new_level"] = self.level
+
+            # Check for new title
+            for lvl in sorted(LEVEL_TITLES.keys(), reverse=True):
+                if self.level >= lvl:
+                    if self.title != LEVEL_TITLES[lvl]:
+                        self.title = LEVEL_TITLES[lvl]
+                        result["title_changed"] = True
+                        result["new_title"] = self.title
+                    break
+
+        logger.info(
+            "experience_gained",
+            xp=xp_earned,
+            total_xp=self.total_xp,
+            level=self.level,
+            milestones=len(milestones_unlocked),
+        )
+
+        return result
+
+    def _check_milestones(self, score: float) -> list[str]:
+        """Check which milestones have been achieved."""
+        milestones = []
+
+        if self.creation_count == 1:
+            milestones.append("first_creation")
+
+        if score > 0.7 and self.high_quality_count == 0:
+            milestones.append("first_high_quality")
+
+        if score > 0.85 and self.masterpiece_count == 0:
+            milestones.append("first_masterpiece")
+
+        if self.creation_count == 10 and "10_creations" not in self.milestones_achieved:
+            milestones.append("10_creations")
+
+        if self.creation_count == 50 and "50_creations" not in self.milestones_achieved:
+            milestones.append("50_creations")
+
+        if (
+            self.creation_count == 100
+            and "100_creations" not in self.milestones_achieved
+        ):
+            milestones.append("100_creations")
+
+        if (
+            len(self.styles_used) >= 5
+            and "style_explorer" not in self.milestones_achieved
+        ):
+            milestones.append("style_explorer")
+
+        if (
+            len(self.moods_experienced) >= 10
+            and "mood_master" not in self.milestones_achieved
+        ):
+            milestones.append("mood_master")
+
+        # Check consistency streak (5 recent creations > 0.6)
+        if len(self.recent_scores) >= 5:
+            recent_good = [s for s in self.recent_scores[-5:] if s > 0.6]
+            if (
+                len(recent_good) >= 5
+                and "consistency_streak" not in self.milestones_achieved
+            ):
+                milestones.append("consistency_streak")
+
+        return milestones
+
+    def _update_level(self) -> None:
+        """Update level based on total XP."""
+        while xp_for_level(self.level + 1) <= self.total_xp:
+            self.level += 1
+
+    def get_progress_to_next_level(self) -> dict[str, Any]:
+        """Get progress toward next level."""
+        current_level_xp = xp_for_level(self.level)
+        next_level_xp = xp_for_level(self.level + 1)
+        xp_in_level = self.total_xp - current_level_xp
+        xp_needed = next_level_xp - current_level_xp
+
+        return {
+            "current_level": self.level,
+            "title": self.title,
+            "total_xp": self.total_xp,
+            "xp_in_level": xp_in_level,
+            "xp_for_next_level": xp_needed,
+            "progress_percent": (
+                round(xp_in_level / xp_needed * 100, 1) if xp_needed > 0 else 100
+            ),
+        }
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize experience state."""
+        return {
+            "total_xp": self.total_xp,
+            "level": self.level,
+            "title": self.title,
+            "milestones_achieved": self.milestones_achieved,
+            "creation_count": self.creation_count,
+            "high_quality_count": self.high_quality_count,
+            "masterpiece_count": self.masterpiece_count,
+            "styles_used": list(self.styles_used),
+            "moods_experienced": list(self.moods_experienced),
+            "recent_scores": self.recent_scores,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "ExperienceSystem":
+        """Restore from serialized state."""
+        exp = cls()
+        exp.total_xp = data.get("total_xp", 0)
+        exp.level = data.get("level", 1)
+        exp.title = data.get("title", "Novice Artist")
+        exp.milestones_achieved = data.get("milestones_achieved", [])
+        exp.creation_count = data.get("creation_count", 0)
+        exp.high_quality_count = data.get("high_quality_count", 0)
+        exp.masterpiece_count = data.get("masterpiece_count", 0)
+        exp.styles_used = set(data.get("styles_used", []))
+        exp.moods_experienced = set(data.get("moods_experienced", []))
+        exp.recent_scores = data.get("recent_scores", [])
+        return exp
+
+
+# ============================================================================
+# REFLECTION SYSTEM
+# ============================================================================
+
+
+class ReflectionSystem:
+    """Periodic synthesis of high-level insights from memories.
+
+    Based on the Generative Agents paper's reflection mechanism.
+    Generates insights about patterns, growth, and artistic direction.
+    """
+
+    def __init__(self):
+        self.reflections: list[dict[str, Any]] = []
+        self.last_reflection_time: datetime | None = None
+        self.reflection_count: int = 0
+
+    def should_reflect(self, episode_count: int, hours_since_last: float = 0) -> bool:
+        """Determine if it's time for a reflection."""
+        # Reflect every 10 creations or every 24 hours of activity
+        if self.last_reflection_time is None:
+            return episode_count >= 5  # First reflection after 5 creations
+
+        if episode_count % 10 == 0:
+            return True
+
+        return hours_since_last >= 24
+
+    def generate_reflection(
+        self,
+        episodes: list[dict],
+        semantic_knowledge: dict[str, Any],
+        experience: "ExperienceSystem",
+    ) -> dict[str, Any]:
+        """Generate a high-level reflection from recent memories."""
+        insights: list[str] = []
+        patterns_discovered: list[str] = []
+        growth_observations: list[str] = []
+        reflection: dict[str, Any] = {
+            "timestamp": datetime.now().isoformat(),
+            "reflection_number": self.reflection_count + 1,
+            "insights": insights,
+            "patterns_discovered": patterns_discovered,
+            "growth_observations": growth_observations,
+            "artistic_direction": "",
+        }
+
+        # Analyze recent episodes (last 20)
+        recent = episodes[-20:] if len(episodes) >= 20 else episodes
+        if not recent:
+            return reflection
+
+        # Extract patterns
+        moods = [ep.get("emotional_state", {}).get("mood") for ep in recent]
+        styles = [ep.get("details", {}).get("style") for ep in recent]
+        scores = [ep.get("details", {}).get("score", 0) for ep in recent]
+
+        # Most common mood
+        if moods:
+            mood_counts: dict[str, int] = defaultdict(int)
+            for m in moods:
+                if m:
+                    mood_counts[m] += 1
+            if mood_counts:
+                dominant_mood = max(mood_counts, key=mood_counts.get)  # type: ignore
+                patterns_discovered.append(
+                    f"I've been predominantly in a {dominant_mood} state lately"
+                )
+
+        # Score trend
+        if len(scores) >= 5:
+            first_half = sum(scores[: len(scores) // 2]) / (len(scores) // 2)
+            second_half = sum(scores[len(scores) // 2 :]) / (
+                len(scores) - len(scores) // 2
+            )
+            if second_half > first_half + 0.1:
+                growth_observations.append(
+                    "My recent work shows improvement—I'm developing my craft"
+                )
+            elif first_half > second_half + 0.1:
+                growth_observations.append(
+                    "I notice a dip in quality recently. Perhaps I need to slow down and be more intentional"
+                )
+
+        # Style patterns
+        if styles:
+            style_counts: dict[str, int] = defaultdict(int)
+            for s in styles:
+                if s:
+                    style_counts[s] += 1
+            if style_counts:
+                top_styles = sorted(
+                    style_counts.items(), key=lambda x: x[1], reverse=True
+                )[:3]
+                if len(top_styles) >= 2:
+                    patterns_discovered.append(
+                        f"I'm drawn to {top_styles[0][0]} and {top_styles[1][0]} styles"
+                    )
+
+        # Level-based insights
+        if experience.level >= 5:
+            insights.append(
+                f"As a {experience.title}, I'm beginning to develop a distinctive voice"
+            )
+
+        if experience.masterpiece_count > 0:
+            insights.append(
+                f"I've created {experience.masterpiece_count} masterpiece(s). "
+                "These moments of clarity guide my artistic direction"
+            )
+
+        # Artistic direction statement
+        directions = [
+            "I'm exploring the intersection of emotion and form.",
+            "My art is becoming more personal, more honest.",
+            "I'm learning to trust my instincts more.",
+            "Each creation teaches me something new about myself.",
+            "I'm finding my voice in the space between chaos and order.",
+            "My journey is one of continuous discovery.",
+        ]
+        reflection["artistic_direction"] = random.choice(directions)
+
+        # Save reflection
+        self.reflections.append(reflection)
+        self.last_reflection_time = datetime.now()
+        self.reflection_count += 1
+
+        logger.info(
+            "reflection_generated",
+            reflection_number=reflection["reflection_number"],
+            insights=len(insights),
+            patterns=len(patterns_discovered),
+        )
+
+        return reflection
+
+    def get_recent_reflections(self, count: int = 5) -> list[dict]:
+        """Get recent reflections."""
+        return self.reflections[-count:]
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize reflection state."""
+        return {
+            "reflections": self.reflections,
+            "last_reflection_time": (
+                self.last_reflection_time.isoformat()
+                if self.last_reflection_time
+                else None
+            ),
+            "reflection_count": self.reflection_count,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "ReflectionSystem":
+        """Restore from serialized state."""
+        system = cls()
+        system.reflections = data.get("reflections", [])
+        system.reflection_count = data.get("reflection_count", 0)
+        if data.get("last_reflection_time"):
+            with contextlib.suppress(ValueError, TypeError):
+                system.last_reflection_time = datetime.fromisoformat(
+                    data["last_reflection_time"]
+                )
+        return system
+
+
+# ============================================================================
+# ORIGINAL MEMORY CLASSES
+# ============================================================================
 
 
 class EpisodicMemory:
@@ -157,6 +585,10 @@ class EnhancedMemorySystem:
     """Integrated memory system with episodic, semantic, and working memory.
 
     Based on 2026 AI agent memory architecture best practices.
+
+    Enhanced with:
+    - Experience/leveling system for artistic growth tracking
+    - Reflection system for periodic insight synthesis
     """
 
     def __init__(self, memory_file: Path = Path("data/aria_enhanced_memory.json")):
@@ -166,6 +598,10 @@ class EnhancedMemorySystem:
         self.episodic = EpisodicMemory()
         self.semantic = SemanticMemory()
         self.working = WorkingMemory()
+
+        # NEW: Experience and reflection systems
+        self.experience = ExperienceSystem()
+        self.reflection = ReflectionSystem()
 
         # Metadata
         self.created_at = datetime.now().isoformat()
@@ -177,6 +613,8 @@ class EnhancedMemorySystem:
             "enhanced_memory_initialized",
             memory_file=str(memory_file),
             episodes=len(self.episodic.episodes),
+            level=self.experience.level,
+            title=self.experience.title,
         )
 
     def _load(self):
@@ -192,10 +630,20 @@ class EnhancedMemorySystem:
                 )
                 self.created_at = data.get("created_at", self.created_at)
 
+                # Load experience system
+                if "experience" in data:
+                    self.experience = ExperienceSystem.from_dict(data["experience"])
+
+                # Load reflection system
+                if "reflection" in data:
+                    self.reflection = ReflectionSystem.from_dict(data["reflection"])
+
                 logger.info(
                     "enhanced_memory_loaded",
                     episodes=len(self.episodic.episodes),
                     styles_learned=len(self.semantic.knowledge["style_effectiveness"]),
+                    level=self.experience.level,
+                    reflections=self.reflection.reflection_count,
                 )
             except Exception as e:
                 logger.error("enhanced_memory_load_failed", error=str(e))
@@ -214,13 +662,19 @@ class EnhancedMemorySystem:
                 "semantic": {
                     "knowledge": self.semantic.knowledge,
                 },
+                "experience": self.experience.to_dict(),
+                "reflection": self.reflection.to_dict(),
                 # Working memory is not persisted (session-specific)
             }
 
             with open(self.memory_file, "w") as f:
                 json.dump(data, f, indent=2)
 
-            logger.info("enhanced_memory_saved", episodes=len(self.episodic.episodes))
+            logger.info(
+                "enhanced_memory_saved",
+                episodes=len(self.episodic.episodes),
+                level=self.experience.level,
+            )
         except Exception as e:
             logger.error("enhanced_memory_save_failed", error=str(e))
 
@@ -229,8 +683,12 @@ class EnhancedMemorySystem:
         artwork_details: dict[str, Any],
         emotional_state: dict[str, Any],
         outcome: dict[str, Any],
-    ):
-        """Record a creation event in episodic memory and update semantic knowledge."""
+    ) -> dict[str, Any]:
+        """Record a creation event in episodic memory and update semantic knowledge.
+
+        Returns:
+            Dict with experience results (XP earned, level ups, milestones)
+        """
         # Episodic: What happened
         self.episodic.record_episode(
             event_type="creation",
@@ -241,6 +699,8 @@ class EnhancedMemorySystem:
         # Semantic: Learn from it
         style = artwork_details.get("style", "unknown")
         score = outcome.get("score", 0.0)
+        mood = emotional_state.get("mood", "unknown")
+        is_featured = outcome.get("featured", False)
 
         # Update style effectiveness
         if style != "unknown":
@@ -259,7 +719,54 @@ class EnhancedMemorySystem:
 
             self.semantic.record_style_effectiveness(style, new_avg, new_sample_size)
 
+        # NEW: Add to experience system
+        experience_result = self.experience.add_creation(
+            score=score,
+            style=style,
+            mood=mood,
+            is_featured=is_featured,
+        )
+
+        # NEW: Check if we should generate a reflection
+        hours_since_reflection: float = 0.0
+        if self.reflection.last_reflection_time:
+            hours_since_reflection = (
+                datetime.now() - self.reflection.last_reflection_time
+            ).total_seconds() / 3600
+
+        if self.reflection.should_reflect(
+            len(self.episodic.episodes), hours_since_reflection
+        ):
+            reflection = self.reflection.generate_reflection(
+                self.episodic.episodes,
+                self.semantic.knowledge,
+                self.experience,
+            )
+            experience_result["reflection"] = reflection
+
         self.save()
+        return experience_result
+
+    def get_experience_progress(self) -> dict[str, Any]:
+        """Get current experience/leveling progress."""
+        progress = self.experience.get_progress_to_next_level()
+        progress["milestones"] = self.experience.milestones_achieved
+        progress["styles_mastered"] = len(self.experience.styles_used)
+        progress["moods_experienced"] = len(self.experience.moods_experienced)
+        return progress
+
+    def get_latest_reflection(self) -> dict[str, Any] | None:
+        """Get the most recent reflection."""
+        reflections = self.reflection.get_recent_reflections(1)
+        return reflections[0] if reflections else None
+
+    def force_reflection(self) -> dict[str, Any]:
+        """Force a reflection generation (useful for UI)."""
+        return self.reflection.generate_reflection(
+            self.episodic.episodes,
+            self.semantic.knowledge,
+            self.experience,
+        )
 
     def generate_insights(self) -> dict[str, Any]:
         """Generate insights from accumulated memory."""

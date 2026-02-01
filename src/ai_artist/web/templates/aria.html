@@ -19,19 +19,59 @@
             --bg-dark: #0a0a0a;
             --bg-panel: #141414;
             --text-main: #e0e0e0;
-            --text-muted: #888888;
+            --text-muted: #9a9a9a; /* Improved contrast: was #888888 */
             --accent: #bb86fc;
             --accent-glow: rgba(187, 134, 252, 0.2);
+            --accent-hover: #d4a8ff;
             --border: #333;
             --success: #00ff64;
             --warning: #ffc800;
             --danger: #ff3264;
+            --focus-ring: rgba(187, 134, 252, 0.5);
+            --xp-bar: linear-gradient(90deg, #bb86fc, #6c63ff);
+        }
+
+        /* Accessibility: Reduced motion preference */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+        }
+
+        /* Skip link for accessibility */
+        .skip-link {
+            position: absolute;
+            top: -100%;
+            left: 0;
+            background: var(--accent);
+            color: #000;
+            padding: 0.5rem 1rem;
+            z-index: 9999;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 0 0 8px 0;
+        }
+        .skip-link:focus {
+            top: 0;
+        }
+
+        /* Focus styles for accessibility */
+        :focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        /* Remove outline for mouse users */
+        :focus:not(:focus-visible) {
+            outline: none;
         }
 
         body {
@@ -270,13 +310,32 @@
             font-weight: 700;
             font-size: 0.8rem;
             cursor: pointer;
-            transition: transform 0.1s, opacity 0.2s;
+            transition: transform 0.15s ease, opacity 0.2s, box-shadow 0.2s;
             flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Button ripple effect */
+        button::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+            transform: scale(0);
+            opacity: 0;
+            transition: transform 0.4s ease, opacity 0.4s ease;
+        }
+        button:active::after {
+            transform: scale(2);
+            opacity: 1;
+            transition: 0s;
         }
 
         button:hover {
-            opacity: 0.9;
+            opacity: 0.95;
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
         button:active { transform: translateY(0); }
@@ -287,6 +346,10 @@
             transform: none;
         }
 
+        button:focus-visible {
+            box-shadow: 0 0 0 3px var(--focus-ring);
+        }
+
         .btn-outline {
             background: transparent;
             border: 1px solid var(--border);
@@ -294,8 +357,132 @@
         }
 
         .btn-outline:hover {
-            border-color: var(--text-main);
+            border-color: var(--accent);
+            color: var(--accent-hover);
         }
+
+        /* Experience/Level Display */
+        .experience-section {
+            margin-bottom: 1.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 1rem;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .level-display {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .level-badge {
+            background: var(--xp-bar);
+            color: #000;
+            font-family: 'Space Mono', monospace;
+            font-weight: 700;
+            font-size: 0.75rem;
+            padding: 0.35rem 0.6rem;
+            border-radius: 6px;
+            min-width: 45px;
+            text-align: center;
+        }
+
+        .level-title {
+            font-size: 0.85rem;
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        .xp-bar-container {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .xp-bar-fill {
+            height: 100%;
+            background: var(--xp-bar);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+            position: relative;
+        }
+
+        .xp-bar-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(rgba(255,255,255,0.2), transparent);
+        }
+
+        .xp-text {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-top: 0.35rem;
+            text-align: right;
+        }
+
+        /* Style Axes Visualization */
+        .style-axes {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .style-axis {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .axis-name {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            width: 70px;
+            text-transform: capitalize;
+        }
+
+        .axis-bar {
+            flex: 1;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .axis-fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        /* Intensity indicator on mood orb */
+        .intensity-ring {
+            position: absolute;
+            inset: -8px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            border-top-color: var(--accent);
+            animation: intensityRotate 2s linear infinite;
+            opacity: 0.6;
+        }
+
+        @keyframes intensityRotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .low-intensity .intensity-ring { animation-duration: 4s; opacity: 0.3; }
+        .high-intensity .intensity-ring { animation-duration: 1s; opacity: 0.9; }
 
         /* === RIGHT PANEL: GALLERY === */
         .gallery-panel {
@@ -663,38 +850,58 @@
     </style>
 </head>
 <body>
+    <!-- Skip link for accessibility -->
+    <a href="#gallery-grid" class="skip-link">Skip to Gallery</a>
+
     <!-- LEFT PANEL: MIND -->
-    <div class="mind-panel">
+    <aside class="mind-panel" role="complementary" aria-label="Aria's Mind">
         <header>
-            <a href="/aria" style="text-decoration: none; color: inherit;"><h1>ARIA</h1></a>
-            <div class="subtitle">Autonomous AI Artist</div>
+            <a href="/aria" style="text-decoration: none; color: inherit;" aria-label="Aria home">
+                <h1>ARIA</h1>
+            </a>
+            <div class="subtitle" role="doc-subtitle">Autonomous AI Artist</div>
         </header>
 
         <!-- Mood Orb -->
-        <div class="mood-container">
-            <div id="mood-orb" class="orb"></div>
+        <div class="mood-container" role="status" aria-live="polite" aria-label="Current emotional state">
+            <div id="mood-orb" class="orb" role="img" aria-label="Mood visualization orb">
+                <div class="intensity-ring" aria-hidden="true"></div>
+            </div>
             <div class="mood-info">
-                <div class="mood-label">Current Mood</div>
-                <div id="mood-text" class="mood-value">Awakening...</div>
+                <div class="mood-label" id="mood-label">Current Mood</div>
+                <div id="mood-text" class="mood-value" aria-labelledby="mood-label">Awakening...</div>
+                <div id="intensity-text" style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem;"></div>
             </div>
         </div>
 
+        <!-- Experience/Level Section -->
+        <div class="experience-section" role="status" aria-label="Experience progress">
+            <div class="level-display">
+                <div id="level-badge" class="level-badge" aria-label="Current level">L1</div>
+                <div id="level-title" class="level-title">Novice Artist</div>
+            </div>
+            <div class="xp-bar-container" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Experience progress">
+                <div id="xp-bar" class="xp-bar-fill" style="width: 0%"></div>
+            </div>
+            <div id="xp-text" class="xp-text">0 / 100 XP</div>
+        </div>
+
         <!-- Stats -->
-        <div class="stats-grid">
+        <div class="stats-grid" role="group" aria-label="Statistics">
             <div class="stat-card">
-                <div class="stat-label">Energy</div>
-                <div id="energy-val" class="stat-value">--%</div>
+                <div class="stat-label" id="energy-label">Energy</div>
+                <div id="energy-val" class="stat-value" aria-labelledby="energy-label">--%</div>
             </div>
             <div class="stat-card">
-                <div class="stat-label">Creations</div>
-                <div id="count-val" class="stat-value">--</div>
+                <div class="stat-label" id="creations-label">Creations</div>
+                <div id="count-val" class="stat-value" aria-labelledby="creations-label">--</div>
             </div>
         </div>
 
         <!-- Personality Traits (OCEAN) -->
-        <div class="personality-section" id="personality-section">
+        <div class="personality-section" id="personality-section" role="group" aria-label="Personality traits">
             <div class="section-header">Personality</div>
-            <div id="personality-traits">
+            <div id="personality-traits" role="list">
                 <!-- Populated by JS -->
             </div>
         </div>
@@ -709,23 +916,24 @@
         </div>
 
         <!-- Controls -->
-        <div class="controls">
-            <button id="create-btn" onclick="triggerCreate()">CREATE</button>
-            <button class="btn-outline" onclick="showStatement()" title="Artist Statement">?</button>
-        </div>
-        <div class="controls" style="margin-top: 0.75rem;">
-            <button class="btn-outline" onclick="forceEvolve()">EVOLVE</button>
-            <button class="btn-outline" onclick="showEvolution()">TIMELINE</button>
-            <button class="btn-outline" onclick="window.open('/', '_blank')">FULL GALLERY</button>
-        </div>
-    </div>
+        <nav class="controls" role="group" aria-label="Primary actions">
+            <button id="create-btn" onclick="triggerCreate()" aria-describedby="create-desc">CREATE</button>
+            <span id="create-desc" hidden>Trigger Aria to create a new artwork</span>
+            <button class="btn-outline" onclick="showStatement()" title="Artist Statement" aria-label="View artist statement">?</button>
+        </nav>
+        <nav class="controls" style="margin-top: 0.75rem;" role="group" aria-label="Secondary actions">
+            <button class="btn-outline" onclick="forceEvolve()" aria-label="Evolve Aria's state">EVOLVE</button>
+            <button class="btn-outline" onclick="showEvolution()" aria-label="View evolution timeline">TIMELINE</button>
+            <button class="btn-outline" onclick="window.open('/', '_blank')" aria-label="Open full gallery in new tab">FULL GALLERY</button>
+        </nav>
+    </aside>
 
     <!-- RIGHT PANEL: GALLERY -->
-    <div class="gallery-panel">
-        <div id="gallery-grid" class="masonry-grid">
+    <main class="gallery-panel" role="main" aria-label="Artwork gallery">
+        <div id="gallery-grid" class="masonry-grid" role="list" aria-label="Recent artworks">
             <!-- Art cards injected here -->
         </div>
-    </div>
+    </main>
 
     <!-- Loading Overlay -->
     <div id="creating-overlay">
@@ -736,30 +944,30 @@
     </div>
 
     <!-- Lightbox -->
-    <div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
+    <div id="lightbox" class="lightbox" onclick="closeLightbox(event)" role="dialog" aria-modal="true" aria-labelledby="lb-title" aria-hidden="true">
         <div class="lightbox-content" onclick="event.stopPropagation()">
-            <button class="close-btn" onclick="closeLightbox()">&times;</button>
+            <button class="close-btn" onclick="closeLightbox()" aria-label="Close lightbox">&times;</button>
             <div class="lightbox-body">
                 <div class="lightbox-img-container">
-                    <img id="lb-img" src="" alt="Artwork">
+                    <img id="lb-img" src="" alt="Artwork detail view">
                 </div>
                 <div class="lightbox-details">
                     <h2 id="lb-title"></h2>
-                    <div class="tags" id="lb-tags"></div>
+                    <div class="tags" id="lb-tags" role="list" aria-label="Artwork tags"></div>
                     <div class="lb-meta">
-                        <div class="lb-label">Reflection</div>
-                        <p id="lb-reflection"></p>
+                        <div class="lb-label" id="reflection-label">Reflection</div>
+                        <p id="lb-reflection" aria-labelledby="reflection-label"></p>
                     </div>
                     <div id="lb-thinking" class="thinking-section" style="display:none;">
                         <div class="thinking-header">
-                            <div class="thinking-icon"></div>
+                            <div class="thinking-icon" aria-hidden="true"></div>
                             Thought Process
                         </div>
                         <div id="lb-thinking-content" class="thinking-content"></div>
                     </div>
                     <div id="lb-critique" class="thinking-section" style="display:none;">
                         <div class="thinking-header">
-                            <div class="thinking-icon"></div>
+                            <div class="thinking-icon" aria-hidden="true"></div>
                             Creative Dialogue
                         </div>
                         <div id="lb-critique-content"></div>
@@ -768,6 +976,48 @@
             </div>
         </div>
     </div>
+
+    <!-- Keyboard navigation handler -->
+    <script>
+        // Keyboard accessibility
+        document.addEventListener('keydown', (e) => {
+            // Escape to close lightbox/modals
+            if (e.key === 'Escape') {
+                const lightbox = document.getElementById('lightbox');
+                const statementModal = document.getElementById('statement-modal');
+                const evolutionModal = document.getElementById('evolution-modal');
+
+                if (lightbox && lightbox.classList.contains('active')) {
+                    closeLightbox();
+                } else if (statementModal && statementModal.classList.contains('active')) {
+                    closeStatement();
+                } else if (evolutionModal && evolutionModal.classList.contains('active')) {
+                    closeEvolution();
+                }
+            }
+        });
+
+        // Trap focus in modals for accessibility
+        function trapFocus(element) {
+            const focusableElements = element.querySelectorAll(
+                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            );
+            const firstFocusable = focusableElements[0];
+            const lastFocusable = focusableElements[focusableElements.length - 1];
+
+            element.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab') {
+                    if (e.shiftKey && document.activeElement === firstFocusable) {
+                        e.preventDefault();
+                        lastFocusable.focus();
+                    } else if (!e.shiftKey && document.activeElement === lastFocusable) {
+                        e.preventDefault();
+                        firstFocusable.focus();
+                    }
+                }
+            });
+        }
+    </script>
 
     <script>
         // Utility: Escape HTML to prevent XSS
@@ -899,6 +1149,47 @@
             if (data.energy !== undefined) {
                 document.getElementById('energy-val').textContent = Math.round(data.energy * 100) + '%';
             }
+
+            // Update mood intensity display
+            var intensity = data.mood_intensity || data.intensity || 0.5;
+            var intensityText = document.getElementById('intensity-text');
+            if (intensityText) {
+                var intensityLabel = intensity > 0.7 ? 'Intense' : (intensity > 0.4 ? 'Moderate' : 'Fading');
+                intensityText.textContent = 'Intensity: ' + Math.round(intensity * 100) + '% (' + intensityLabel + ')';
+            }
+
+            // Update intensity ring animation class
+            if (intensity > 0.7) {
+                orb.classList.add('high-intensity');
+                orb.classList.remove('low-intensity');
+            } else if (intensity < 0.4) {
+                orb.classList.add('low-intensity');
+                orb.classList.remove('high-intensity');
+            } else {
+                orb.classList.remove('high-intensity', 'low-intensity');
+            }
+        }
+
+        function updateExperienceDisplay(data) {
+            // Update from experience data in state
+            var exp = data.experience || {};
+            var level = exp.level || data.level || 1;
+            var title = exp.title || data.title || 'Novice Artist';
+            var totalXp = exp.total_xp || 0;
+            var progress = exp.progress_percent || 0;
+            var xpInLevel = exp.xp_in_level || 0;
+            var xpForNext = exp.xp_for_next_level || 100;
+
+            document.getElementById('level-badge').textContent = 'L' + level;
+            document.getElementById('level-title').textContent = title;
+            document.getElementById('xp-bar').style.width = progress + '%';
+            document.getElementById('xp-text').textContent = xpInLevel + ' / ' + xpForNext + ' XP';
+
+            // Update ARIA attributes
+            var xpBar = document.querySelector('.xp-bar-container');
+            if (xpBar) {
+                xpBar.setAttribute('aria-valuenow', progress);
+            }
         }
 
         function updatePersonalityDisplay(personality) {
@@ -961,6 +1252,9 @@
                     if (data.personality) {
                         updatePersonalityDisplay(data.personality);
                     }
+
+                    // Update experience/level display
+                    updateExperienceDisplay(data);
 
                     if (loadGallery && data.portfolio) {
                         renderGallery(data.portfolio);
