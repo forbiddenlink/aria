@@ -1,15 +1,11 @@
 """Tests for Aria's cognition and thinking process."""
 
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-from ai_artist.personality.cognition import (
-    Thought,
-    ThinkingProcess,
-    ThoughtType,
-)
+from ai_artist.personality.cognition import ThinkingProcess, Thought, ThoughtType
 from ai_artist.personality.moods import Mood, MoodSystem
 
 
@@ -218,7 +214,7 @@ class TestReflect:
             mood_system=MoodSystem(),
             memory_system=mock_memory,
         )
-        reflection = thinking.reflect("art")
+        thinking.reflect("art")
 
         # Should query memory
         mock_memory.get_relevant_context.assert_called_once()
@@ -344,7 +340,9 @@ class TestBeginCreation:
 
     def test_begin_creation_returns_string(self, thinking):
         """Test begin_creation returns a string."""
-        statement = thinking.begin_creation({"subject": "sunset", "style": "impressionist"})
+        statement = thinking.begin_creation(
+            {"subject": "sunset", "style": "impressionist"}
+        )
         assert isinstance(statement, str)
         assert len(statement) > 0
 

@@ -154,7 +154,9 @@ class ArtistCritic:
         # Novelty (have we done this recently?)
         recent_subjects = artist_state.get("recent_subjects", [])[-5:]
         current_subject = concept.get("subject", "")
-        analysis["novelty_score"] = 0.8 if current_subject not in recent_subjects else 0.3
+        analysis["novelty_score"] = (
+            0.8 if current_subject not in recent_subjects else 0.3
+        )
 
         # Technical feasibility (complexity vs energy)
         complexity = concept.get("complexity", 0.5)
@@ -162,7 +164,7 @@ class ArtistCritic:
         analysis["technical_feasibility"] = 0.9 if complexity <= energy + 0.2 else 0.5
 
         # Overall score (weighted average)
-        scores = [v for v in analysis.values() if isinstance(v, (int, float))]
+        scores = [v for v in analysis.values() if isinstance(v, int | float)]
         analysis["overall_score"] = sum(scores) / len(scores) if scores else 0.7
 
         return analysis
@@ -264,13 +266,17 @@ class ArtistCritic:
                 suggestions.append("Consider simplifying the color palette")
 
             if analysis.get("novelty_score", 1.0) < 0.4:
-                suggestions.append("This theme has been explored recently - try a fresh angle")
+                suggestions.append(
+                    "This theme has been explored recently - try a fresh angle"
+                )
 
             if analysis.get("technical_feasibility", 1.0) < 0.6:
                 suggestions.append("The complexity might exceed current energy levels")
 
             if analysis.get("mood_alignment", 1.0) < 0.5:
-                suggestions.append("The style doesn't quite match your mood - reconsider the approach")
+                suggestions.append(
+                    "The style doesn't quite match your mood - reconsider the approach"
+                )
 
             result["suggestions"] = suggestions
 

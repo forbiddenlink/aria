@@ -127,7 +127,7 @@ model:
   base_model: "stabilityai/stable-diffusion-xl-base-1.0"
   device: "cuda"  # "cuda", "mps", or "cpu"
   dtype: "float16"  # "float16" or "float32"
-  
+
   # LoRA settings (optional)
   lora_path: null  # Path to trained LoRA
   lora_scale: 0.8  # LoRA strength (0.0-1.0)
@@ -204,8 +204,8 @@ DEVICE=cuda
 
 2. **Install CUDA Toolkit:**
 
-- CUDA 11.8: https://developer.nvidia.com/cuda-11-8-0-download-archive
-- CUDA 12.1: https://developer.nvidia.com/cuda-downloads
+- CUDA 11.8: <https://developer.nvidia.com/cuda-11-8-0-download-archive>
+- CUDA 12.1: <https://developer.nvidia.com/cuda-downloads>
 
 3. **Verify installation:**
 
@@ -251,6 +251,7 @@ model:
 ```
 
 **Known Issues:**
+
 - Some operations may have NaN outputs (fixed in code)
 - Attention slicing disabled on MPS
 - VAE uses float32 to avoid dtype issues
@@ -271,7 +272,7 @@ model:
 
 ### Unsplash API
 
-1. Go to https://unsplash.com/developers
+1. Go to <https://unsplash.com/developers>
 2. Click "Register as a developer"
 3. Create a new application
 4. Copy your **Access Key** and **Secret Key**
@@ -284,12 +285,13 @@ api_keys:
 ```
 
 **Rate Limits:**
+
 - Free tier: 50 requests/hour
 - Plus tier: 100 requests/hour
 
 ### Pexels API (Optional)
 
-1. Go to https://www.pexels.com/api/
+1. Go to <https://www.pexels.com/api/>
 2. Sign up and get your API key
 3. Add to config:
 
@@ -299,13 +301,14 @@ api_keys:
 ```
 
 **Rate Limits:**
+
 - Free tier: 200 requests/hour
 
 ### Hugging Face Token (Optional)
 
 Only needed for private models or gated models.
 
-1. Go to https://huggingface.co/settings/tokens
+1. Go to <https://huggingface.co/settings/tokens>
 2. Create a new token
 3. Add to config:
 
@@ -366,7 +369,7 @@ ai-artist-web
 uvicorn ai_artist.web.app:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Access at: http://localhost:8000
+Access at: <http://localhost:8000>
 
 ### Production Server
 
@@ -467,6 +470,7 @@ pre-commit run --all-files
 **Problem:** `pip install` fails
 
 **Solution:**
+
 ```bash
 # Upgrade pip
 pip install --upgrade pip setuptools wheel
@@ -478,6 +482,7 @@ pip install -r requirements.txt
 **Problem:** CUDA out of memory
 
 **Solution:**
+
 ```yaml
 # Reduce image size or use CPU
 model:
@@ -490,6 +495,7 @@ generation:
 **Problem:** MPS backend errors
 
 **Solution:**
+
 ```yaml
 # Use float32 instead of float16
 model:
@@ -501,6 +507,7 @@ model:
 **Problem:** "No module named 'ai_artist'"
 
 **Solution:**
+
 ```bash
 pip install -e .
 ```
@@ -508,6 +515,7 @@ pip install -e .
 **Problem:** Database locked error
 
 **Solution:**
+
 ```bash
 # Close other connections and restart
 rm data/ai_artist.db-journal
@@ -516,6 +524,7 @@ rm data/ai_artist.db-journal
 **Problem:** Web interface not loading
 
 **Solution:**
+
 ```bash
 # Check if port is in use
 lsof -i :8000
@@ -529,6 +538,7 @@ ai-artist-web --port 8080
 **Problem:** Model download fails
 
 **Solution:**
+
 ```bash
 # Download manually
 huggingface-cli download stabilityai/stable-diffusion-xl-base-1.0
@@ -537,6 +547,7 @@ huggingface-cli download stabilityai/stable-diffusion-xl-base-1.0
 **Problem:** Out of memory during generation
 
 **Solution:**
+
 ```yaml
 # Enable memory optimizations
 model:

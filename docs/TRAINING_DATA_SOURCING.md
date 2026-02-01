@@ -5,6 +5,7 @@
 **MUST READ**: Review [LEGAL.md](LEGAL.md) before sourcing any training data.
 
 All training images must be:
+
 - Public domain OR
 - Licensed under CC0, CC BY, CC BY-SA OR
 - Personally created by you OR
@@ -15,27 +16,31 @@ All training images must be:
 ### 1. Public Domain Collections
 
 #### Wikimedia Commons
-- URL: https://commons.wikimedia.org
+
+- URL: <https://commons.wikimedia.org>
 - License Filter: Public domain / CC0
 - Categories: Art, Nature, Architecture
 - Quality: High-resolution scans available
 - **Process**: Search → Filter by license → Download
 
 #### Metropolitan Museum of Art
-- URL: https://www.metmuseum.org/art/collection
+
+- URL: <https://www.metmuseum.org/art/collection>
 - License: CC0 for Open Access artworks
 - Quantity: 400,000+ images
 - Quality: Professional photography
 - **Process**: Use "Open Access" filter
 
 #### Smithsonian Open Access
-- URL: https://www.si.edu/openaccess
+
+- URL: <https://www.si.edu/openaccess>
 - License: CC0
 - Quantity: 3 million+ images
 - Quality: Museum-quality scans
 
 #### Rijksmuseum
-- URL: https://www.rijksmuseum.nl/en/rijksstudio
+
+- URL: <https://www.rijksmuseum.nl/en/rijksstudio>
 - License: Public domain
 - Focus: Dutch Masters
 - Quality: Ultra high-resolution
@@ -43,44 +48,51 @@ All training images must be:
 ### 2. Creative Commons Platforms
 
 #### Unsplash
-- URL: https://unsplash.com
+
+- URL: <https://unsplash.com>
 - License: Unsplash License (AI training allowed)
 - Quantity: Millions of photos
 - Quality: Professional photography
 - **Note**: Check individual licenses
 
 #### Pexels
-- URL: https://www.pexels.com
+
+- URL: <https://www.pexels.com>
 - License: Pexels License (free for AI training)
 - Quantity: Large collection
 - Quality: High-quality stock photos
 
 #### Pixabay
-- URL: https://pixabay.com
+
+- URL: <https://pixabay.com>
 - License: Pixabay License (free for any use)
 - Quantity: 2.5 million+ images
 
 ### 3. Government Archives
 
 #### NASA Image Library
-- URL: https://images.nasa.gov
+
+- URL: <https://images.nasa.gov>
 - License: Public domain (US Government)
 - Focus: Space, science, astronomy
 - Quality: Exceptional
 
 #### Library of Congress
-- URL: https://www.loc.gov/collections
+
+- URL: <https://www.loc.gov/collections>
 - License: Many public domain items
 - Quality: Historical significance
 
 ## Dataset Requirements
 
 ### Quantity
+
 - **Minimum**: 20 images
 - **Recommended**: 30-50 images
 - **Maximum**: 100 images (risk of overfitting)
 
 ### Quality Standards
+
 - **Resolution**: Minimum 512x512 pixels
 - **Format**: JPEG or PNG
 - **Content**: Clear, well-composed
@@ -90,19 +102,23 @@ All training images must be:
 ### Content Selection
 
 #### For Style Training
+
 Focus on images that share:
+
 - Similar color palette
 - Consistent artistic technique
 - Common mood/atmosphere
 - Recognizable aesthetic
 
 Examples:
+
 - All impressionist paintings
 - All black & white photography
 - All watercolor illustrations
 - All cyberpunk cityscapes
 
 #### What to Avoid
+
 - Mixed styles in one dataset
 - Low resolution or blurry images
 - Watermarked images
@@ -169,6 +185,7 @@ python -m ai_artist.training.train_lora \
 ## Validation
 
 Before training:
+
 1. Run license audit: Review all sources
 2. Check image quality: All images load correctly
 3. Verify consistency: Style is cohesive

@@ -117,11 +117,11 @@ class Personality:
         # Apply external factors
         if external_factors:
             for mood in Mood:
-                if "recent_success" in external_factors:
-                    if mood in [Mood.ENERGIZED, Mood.PLAYFUL]:
-                        mood_weights[mood] *= (
-                            1 + external_factors["recent_success"] * 0.5
-                        )
+                if "recent_success" in external_factors and mood in [
+                    Mood.ENERGIZED,
+                    Mood.PLAYFUL,
+                ]:
+                    mood_weights[mood] *= 1 + external_factors["recent_success"] * 0.5
 
         # Weighted random choice
         moods = list(mood_weights.keys())

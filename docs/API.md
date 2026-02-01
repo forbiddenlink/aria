@@ -32,6 +32,7 @@ Complete API documentation for all AI Artist modules.
 Stable Diffusion image generation with LoRA support.
 
 **Constructor:**
+
 ```python
 ImageGenerator(
     model_id: str = "stabilityai/stable-diffusion-xl-base-1.0",
@@ -41,6 +42,7 @@ ImageGenerator(
 ```
 
 **Parameters:**
+
 - `model_id` (str): HuggingFace model identifier
 - `device` (Literal): Device to run model on
 - `dtype` (torch.dtype): Data type for model weights
@@ -52,9 +54,11 @@ ImageGenerator(
 Load the diffusion pipeline.
 
 **Raises:**
+
 - `RuntimeError`: If model fails to load
 
 **Example:**
+
 ```python
 generator = ImageGenerator()
 generator.load_model()
@@ -67,14 +71,17 @@ generator.load_model()
 Load LoRA weights into the pipeline.
 
 **Parameters:**
+
 - `lora_path` (Path): Path to LoRA safetensors file
 - `lora_scale` (float): LoRA influence strength (0.0-1.0)
 
 **Raises:**
+
 - `RuntimeError`: If model not loaded first
 - `FileNotFoundError`: If LoRA file doesn't exist
 
 **Example:**
+
 ```python
 generator.load_lora(Path("models/lora/my_style.safetensors"), lora_scale=0.8)
 ```
@@ -86,6 +93,7 @@ generator.load_lora(Path("models/lora/my_style.safetensors"), lora_scale=0.8)
 Generate images from prompt.
 
 **Parameters:**
+
 - `prompt` (str): Text prompt for generation
 - `negative_prompt` (str, optional): Negative prompt. Default: ""
 - `width` (int, optional): Image width. Default: 1024
@@ -96,13 +104,16 @@ Generate images from prompt.
 - `seed` (int | None, optional): Random seed. Default: None
 
 **Returns:**
+
 - `list[Image.Image]`: Generated images
 
 **Raises:**
+
 - `RuntimeError`: If model not loaded
 - `torch.cuda.OutOfMemoryError`: If GPU OOM
 
 **Example:**
+
 ```python
 images = generator.generate(
     prompt="a beautiful sunset over mountains",
@@ -119,6 +130,7 @@ images = generator.generate(
 Unload model from memory and clear CUDA cache.
 
 **Example:**
+
 ```python
 generator.unload()
 ```
@@ -134,11 +146,13 @@ generator.unload()
 Dataclass for image quality scores.
 
 **Attributes:**
+
 - `aesthetic_score` (float): Aesthetic quality (0-1)
 - `clip_score` (float): Text-image alignment (0-1)
 - `technical_score` (float): Technical quality (0-1)
 
 **Properties:**
+
 - `overall_score` (float): Weighted average of all scores
 
 ---
@@ -148,11 +162,13 @@ Dataclass for image quality scores.
 CLIP-based image quality evaluation.
 
 **Constructor:**
+
 ```python
 ImageCurator(device: str = "cuda")
 ```
 
 **Parameters:**
+
 - `device` (str): Device for CLIP model
 
 **Methods:**
@@ -162,13 +178,16 @@ ImageCurator(device: str = "cuda")
 Evaluate image quality metrics.
 
 **Parameters:**
+
 - `image` (PIL.Image.Image): Image to evaluate
 - `prompt` (str): Original generation prompt
 
 **Returns:**
+
 - `QualityMetrics`: Quality scores
 
 **Example:**
+
 ```python
 curator = ImageCurator()
 metrics = curator.evaluate(image, prompt="a sunset")
@@ -182,13 +201,16 @@ print(f"Overall score: {metrics.overall_score:.2f}")
 Determine if image meets quality threshold.
 
 **Parameters:**
+
 - `metrics` (QualityMetrics): Image quality metrics
 - `threshold` (float): Minimum acceptable score
 
 **Returns:**
+
 - `bool`: True if image should be kept
 
 **Example:**
+
 ```python
 if curator.should_keep(metrics, threshold=0.7):
     gallery.save_image(image, prompt, metadata)
@@ -207,6 +229,7 @@ if curator.should_keep(metrics, threshold=0.7):
 Async HTTP client for Unsplash API with retry logic.
 
 **Constructor:**
+
 ```python
 UnsplashClient(
     access_key: str,
@@ -215,6 +238,7 @@ UnsplashClient(
 ```
 
 **Parameters:**
+
 - `access_key` (str): Unsplash API access key
 - `app_name` (str): Application name for attribution
 
@@ -225,18 +249,22 @@ UnsplashClient(
 Search for photos.
 
 **Parameters:**
+
 - `query` (str): Search query
 - `per_page` (int, optional): Results per page. Default: 10
 - `orientation` (str | None, optional): Image orientation. Options: "landscape", "portrait", "squarish"
 
 **Returns:**
+
 - `dict`: Search results with "results" key containing photo objects
 
 **Raises:**
+
 - `RateLimitError`: If API rate limit exceeded
 - `httpx.HTTPStatusError`: On HTTP errors
 
 **Example:**
+
 ```python
 async with UnsplashClient(access_key="...") as client:
     results = await client.search_photos(
@@ -255,12 +283,15 @@ async with UnsplashClient(access_key="...") as client:
 Get a random photo.
 
 **Parameters:**
+
 - `query` (str | None, optional): Filter by topic
 
 **Returns:**
+
 - `dict`: Photo object
 
 **Example:**
+
 ```python
 photo = await client.get_random_photo(query="nature")
 ```
@@ -272,9 +303,11 @@ photo = await client.get_random_photo(query="nature")
 Track download (required by Unsplash API guidelines).
 
 **Parameters:**
+
 - `download_location` (str): Download URL from photo object
 
 **Example:**
+
 ```python
 await client.trigger_download(photo["links"]["download_location"])
 ```
@@ -286,12 +319,15 @@ await client.trigger_download(photo["links"]["download_location"])
 Generate proper attribution HTML.
 
 **Parameters:**
+
 - `photo` (dict): Photo object from API
 
 **Returns:**
+
 - `str`: HTML attribution string
 
 **Example:**
+
 ```python
 attribution = client.get_attribution(photo)
 # Output: 'Photo by <a href="...">John Doe</a> on <a href="...">Unsplash</a>'
@@ -304,6 +340,7 @@ attribution = client.get_attribution(photo)
 Close HTTP client connection.
 
 **Example:**
+
 ```python
 await client.close()
 ```
@@ -323,6 +360,7 @@ SQLAlchemy model for generated artwork.
 **Table:** `generated_images`
 
 **Columns:**
+
 - `id` (Integer, PK): Auto-increment ID
 - `filename` (String, unique, indexed): Image filename
 - `prompt` (String): Generation prompt
@@ -342,6 +380,7 @@ SQLAlchemy model for generated artwork.
 - `tags` (JSON): Tag list
 
 **Example:**
+
 ```python
 image = GeneratedImage(
     filename="20260108_120000_sunset.png",
@@ -366,6 +405,7 @@ SQLAlchemy model for LoRA training sessions.
 **Table:** `training_sessions`
 
 **Columns:**
+
 - `id` (Integer, PK): Auto-increment ID
 - `name` (String): Session name
 - `model_path` (String): Path to saved model
@@ -387,6 +427,7 @@ SQLAlchemy model for automated creation sessions.
 **Table:** `creation_sessions`
 
 **Columns:**
+
 - `id` (Integer, PK): Auto-increment ID
 - `theme` (String, nullable): Session theme
 - `images_created` (Integer): Total images generated
@@ -404,6 +445,7 @@ SQLAlchemy model for automated creation sessions.
 Repository pattern for database operations on images.
 
 **Constructor:**
+
 ```python
 ImageRepository(session_factory: sessionmaker)
 ```
@@ -443,6 +485,7 @@ Mark image as curated or rejected.
 Pydantic model for application configuration.
 
 **Attributes:**
+
 - `model` (ModelConfig): Model configuration
 - `generation` (GenerationConfig): Generation parameters
 - `api_keys` (APIKeysConfig): API credentials
@@ -452,6 +495,7 @@ Pydantic model for application configuration.
 Load configuration from YAML file.
 
 **Example:**
+
 ```python
 config = load_config(Path("config/config.yaml"))
 print(config.model.base_model)
@@ -469,10 +513,12 @@ print(config.generation.num_inference_steps)
 Configure structured logging with structlog.
 
 **Parameters:**
+
 - `log_level` (str, optional): Log level. Default: "INFO"
 - `log_file` (Path | None, optional): Log file path. Default: None
 
 **Example:**
+
 ```python
 configure_logging(log_level="DEBUG", log_file=Path("logs/app.log"))
 ```
@@ -484,12 +530,15 @@ configure_logging(log_level="DEBUG", log_file=Path("logs/app.log"))
 Get a structured logger instance.
 
 **Parameters:**
+
 - `name` (str): Logger name (typically `__name__`)
 
 **Returns:**
+
 - `structlog.BoundLogger`: Logger instance
 
 **Example:**
+
 ```python
 logger = get_logger(__name__)
 logger.info("processing_image", image_id=123, score=7.5)
@@ -508,6 +557,7 @@ logger.info("processing_image", image_id=123, score=7.5)
 Raised when API rate limit is exceeded.
 
 **Usage:**
+
 ```python
 try:
     await client.search_photos("sunset")
@@ -578,6 +628,7 @@ async def api_call():
 ### Mocking Examples
 
 **Mock Unsplash Client:**
+
 ```python
 @pytest.fixture
 def mock_unsplash(mocker):
@@ -591,6 +642,7 @@ def mock_unsplash(mocker):
 ```
 
 **Mock Image Generator:**
+
 ```python
 @pytest.fixture
 def mock_generator(mocker):

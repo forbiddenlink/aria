@@ -9,9 +9,10 @@ The cognition system makes Aria's creative process transparent:
 This creates authenticity by showing the "why" behind her art.
 """
 
+from collections.abc import Callable
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable
+from typing import Any
 
 from ..utils.logging import get_logger
 
@@ -144,17 +145,15 @@ class ThinkingProcess:
         if self.mood_system:
             mood = self.mood_system.current_mood.value
             energy = self.mood_system.energy_level
-            energy_desc = "high" if energy > 0.7 else "low" if energy < 0.3 else "moderate"
-            observations.append(
-                f"I'm feeling {mood} today, with {energy_desc} energy."
+            energy_desc = (
+                "high" if energy > 0.7 else "low" if energy < 0.3 else "moderate"
             )
+            observations.append(f"I'm feeling {mood} today, with {energy_desc} energy.")
 
         # Notice if there's a suggested theme
         theme = context.get("theme")
         if theme:
-            observations.append(
-                f"Someone has suggested '{theme}' as inspiration..."
-            )
+            observations.append(f"Someone has suggested '{theme}' as inspiration...")
         else:
             observations.append(
                 "No direction has been suggested - I'm free to follow my intuition."
@@ -168,7 +167,11 @@ class ThinkingProcess:
             )
 
         # Combine into a cohesive observation
-        observation = " ".join(observations) if observations else "I observe my surroundings, open to inspiration..."
+        observation = (
+            " ".join(observations)
+            if observations
+            else "I observe my surroundings, open to inspiration..."
+        )
 
         thought = Thought(
             thought_type=ThoughtType.OBSERVE,
@@ -204,7 +207,11 @@ class ThinkingProcess:
             # Check for similar past work
             similar_episodes = memory_context.get("similar_mood_episodes", [])
             if similar_episodes:
-                past_subject = similar_episodes[-1].get("details", {}).get("subject", "similar themes")
+                past_subject = (
+                    similar_episodes[-1]
+                    .get("details", {})
+                    .get("subject", "similar themes")
+                )
                 reflections.append(
                     f"This reminds me of when I explored {past_subject}..."
                 )
@@ -219,9 +226,7 @@ class ThinkingProcess:
                     )
 
         # Base reflection on topic
-        reflections.append(
-            f"Thinking about '{topic}'... what does it evoke in me?"
-        )
+        reflections.append(f"Thinking about '{topic}'... what does it evoke in me?")
 
         # Mood-influenced reflection
         if self.mood_system:
@@ -310,11 +315,11 @@ class ThinkingProcess:
             ]
 
             for option in options:
-                if option not in recent_subjects:
-                    if choice == options[0]:  # Only if we haven't found a better match
-                        choice = option
-                        reasons.append(f"'{choice}' offers fresh territory to explore")
-                        break
+                if option not in recent_subjects and choice == options[0]:
+                    # Only if we haven't found a better match
+                    choice = option
+                    reasons.append(f"'{choice}' offers fresh territory to explore")
+                    break
 
         if not reasons:
             reasons.append(f"I'm drawn to '{choice}' - it speaks to me right now")
@@ -430,8 +435,14 @@ class ThinkingProcess:
                 "working_context": self.working_context,
             },
             emotional_state={
-                "mood": self.mood_system.current_mood.value if self.mood_system else "unknown",
-                "energy_level": self.mood_system.energy_level if self.mood_system else 0.5,
+                "mood": (
+                    self.mood_system.current_mood.value
+                    if self.mood_system
+                    else "unknown"
+                ),
+                "energy_level": (
+                    self.mood_system.energy_level if self.mood_system else 0.5
+                ),
             },
         )
 

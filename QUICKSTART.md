@@ -53,7 +53,7 @@ nano config/config.yaml
 
 **Add your Unsplash API key:**
 
-1. Go to https://unsplash.com/developers
+1. Go to <https://unsplash.com/developers>
 2. Create an app
 3. Copy your Access Key
 4. Paste it in `config.yaml`:
@@ -85,7 +85,7 @@ Launch the web interface:
 ai-artist-web
 ```
 
-Then open your browser to: http://localhost:8000
+Then open your browser to: <http://localhost:8000>
 
 ---
 
@@ -172,6 +172,7 @@ model:
 ## 📚 Next Steps
 
 **Learn more:**
+
 - 📖 [Setup Guide](SETUP.md) - Detailed installation
 - 🏗️ [Architecture](ARCHITECTURE.md) - How it works
 - 🎨 [LoRA Training](LORA_TRAINING.md) - Advanced styling
@@ -179,12 +180,14 @@ model:
 - 🔒 [Security](SECURITY.md) - Best practices
 
 **Get creative:**
+
 - Try different themes and prompts
 - Experiment with generation settings
 - Train a LoRA on your own art style
 - Set up automated creation schedules
 
 **Join the community:**
+
 - ⭐ Star the repo if you like it!
 - 🐛 Report bugs via GitHub Issues
 - 💡 Suggest features
@@ -192,7 +195,7 @@ model:
 
 ---
 
-## 🎉 You're All Set!
+## 🎉 You're All Set
 
 Your AI Artist is ready to create. Happy generating! 🎨
 

@@ -1,6 +1,6 @@
 """Aria's personality system - bringing soul to the autonomous artist."""
 
-from .cognition import Thought, ThinkingProcess, ThoughtType
+from .cognition import ThinkingProcess, Thought, ThoughtType
 from .enhanced_memory import EnhancedMemorySystem, EpisodicMemory, SemanticMemory
 from .memory import ArtistMemory
 from .moods import Mood, MoodSystem

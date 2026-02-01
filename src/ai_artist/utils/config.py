@@ -51,7 +51,8 @@ class ModelConfig(BaseModel):
     lora_scale: float = 0.8  # LoRA strength (0.0-1.0)
     use_refiner: bool = False
     refiner_model: str = "stabilityai/stable-diffusion-xl-refiner-1.0"
-    mood_models: MoodModelConfig = Field(default_factory=MoodModelConfig)  # type: ignore[arg-type]
+    # type: ignore[arg-type]
+    mood_models: MoodModelConfig = Field(default_factory=MoodModelConfig)
 
 
 class GenerationConfig(BaseModel):
@@ -94,7 +95,8 @@ class FaceRestorationConfig(BaseModel):
     """Face restoration configuration."""
 
     enabled: bool = False
-    model: Literal["codeformer"] = "codeformer"  # CodeFormer is now the only option
+    # CodeFormer is now the only option
+    model: Literal["codeformer"] = "codeformer"
     model_path: str | None = None  # Custom model path (optional)
     fidelity: float = 0.7  # Balance between quality (0) and fidelity (1)
 
@@ -184,20 +186,31 @@ class Config(BaseSettings):
         protected_namespaces=("settings_",),
     )  # type: ignore[misc]
 
-    model: ModelConfig = Field(default_factory=ModelConfig)  # type: ignore[arg-type]
-    generation: GenerationConfig = Field(default_factory=GenerationConfig)  # type: ignore[arg-type]
-    upscaling: UpscalingConfig = Field(default_factory=UpscalingConfig)  # type: ignore[arg-type]
-    controlnet: ControlNetConfig = Field(default_factory=ControlNetConfig)  # type: ignore[arg-type]
-    inpainting: InpaintingConfig = Field(default_factory=InpaintingConfig)  # type: ignore[arg-type]
+    # type: ignore[arg-type]
+    model: ModelConfig = Field(default_factory=ModelConfig)
+    # type: ignore[arg-type]
+    generation: GenerationConfig = Field(default_factory=GenerationConfig)
+    # type: ignore[arg-type]
+    upscaling: UpscalingConfig = Field(default_factory=UpscalingConfig)
+    # type: ignore[arg-type]
+    controlnet: ControlNetConfig = Field(default_factory=ControlNetConfig)
+    # type: ignore[arg-type]
+    inpainting: InpaintingConfig = Field(default_factory=InpaintingConfig)
     face_restoration: FaceRestorationConfig = Field(
         default_factory=FaceRestorationConfig
     )  # type: ignore[arg-type]
-    autonomy: AutonomyConfig = Field(default_factory=AutonomyConfig)  # type: ignore[arg-type]
-    trends: TrendsConfig = Field(default_factory=TrendsConfig)  # type: ignore[arg-type]
-    model_manager: ModelManagerConfig = Field(default_factory=ModelManagerConfig)  # type: ignore[arg-type]
-    api_keys: APIKeysConfig = Field(default_factory=APIKeysConfig)  # type: ignore[arg-type]
-    database: DatabaseConfig = Field(default_factory=DatabaseConfig)  # type: ignore[arg-type]
-    web: WebConfig = Field(default_factory=WebConfig)  # type: ignore[arg-type]
+    # type: ignore[arg-type]
+    autonomy: AutonomyConfig = Field(default_factory=AutonomyConfig)
+    # type: ignore[arg-type]
+    trends: TrendsConfig = Field(default_factory=TrendsConfig)
+    # type: ignore[arg-type]
+    model_manager: ModelManagerConfig = Field(default_factory=ModelManagerConfig)
+    # type: ignore[arg-type]
+    api_keys: APIKeysConfig = Field(default_factory=APIKeysConfig)
+    # type: ignore[arg-type]
+    database: DatabaseConfig = Field(default_factory=DatabaseConfig)
+    # type: ignore[arg-type]
+    web: WebConfig = Field(default_factory=WebConfig)
 
 
 def load_config(config_path: Path | None = None) -> Config:

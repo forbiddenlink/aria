@@ -76,4 +76,3 @@ echo "3. Test: python -m pytest tests/"
 echo "4. Generate art: python -m src.ai_artist.main --mode manual"
 echo ""
 echo "For more information, see QUICKSTART.md"
-

@@ -94,7 +94,7 @@ def load_secrets():
     """Load secrets from .env file."""
     env_path = Path(__file__).parent.parent.parent / '.env'
     load_dotenv(env_path)
-    
+
     return {
         'unsplash': {
             'access_key': os.getenv('UNSPLASH_ACCESS_KEY'),
@@ -111,6 +111,7 @@ def load_secrets():
 For production deployments, use:
 
 1. **System Environment Variables**
+
    ```bash
    export UNSPLASH_ACCESS_KEY="..."
    ```
@@ -122,10 +123,11 @@ For production deployments, use:
    - HashiCorp Vault
 
 3. **Encrypted Config Files**
+
    ```bash
    # Encrypt config
    gpg -c config.yaml
-   
+
    # Decrypt on use
    gpg -d config.yaml.gpg > config.yaml
    ```
@@ -145,29 +147,29 @@ from collections import deque
 
 class RateLimiter:
     """Rate limiter using sliding window."""
-    
+
     def __init__(self, max_calls: int, period: int):
         self.max_calls = max_calls
         self.period = period
         self.calls = deque()
-    
+
     def __call__(self, func):
         @wraps(func)
         def wrapper(*args, **kwargs):
             now = time.time()
-            
+
             # Remove old calls
             while self.calls and self.calls[0] < now - self.period:
                 self.calls.popleft()
-            
+
             if len(self.calls) >= self.max_calls:
                 sleep_time = self.period - (now - self.calls[0])
                 time.sleep(sleep_time)
                 return wrapper(*args, **kwargs)
-            
+
             self.calls.append(now)
             return func(*args, **kwargs)
-        
+
         return wrapper
 
 # Usage
@@ -187,14 +189,14 @@ def validate_prompt(prompt: str) -> str:
     # Length check
     if len(prompt) > 500:
         raise ValueError("Prompt too long (max 500 characters)")
-    
+
     # Remove potential injection attacks
     # (Though SD prompts don't execute code, still good practice)
     dangerous_chars = ['<', '>', '{', '}', '|']
     for char in dangerous_chars:
         if char in prompt:
             prompt = prompt.replace(char, '')
-    
+
     return prompt.strip()
 ```
 
@@ -210,14 +212,14 @@ def fetch_image(url: str):
     # Ensure HTTPS
     if not url.startswith('https://'):
         raise ValueError("Only HTTPS URLs allowed")
-    
+
     # Set timeout
     response = requests.get(
         url,
         timeout=30,  # Prevent hanging
         verify=True  # Verify SSL certificates
     )
-    
+
     return response
 ```
 
@@ -235,18 +237,18 @@ def safe_save_image(image, filename: str, gallery_path: Path):
     """Safely save image with path validation."""
     # Resolve to absolute path
     gallery_path = gallery_path.resolve()
-    
+
     # Sanitize filename
     filename = os.path.basename(filename)  # Remove path components
     filename = filename.replace('..', '')  # Prevent directory traversal
-    
+
     # Construct full path
     full_path = gallery_path / filename
-    
+
     # Ensure path is within gallery
     if not full_path.resolve().is_relative_to(gallery_path):
         raise ValueError("Invalid file path")
-    
+
     # Save with restricted permissions
     image.save(full_path)
     os.chmod(full_path, 0o644)  # rw-r--r--
@@ -265,10 +267,10 @@ def process_with_temp_file(image):
     with tempfile.NamedTemporaryFile(suffix='.png', delete=True) as tmp:
         tmp_path = Path(tmp.name)
         image.save(tmp_path)
-        
+
         # Process...
         result = process_image(tmp_path)
-        
+
         # File automatically deleted when exiting context
         return result
 ```
@@ -304,10 +306,10 @@ import os
 def create_database(db_path: str):
     """Create database with restricted permissions."""
     conn = sqlite3.connect(db_path)
-    
+
     # Set restrictive permissions
     os.chmod(db_path, 0o600)  # rw-------
-    
+
     return conn
 ```
 
@@ -342,15 +344,15 @@ def download_model_safe(model_id: str, expected_hash: str = None):
         repo_id=model_id,
         filename="pytorch_model.bin"
     )
-    
+
     if expected_hash:
         # Verify file hash
         with open(model_path, 'rb') as f:
             file_hash = hashlib.sha256(f.read()).hexdigest()
-        
+
         if file_hash != expected_hash:
             raise ValueError("Model hash mismatch - potential tampering")
-    
+
     return model_path
 ```
 
@@ -388,13 +390,13 @@ def sanitize_for_logging(text: str) -> str:
     """Remove sensitive data before logging."""
     # Remove API keys
     text = re.sub(r'api[_-]?key["\s:=]+[\w-]+', 'api_key=<redacted>', text, flags=re.IGNORECASE)
-    
+
     # Remove tokens
     text = re.sub(r'token["\s:=]+[\w-]+', 'token=<redacted>', text, flags=re.IGNORECASE)
-    
+
     # Remove email addresses
     text = re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', '<email>', text)
-    
+
     return text
 
 # Use in logging
@@ -411,21 +413,21 @@ import os
 def setup_secure_logging():
     """Configure logging with security considerations."""
     log_file = 'logs/ai_artist.log'
-    
+
     # Create logs directory with restricted permissions
     os.makedirs('logs', exist_ok=True)
     os.chmod('logs', 0o700)
-    
+
     # Rotating file handler
     handler = RotatingFileHandler(
         log_file,
         maxBytes=10*1024*1024,  # 10MB
         backupCount=5
     )
-    
+
     # Set log file permissions
     os.chmod(log_file, 0o600)
-    
+
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -517,6 +519,7 @@ def generate():
 ### If API Keys are Compromised
 
 1. **Immediate Actions:**
+
    ```bash
    # Revoke compromised keys immediately
    # 1. Go to API provider dashboard
@@ -531,10 +534,11 @@ def generate():
    - Check file system for unauthorized changes
 
 3. **Update All Instances:**
+
    ```bash
    # Update environment variables
    export UNSPLASH_ACCESS_KEY="new_key"
-   
+
    # Restart services
    systemctl restart ai-artist
    ```

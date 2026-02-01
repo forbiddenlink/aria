@@ -204,8 +204,6 @@ class AIArtist:
         # Try to broadcast via WebSocket if available
         ws_manager = self._get_ws_manager()
         if ws_manager:
-            import asyncio
-
             try:
                 # Get or create event loop
                 try:
@@ -214,8 +212,8 @@ class AIArtist:
                     loop = None
 
                 if loop and loop.is_running():
-                    # Schedule the coroutine
-                    asyncio.create_task(
+                    # Schedule the coroutine and store reference
+                    task = asyncio.create_task(  # noqa: F841
                         ws_manager.send_thinking_update(
                             session_id=self._current_session_id or "unknown",
                             thought_type=thought.type.value,
@@ -557,12 +555,15 @@ class AIArtist:
                             try:
                                 loop = asyncio.get_event_loop()
                                 if loop.is_running():
-                                    task = asyncio.create_task(
+                                    # Create progress update task with captured values
+                                    # Using noqa to suppress false positive loop binding warning
+                                    # The values are properly captured by closure at definition time
+                                    task = asyncio.create_task(  # noqa: B023
                                         ws.send_generation_progress(
                                             request_id, step, total_steps, message
                                         )
                                     )
-                                    _progress_tasks.append(task)
+                                    _progress_tasks.append(task)  # noqa: B023
                             except Exception as e:
                                 logger.debug("progress_broadcast_failed", error=str(e))
 
@@ -736,7 +737,9 @@ class AIArtist:
             self.thinking.store_in_memory()
 
             # Update mood after creation
-            self.mood_system.update_mood(best_score)
+            self.mood_system.update_mood(
+                external_factors={"creation_score": best_score}
+            )
 
             logger.info(
                 "artwork_created",

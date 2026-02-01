@@ -38,6 +38,7 @@ Base Stable Diffusion Model
 ```
 
 **Key Concept**: LoRAs are style enhancers, not replacements. You can:
+
 - Generate any subject with or without a LoRA active
 - Control style strength with the `lora_scale` parameter (0.0-1.0)
 - Switch between LoRAs anytime by changing config
@@ -81,6 +82,7 @@ AI Artist provides three professionally configured LoRA profiles:
 **Best for**: Creative projects, artistic designs, vibrant artwork
 
 **Style**: Colorful, modern abstract compositions
+
 - **Training**: 30 images, rank 16, 3000 steps
 - **Time**: ~2 hours
 - **Output**: Bold colors, geometric shapes, artistic flair
@@ -97,6 +99,7 @@ python scripts/manage_loras.py set abstract_style --scale 0.8
 ```
 
 **Prompt examples**:
+
 - "flowing colors and shapes"
 - "geometric patterns in vibrant hues"
 - "dreamlike composition with bold strokes"
@@ -106,8 +109,9 @@ python scripts/manage_loras.py set abstract_style --scale 0.8
 **Best for**: Nature backgrounds, travel imagery, outdoor scenes
 
 **Style**: Dramatic natural scenery, professional photography
+
 - **Training**: 30 images, rank 8, 3000 steps
-- **Time**: ~2 hours  
+- **Time**: ~2 hours
 - **Output**: Ansel Adams-style dramatic landscapes
 
 ```bash
@@ -122,6 +126,7 @@ python scripts/manage_loras.py set landscape_style --scale 0.7
 ```
 
 **Prompt examples**:
+
 - "mountain peak at golden hour"
 - "misty forest in morning light"
 - "dramatic coastal cliffs at sunset"
@@ -131,6 +136,7 @@ python scripts/manage_loras.py set landscape_style --scale 0.7
 **Best for**: Website headers, landing pages, marketing materials
 
 **Style**: Professional, clean, modern compositions (16:9 format)
+
 - **Training**: 30 images, rank 8, 2500 steps, 768px resolution
 - **Time**: ~1.5 hours
 - **Output**: Professional website hero images
@@ -147,6 +153,7 @@ python scripts/manage_loras.py set webhero_style --scale 0.8
 ```
 
 **Prompt examples** (perfect for web dev!):
+
 - "modern tech office with computers"
 - "professional business team working together"
 - "sleek product on minimalist background"
@@ -169,22 +176,26 @@ python scripts/manage_loras.py set webhero_style --scale 0.8
 ### Parameter Tuning
 
 **LoRA Rank**:
+
 - `rank=4`: Fast, subtle style (general use)
 - `rank=8`: Balanced quality/speed (recommended)
 - `rank=16`: Strong style (abstract/artistic)
 - `rank=32+`: Very strong, risk of overfitting
 
 **Training Steps**:
+
 - `2000`: Quick iteration (1 hour on Apple Silicon)
 - `2500-3000`: Standard quality (1.5-2 hours)
 - `5000+`: Maximum quality, watch for overfitting
 
 **Learning Rate**:
+
 - `5e-5`: Slower, better for abstract/artistic (rank 16)
 - `1e-4`: Standard (rank 4-8)
 - `5e-4`: Faster, risk of instability
 
 **Resolution**:
+
 - `512`: Standard for most cases
 - `768`: Better for hero images, requires more memory
 
@@ -214,6 +225,7 @@ python scripts/manage_loras.py list
 ```
 
 Output:
+
 ```
 🎨 Available LoRA Models:
 ============================================================
@@ -237,6 +249,7 @@ python scripts/manage_loras.py status
 ```
 
 Output:
+
 ```
 🎨 Current LoRA Status:
 ============================================================
@@ -287,7 +300,7 @@ python scripts/manage_loras.py set abstract_style
 ai-artist  # Generates abstract images
 
 # Afternoon: Design website heroes
-python scripts/manage_loras.py set webhero_style  
+python scripts/manage_loras.py set webhero_style
 ai-artist  # Generates professional heroes
 
 # Evening: Create landscape backgrounds
@@ -308,7 +321,7 @@ model:
   base_model: "runwayml/stable-diffusion-v1-5"
   device: "mps"  # or "cuda" or "cpu"
   dtype: "float32"
-  
+
   # LoRA settings
   lora_path: "models/lora/webhero_style"  # or null to disable
   lora_scale: 0.8  # 0.0-1.0
@@ -318,6 +331,7 @@ model:
 
 1. **Collect images** (20-50 similar style/subject)
 2. **Organize dataset**:
+
    ```bash
    mkdir -p datasets/training_mystyle
    cp my_images/*.jpg datasets/training_mystyle/
@@ -326,6 +340,7 @@ model:
 3. **Document sources** in `datasets/licenses.txt`
 
 4. **Train**:
+
    ```bash
    python -m ai_artist.training.train_lora \
        --instance_data_dir datasets/training_mystyle \
@@ -335,6 +350,7 @@ model:
    ```
 
 5. **Use**:
+
    ```bash
    python scripts/manage_loras.py set mystyle
    ```
@@ -355,51 +371,58 @@ python scripts/train_all_loras.py all
 
 ### Training Issues
 
-**Problem**: Training crashes with memory error  
+**Problem**: Training crashes with memory error
 **Solution**: Reduce batch size or resolution:
+
 ```bash
 --train_batch_size 1 --resolution 512
 ```
 
-**Problem**: Loss not decreasing  
-**Solution**: 
+**Problem**: Loss not decreasing
+**Solution**:
+
 - Check learning rate (try 1e-4)
 - Ensure images are similar style
 - Increase training steps
 
-**Problem**: Training very slow  
+**Problem**: Training very slow
 **Solution**:
+
 - Reduce rank (try 4 instead of 8)
 - Reduce resolution (512 instead of 768)
 - Use GPU if available
 
 ### LoRA Not Working
 
-**Problem**: LoRA has no effect on output  
+**Problem**: LoRA has no effect on output
 **Solution**:
+
 - Increase scale: `--scale 0.9`
 - Check LoRA is active: `python scripts/manage_loras.py status`
 - Verify training completed successfully
 
-**Problem**: Style too strong  
+**Problem**: Style too strong
 **Solution**: Reduce scale: `--scale 0.5` or `--scale 0.3`
 
-**Problem**: Can't switch LoRA  
+**Problem**: Can't switch LoRA
 **Solution**:
+
 - Check path exists: `ls models/lora/`
 - Verify permissions
 - Check for typos in LoRA name
 
 ### Quality Issues
 
-**Problem**: Generated images are low quality  
+**Problem**: Generated images are low quality
 **Solution**:
+
 - Use base model to verify it works: `python scripts/manage_loras.py set none`
 - Retrain with better dataset
 - Check training loss decreased during training
 
-**Problem**: LoRA produces artifacts  
+**Problem**: LoRA produces artifacts
 **Solution**:
+
 - Dataset may have low-quality images
 - Try lower rank (4 or 8)
 - Reduce scale strength
@@ -409,25 +432,30 @@ python scripts/train_all_loras.py all
 ## Best Practices
 
 ### Dataset Quality
+
 ✅ **Good**:
+
 - 20-50 high-resolution images
 - Consistent style/subject
 - Good lighting, sharp focus
 - Diverse compositions
 
 ❌ **Bad**:
+
 - Mixed styles in one LoRA
 - Low resolution or blurry
 - Watermarks or text
 - Too similar/duplicate images
 
 ### Training Tips
+
 - Start with rank 8 for most cases
 - Use 2500-3000 steps initially
 - Monitor training loss (should decrease)
 - Test at different scales (0.5, 0.7, 0.9)
 
 ### Usage Tips
+
 - Start with scale 0.8
 - Lower scale for subtle style
 - Use base model for maximum flexibility

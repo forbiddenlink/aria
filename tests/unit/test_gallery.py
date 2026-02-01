@@ -1,7 +1,6 @@
 """Tests for gallery manager."""
 
 import json
-from pathlib import Path
 
 import pytest
 from PIL import Image
@@ -75,4 +74,3 @@ def test_list_images(test_gallery):
     # List only featured
     featured_images = test_gallery.list_images(featured_only=True)
     assert len(featured_images) >= 1
-

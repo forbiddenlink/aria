@@ -4,8 +4,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import torch
-from ai_artist.core.generator import ImageGenerator
 from PIL import Image
+
+from ai_artist.core.generator import ImageGenerator
 
 
 @pytest.fixture
@@ -93,6 +94,7 @@ class TestImageGenerator:
 
         # Create a non-uniform image with noise (uniform images are filtered)
         import numpy as np
+
         noise = np.random.randint(50, 200, (512, 512, 3), dtype=np.uint8)
         mock_image = Image.fromarray(noise, mode="RGB")
         mock_instance.return_value.images = [mock_image, mock_image, mock_image]
@@ -122,6 +124,7 @@ class TestImageGenerator:
         mock_class, mock_instance = mock_pipeline
         # Create a non-uniform image with noise (uniform images are filtered)
         import numpy as np
+
         noise = np.random.randint(50, 200, (512, 512, 3), dtype=np.uint8)
         mock_image = Image.fromarray(noise, mode="RGB")
         mock_instance.return_value.images = [mock_image]

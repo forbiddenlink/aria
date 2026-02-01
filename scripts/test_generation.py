@@ -8,7 +8,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import torch
-from PIL import Image
 
 from src.ai_artist.core.generator import ImageGenerator
 from src.ai_artist.gallery.manager import GalleryManager
@@ -87,4 +86,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

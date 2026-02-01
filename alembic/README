@@ -14,4 +14,3 @@ To see current version:
 
 To see migration history:
   alembic history
-

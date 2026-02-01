@@ -1,13 +1,14 @@
-# Minimal requirements for Vercel deployment (Gallery-only mode)
+# Minimal requirements for Railway/Vercel deployment (Gallery-only mode)
 # No ML libraries needed - just web server
 
-fastapi>=0.115.0,<0.117.0
-uvicorn[standard]>=0.32.0,<0.34.0
+fastapi>=0.115.0,<0.130.0
+uvicorn[standard]>=0.32.0,<0.42.0
 python-multipart>=0.0.17,<0.1.0
 pydantic>=2.10.0,<3.0.0
 pydantic-settings>=2.6.0,<3.0.0
 mangum>=0.19.0,<1.0.0
 aiofiles>=25.1.0
+slowapi>=0.1.9,<0.2.0
 
 # Optional: for structured logging
-structlog>=24.4.0,<25.0.0
+structlog>=24.4.0,<26.0.0

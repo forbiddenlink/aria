@@ -3,6 +3,7 @@
 
 import asyncio
 from pathlib import Path
+
 from src.ai_artist.core.generator import ImageGenerator
 
 # Diverse prompts for interesting artwork
@@ -17,12 +18,13 @@ PROMPTS = [
     "minimalist landscape with rolling hills and single tree, artistic",
 ]
 
+
 async def main():
     config_path = Path("config/config.yaml")
     generator = ImageGenerator(config_path)
-    
+
     print(f"\n🎨 Generating {len(PROMPTS)} artworks...\n")
-    
+
     success_count = 0
     for i, prompt in enumerate(PROMPTS, 1):
         try:
@@ -37,8 +39,11 @@ async def main():
         except Exception as e:
             print(f"❌ Error: {e}\n")
             continue
-    
-    print(f"\n✨ Complete! Successfully generated {success_count}/{len(PROMPTS)} artworks")
+
+    print(
+        f"\n✨ Complete! Successfully generated {success_count}/{len(PROMPTS)} artworks"
+    )
+
 
 if __name__ == "__main__":
     asyncio.run(main())

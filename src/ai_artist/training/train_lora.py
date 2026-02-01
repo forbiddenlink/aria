@@ -37,7 +37,8 @@ class DreamBoothDataset(Dataset):
         # Filter for image files only
         valid_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
         self.instance_images_path = [
-            p for p in Path(instance_data_root).iterdir()
+            p
+            for p in Path(instance_data_root).iterdir()
             if p.suffix.lower() in valid_extensions
         ]
         self.num_instance_images = len(self.instance_images_path)

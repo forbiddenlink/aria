@@ -19,12 +19,14 @@ Complete database schema for AI Artist project using SQLite + SQLAlchemy + Alemb
 ## Overview
 
 ### Technology Stack
+
 - **Database**: SQLite 3.x with WAL mode
 - **ORM**: SQLAlchemy 2.0+
 - **Migrations**: Alembic 1.13+
 - **Connection Pooling**: StaticPool (single process) or QueuePool (multi-process)
 
 ### Design Principles
+
 - **Denormalization**: Store JSON metadata for flexibility
 - **Indexing**: Index all frequently queried columns
 - **WAL Mode**: Enable Write-Ahead Logging for better concurrency
@@ -320,16 +322,19 @@ CREATE INDEX idx_status_score ON generated_images(status, final_score DESC);
 ### Alembic Setup
 
 **Initialize Alembic:**
+
 ```bash
 alembic init alembic
 ```
 
 **Configure `alembic.ini`:**
+
 ```ini
 sqlalchemy.url = sqlite:///./data/ai_artist.db
 ```
 
 **Configure `alembic/env.py`:**
+
 ```python
 from src.ai_artist.db.models import Base
 
@@ -346,11 +351,13 @@ def run_migrations_online():
 ### Creating Migrations
 
 **Auto-generate migration:**
+
 ```bash
 alembic revision --autogenerate -m "Add new column"
 ```
 
 **Example Migration:**
+
 ```python
 """Add diversity_score column
 
@@ -371,11 +378,13 @@ def downgrade():
 ```
 
 **Apply migrations:**
+
 ```bash
 alembic upgrade head
 ```
 
 **Rollback:**
+
 ```bash
 alembic downgrade -1
 ```
@@ -455,6 +464,7 @@ ORDER BY date DESC;
 ### Automated Backups
 
 **Daily Backup Script:**
+
 ```python
 from pathlib import Path
 import sqlite3
@@ -476,11 +486,13 @@ def backup_database(db_path: Path, backup_dir: Path):
 ```
 
 **Retention Policy:**
+
 - Keep daily backups for 7 days
 - Keep weekly backups for 1 month
 - Keep monthly backups for 1 year
 
 **Backup Schedule:**
+
 ```bash
 # Cron job (daily at 2 AM)
 0 2 * * * /path/to/venv/bin/python scripts/backup_db.py
@@ -500,6 +512,7 @@ PRAGMA temp_store=MEMORY;
 ```
 
 **Benefits:**
+
 - Faster writes (no lock contention)
 - Concurrent reads during writes
 - Better crash recovery
@@ -507,6 +520,7 @@ PRAGMA temp_store=MEMORY;
 ### Query Optimization
 
 **Use EXPLAIN QUERY PLAN:**
+
 ```sql
 EXPLAIN QUERY PLAN
 SELECT * FROM generated_images
@@ -516,6 +530,7 @@ LIMIT 10;
 ```
 
 **Optimize with covering indexes:**
+
 ```sql
 -- If query only needs these columns:
 CREATE INDEX idx_covering ON generated_images(status, final_score, filename, created_at);
@@ -528,11 +543,13 @@ CREATE INDEX idx_covering ON generated_images(status, final_score, filename, cre
 ### Constraints
 
 **Unique Constraints:**
+
 ```sql
 ALTER TABLE generated_images ADD CONSTRAINT unique_filename UNIQUE (filename);
 ```
 
 **Check Constraints:**
+
 ```sql
 ALTER TABLE generated_images ADD CONSTRAINT check_score_range
     CHECK (final_score >= 0 AND final_score <= 10);
@@ -544,6 +561,7 @@ ALTER TABLE generated_images ADD CONSTRAINT check_status_valid
 ### Triggers
 
 **Auto-update timestamp:**
+
 ```sql
 CREATE TRIGGER update_timestamp
 AFTER UPDATE ON generated_images
@@ -591,6 +609,7 @@ PRAGMA index_info('idx_final_score');
 ### "Database is locked"
 
 **Solution:**
+
 - Enable WAL mode
 - Reduce transaction duration
 - Use proper connection pooling
@@ -598,11 +617,13 @@ PRAGMA index_info('idx_final_score');
 ### Slow Queries
 
 **Diagnosis:**
+
 ```sql
 EXPLAIN QUERY PLAN SELECT ...;
 ```
 
 **Solutions:**
+
 - Add missing indexes
 - Use ANALYZE to update statistics
 - Consider denormalization for complex joins
@@ -610,11 +631,13 @@ EXPLAIN QUERY PLAN SELECT ...;
 ### Database Corruption
 
 **Check integrity:**
+
 ```sql
 PRAGMA integrity_check;
 ```
 
 **Recovery:**
+
 ```bash
 # Restore from backup
 sqlite3 ai_artist.db ".backup backup.db"

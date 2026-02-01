@@ -38,7 +38,12 @@ class TestCriticPersonality:
         """Test personality stays consistent across critiques."""
         initial_strictness = critic.personality["strictness"]
         # Run several critiques
-        concept = {"subject": "test", "mood": "serene", "style": "minimal", "colors": []}
+        concept = {
+            "subject": "test",
+            "mood": "serene",
+            "style": "minimal",
+            "colors": [],
+        }
         state = {"mood": "serene", "energy": 0.5, "recent_subjects": []}
         for _ in range(5):
             critic.critique_concept(concept, state)
@@ -181,10 +186,14 @@ class TestApprovalRejectionLogic:
             "overall_score": 0.6,
         }
 
-        with patch.object(strict_critic, "_analyze_concept", return_value=fixed_analysis):
+        with patch.object(
+            strict_critic, "_analyze_concept", return_value=fixed_analysis
+        ):
             strict_result = strict_critic.critique_concept(concept, state)
 
-        with patch.object(lenient_critic, "_analyze_concept", return_value=fixed_analysis):
+        with patch.object(
+            lenient_critic, "_analyze_concept", return_value=fixed_analysis
+        ):
             lenient_result = lenient_critic.critique_concept(concept, state)
 
         # Lenient critic should be more likely to approve borderline cases
@@ -236,7 +245,9 @@ class TestMaxIterationsFallback:
 
     def test_fallback_on_exception(self, critic):
         """Test fallback behavior when critique fails."""
-        with patch.object(critic, "_analyze_concept", side_effect=Exception("Test error")):
+        with patch.object(
+            critic, "_analyze_concept", side_effect=Exception("Test error")
+        ):
             concept = {"subject": "test"}
             state = {}
             result = critic.critique_concept(concept, state)
@@ -267,9 +278,16 @@ class TestMoodStylePairingValidation:
     def test_all_moods_have_pairings(self, critic):
         """Test all moods have defined style pairings."""
         expected_moods = [
-            "contemplative", "chaotic", "melancholic", "energized",
-            "rebellious", "serene", "restless", "playful",
-            "introspective", "bold",
+            "contemplative",
+            "chaotic",
+            "melancholic",
+            "energized",
+            "rebellious",
+            "serene",
+            "restless",
+            "playful",
+            "introspective",
+            "bold",
         ]
         for mood in expected_moods:
             assert mood in critic.MOOD_STYLE_PAIRINGS
@@ -278,7 +296,9 @@ class TestMoodStylePairingValidation:
     def test_serene_minimalist_is_good_pair(self, critic):
         """Test specific known good pairing."""
         # Run multiple times due to randomness
-        scores = [critic._check_mood_style_fit("serene", "minimalist") for _ in range(10)]
+        scores = [
+            critic._check_mood_style_fit("serene", "minimalist") for _ in range(10)
+        ]
         avg_score = sum(scores) / len(scores)
         assert avg_score >= 0.7  # Should generally score well
 
@@ -299,7 +319,10 @@ class TestColorHarmonyAssessment:
         """Test fewer colors generally score higher."""
         # Run multiple times and compare averages
         few_scores = [critic._assess_color_harmony(["red", "blue"]) for _ in range(20)]
-        many_scores = [critic._assess_color_harmony(["a", "b", "c", "d", "e", "f", "g"]) for _ in range(20)]
+        many_scores = [
+            critic._assess_color_harmony(["a", "b", "c", "d", "e", "f", "g"])
+            for _ in range(20)
+        ]
 
         avg_few = sum(few_scores) / len(few_scores)
         avg_many = sum(many_scores) / len(many_scores)
@@ -398,8 +421,14 @@ class TestPersonalityDescription:
         critic = ArtistCritic()
         desc = critic.get_personality_description()
 
-        style_words = ["demanding", "encouraging", "technically", "conceptually",
-                      "experimental", "traditional"]
+        style_words = [
+            "demanding",
+            "encouraging",
+            "technically",
+            "conceptually",
+            "experimental",
+            "traditional",
+        ]
 
         assert any(word in desc for word in style_words)
 

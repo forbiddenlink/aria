@@ -95,7 +95,7 @@ class UnsplashClient:
         utm = f"utm_source={self.app_name}&utm_medium=referral"
         return (
             f'Photo by <a href="{user["links"]["html"]}?{utm}">'
-            f'{user["name"]}</a> on '
+            f"{user['name']}</a> on "
             f'<a href="https://unsplash.com/?{utm}">Unsplash</a>'
         )
 

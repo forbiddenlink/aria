@@ -99,6 +99,7 @@ training_metadata = {
    - Be transparent about AI involvement
 
 2. **Licensing Your Outputs**
+
    ```yaml
    recommended_license: "CC-BY 4.0"
    # Allows others to use with attribution
@@ -117,12 +118,14 @@ training_metadata = {
 ### Unsplash API
 
 **Terms of Service Requirements:**
+
 - Attribution required for used images
 - Cannot use images for competing services
 - Rate limits: 50 requests/hour (free tier)
 - Downloaded images used only as inspiration, not redistributed
 
 **Proper Attribution:**
+
 ```python
 attribution = f"Photo by {photographer_name} on Unsplash"
 # Store in database with each source image
@@ -131,6 +134,7 @@ attribution = f"Photo by {photographer_name} on Unsplash"
 ### Pexels API
 
 **Terms of Service Requirements:**
+
 - Attribution appreciated but not required
 - Cannot sell unmodified photos
 - Cannot create competing image service
@@ -155,19 +159,19 @@ BLOCKED_ARTISTS = [
 def check_prompt_safety(prompt: str) -> bool:
     """Prevent prompts that could generate infringing content"""
     prompt_lower = prompt.lower()
-    
+
     # Block specific artist names
     for artist in BLOCKED_ARTISTS:
         if artist.lower() in prompt_lower:
             return False
-    
+
     # Block style mimicry phrases
     risky_phrases = [
         "in the style of",
         "as painted by",
         "like [artist name]",
     ]
-    
+
     # Allow style descriptors, block specific attribution
     return True
 ```
@@ -248,11 +252,13 @@ Before training or deploying:
 ## Reporting Issues
 
 If you discover:
+
 - Potentially infringing outputs
 - Training data with unclear licensing
 - License violations
 
 **Actions:**
+
 1. Stop using the affected component
 2. Document the issue
 3. Consult legal advice if needed
@@ -263,16 +269,19 @@ If you discover:
 ## Resources
 
 ### Legal Information
+
 - [U.S. Copyright Office - AI Reports](https://www.copyright.gov/ai/)
 - [Creative Commons Licenses](https://creativecommons.org/licenses/)
 - [Stability AI License](https://huggingface.co/spaces/CompVis/stable-diffusion-license)
 
 ### Safe Data Sources
+
 - [Rijksmuseum API](https://data.rijksmuseum.nl/)
 - [Met Museum Open Access](https://www.metmuseum.org/about-the-met/policies-and-documents/open-access)
 - [Public Domain Review](https://publicdomainreview.org/)
 
 ### Model Licenses
+
 - [Stable Diffusion License](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/blob/main/LICENSE.md)
 - [Hugging Face Model Cards](https://huggingface.co/docs/hub/model-cards)
 
@@ -281,12 +290,14 @@ If you discover:
 ## Updates
 
 This document will be updated as:
+
 - Laws and regulations evolve
 - New court cases provide guidance
 - Model licenses change
 - Community best practices develop
 
 **Version History:**
+
 - v1.0 (2026-01-08): Initial version
 
 ---

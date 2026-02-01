@@ -1,7 +1,5 @@
 """Tests for Aria's critique system."""
 
-import pytest
-
 from ai_artist.personality.critic import ArtistCritic
 from ai_artist.personality.moods import MoodSystem
 
@@ -64,7 +62,10 @@ class TestArtistCritic:
         result_repeat = critic.critique_concept(concept, state_repeat)
 
         # Novelty should be lower for repeat
-        assert result_repeat["analysis"]["novelty_score"] < result_fresh["analysis"]["novelty_score"]
+        assert (
+            result_repeat["analysis"]["novelty_score"]
+            < result_fresh["analysis"]["novelty_score"]
+        )
 
     def test_mood_style_alignment_scoring(self):
         """Test that matching mood-style pairs score higher."""

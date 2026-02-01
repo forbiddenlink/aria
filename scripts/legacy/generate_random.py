@@ -5,17 +5,17 @@ This script creates a diverse collection of images using random prompts
 across various artistic styles, subjects, and aesthetics.
 """
 
-import sys
 import random
-from pathlib import Path
+import sys
 from datetime import datetime
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.ai_artist.core.generator import ImageGenerator
 from src.ai_artist.gallery.manager import GalleryManager
-from src.ai_artist.utils.logging import configure_logging, get_logger
 from src.ai_artist.utils.config import load_config
+from src.ai_artist.utils.logging import configure_logging, get_logger
 
 configure_logging()
 logger = get_logger(__name__)
@@ -111,30 +111,30 @@ RANDOM_PROMPTS = {
 
 def generate_random_images(num_images: int = 5, category: str | None = None):
     """Generate random images from diverse prompts.
-    
+
     Args:
         num_images: Number of images to generate
         category: Specific category to use, or None for random selection
     """
     logger.info("random_generation_started", num_images=num_images, category=category)
-    
+
     # Load configuration
     config_path = Path(__file__).parent.parent / "config" / "config.yaml"
     config = load_config(config_path)
-    
+
     # Initialize generator
     generator = ImageGenerator(
         model_id=config.model.base_model,
         device=config.model.device,
     )
-    
+
     logger.info("loading_model", model=config.model.base_model)
     generator.load_model()
-    
+
     # Initialize gallery
     gallery_dir = Path(__file__).parent.parent / "gallery"
     gallery = GalleryManager(gallery_dir=gallery_dir)
-    
+
     # Select prompts
     if category and category in RANDOM_PROMPTS:
         available_prompts = RANDOM_PROMPTS[category].copy()
@@ -145,27 +145,32 @@ def generate_random_images(num_images: int = 5, category: str | None = None):
         for cat_prompts in RANDOM_PROMPTS.values():
             available_prompts.extend(cat_prompts)
         logger.info("using_all_categories", total_prompts=len(available_prompts))
-    
+
     # Shuffle to ensure randomness
     random.shuffle(available_prompts)
-    
+
     # Generate images
     for i in range(num_images):
         if not available_prompts:
             logger.warning("no_more_prompts", generated=i)
             break
-        
+
         prompt = available_prompts.pop()
-        logger.info("generating_image", index=i+1, total=num_images, prompt=prompt[:50]+"...")
-        
+        logger.info(
+            "generating_image",
+            index=i + 1,
+            total=num_images,
+            prompt=prompt[:50] + "...",
+        )
+
         try:
             # Random parameters for variety
             steps = random.choice([20, 25, 30, 35])
             guidance = round(random.uniform(6.5, 8.5), 1)
             seed = random.randint(0, 999999)
-            
+
             logger.info("generation_params", steps=steps, guidance=guidance, seed=seed)
-            
+
             # Generate
             images = generator.generate(
                 prompt=prompt,
@@ -175,7 +180,7 @@ def generate_random_images(num_images: int = 5, category: str | None = None):
                 seed=seed,
                 num_images=1,
             )
-            
+
             # Save to gallery
             for img in images:
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -183,71 +188,73 @@ def generate_random_images(num_images: int = 5, category: str | None = None):
                 prompt_slug = "_".join(prompt.split()[:3]).lower()
                 prompt_slug = "".join(c for c in prompt_slug if c.isalnum() or c == "_")
                 filename = f"random_{prompt_slug}_{timestamp}.png"
-                
+
                 filepath = gallery.gallery_dir / "2026" / "01" / filename
                 filepath.parent.mkdir(parents=True, exist_ok=True)
-                
+
                 img.save(filepath)
                 logger.info("image_saved", path=str(filepath), size=img.size)
-                
-                print(f"\n✅ Generated {i+1}/{num_images}: {filename}")
+
+                print(f"\n✅ Generated {i + 1}/{num_images}: {filename}")
                 print(f"   📝 Prompt: {prompt[:70]}...")
                 print(f"   ⚙️  Steps: {steps}, Guidance: {guidance}, Seed: {seed}")
-        
+
         except Exception as e:
             logger.error("generation_failed", error=str(e), prompt=prompt)
-            print(f"\n❌ Failed to generate image {i+1}: {e}")
+            print(f"\n❌ Failed to generate image {i + 1}: {e}")
             continue
-    
+
     logger.info("random_generation_complete", total_generated=num_images)
     print(f"\n🎉 Complete! Generated {num_images} random images")
 
 
 if __name__ == "__main__":
     import argparse
-    
+
     parser = argparse.ArgumentParser(
         description="Generate random diverse images",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
 Available categories:
-  {', '.join(RANDOM_PROMPTS.keys())}
+  {", ".join(RANDOM_PROMPTS.keys())}
 
 Examples:
   # Generate 5 random images from any category
   python scripts/generate_random.py
-  
+
   # Generate 10 cosmic-themed images
   python scripts/generate_random.py -n 10 -c cosmic
-  
+
   # Generate 3 surreal images
   python scripts/generate_random.py -n 3 --category surreal
-        """
+        """,
     )
-    
+
     parser.add_argument(
-        "-n", "--num-images",
+        "-n",
+        "--num-images",
         type=int,
         default=5,
-        help="Number of images to generate (default: 5)"
+        help="Number of images to generate (default: 5)",
     )
-    
+
     parser.add_argument(
-        "-c", "--category",
+        "-c",
+        "--category",
         type=str,
         choices=list(RANDOM_PROMPTS.keys()),
-        help="Specific category to use (optional)"
+        help="Specific category to use (optional)",
     )
-    
+
     args = parser.parse_args()
-    
+
     print("🎨 AI Artist - Random Image Generator")
     print("=" * 50)
     if args.category:
         print(f"📂 Category: {args.category}")
     else:
-        print(f"📂 Category: All (random mix)")
+        print("📂 Category: All (random mix)")
     print(f"🔢 Number of images: {args.num_images}")
     print("=" * 50)
-    
+
     generate_random_images(num_images=args.num_images, category=args.category)

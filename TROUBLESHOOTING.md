@@ -24,6 +24,7 @@ Common issues and their solutions for AI Artist.
 **Cause:** Package not installed in editable mode
 
 **Solution:**
+
 ```bash
 pip install -e .
 ```
@@ -33,6 +34,7 @@ pip install -e .
 **Cause:** Python version too old
 
 **Solution:**
+
 ```bash
 # Check Python version
 python --version  # Should be 3.11+
@@ -48,6 +50,7 @@ python --version  # Should be 3.11+
 **Cause:** Missing C++ build tools
 
 **Solution:**
+
 1. Download Visual Studio Build Tools
 2. Install "Desktop development with C++"
 3. Retry pip install
@@ -57,6 +60,7 @@ python --version  # Should be 3.11+
 **Cause:** Wrong installation command for your system
 
 **Solution:**
+
 ```bash
 # NVIDIA GPU (CUDA 11.8)
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
@@ -82,6 +86,7 @@ pip install torch torchvision torchaudio
 **Solutions:**
 
 **Option 1: Reduce image size**
+
 ```yaml
 # config.yaml
 generation:
@@ -90,6 +95,7 @@ generation:
 ```
 
 **Option 2: Enable memory optimizations**
+
 ```yaml
 model:
   enable_attention_slicing: true
@@ -97,12 +103,14 @@ model:
 ```
 
 **Option 3: Use CPU**
+
 ```yaml
 model:
   device: "cpu"
 ```
 
 **Option 4: Reduce batch size**
+
 ```yaml
 generation:
   num_variations: 1  # Instead of 3
@@ -115,12 +123,14 @@ generation:
 **Solutions:**
 
 **Option 1: Use float32** (Already implemented as fallback)
+
 ```yaml
 model:
   dtype: "float32"
 ```
 
 **Option 2: Check code has MPS fixes**
+
 ```python
 # generator.py should have:
 if self.device == "mps":
@@ -128,6 +138,7 @@ if self.device == "mps":
 ```
 
 **Option 3: Update PyTorch**
+
 ```bash
 pip install --upgrade torch torchvision torchaudio
 ```
@@ -137,6 +148,7 @@ pip install --upgrade torch torchvision torchaudio
 **Cause:** GPU driver issue or memory corruption
 
 **Solution:**
+
 ```bash
 # Reset GPU state
 nvidia-smi --gpu-reset
@@ -153,6 +165,7 @@ nvidia-smi --gpu-reset
 ### ❌ Generation is very slow
 
 **Expected Times:**
+
 - NVIDIA RTX 3060: 15-30 seconds per image
 - Apple M1/M2: 30-60 seconds per image
 - CPU: 5-15 minutes per image
@@ -160,6 +173,7 @@ nvidia-smi --gpu-reset
 **Solutions:**
 
 **1. Check device:**
+
 ```python
 import torch
 print(f"CUDA: {torch.cuda.is_available()}")
@@ -167,12 +181,14 @@ print(f"MPS: {torch.backends.mps.is_available()}")
 ```
 
 **2. Reduce steps:**
+
 ```yaml
 generation:
   num_inference_steps: 20  # Instead of 30
 ```
 
 **3. Use smaller model:**
+
 ```yaml
 model:
   base_model: "stabilityai/stable-diffusion-v1-5"  # Smaller than XL
@@ -183,6 +199,7 @@ model:
 **Solutions:**
 
 **1. Increase steps:**
+
 ```yaml
 generation:
   num_inference_steps: 50
@@ -190,6 +207,7 @@ generation:
 ```
 
 **2. Improve prompt:**
+
 ```bash
 # Bad prompt
 ai-artist --theme "dog"
@@ -199,6 +217,7 @@ ai-artist --theme "a majestic golden retriever, professional photography, detail
 ```
 
 **3. Use negative prompts:**
+
 ```yaml
 generation:
   negative_prompt: "blurry, low quality, distorted, ugly, deformed, watermark, text, amateur"
@@ -209,6 +228,7 @@ generation:
 **Cause:** Weak guidance or poor prompt
 
 **Solution:**
+
 ```yaml
 generation:
   guidance_scale: 9.0  # Higher = more prompt adherence
@@ -225,23 +245,27 @@ generation:
 **Solutions:**
 
 **1. Wait for rate limit reset**
+
 ```bash
 # Check when limit resets (shown in error message)
 ```
 
 **2. Use Pexels as fallback**
+
 ```yaml
 api_keys:
   pexels_api_key: "YOUR_KEY"
 ```
 
 **3. Upgrade Unsplash tier**
+
 - Plus: 100 requests/hour
 - Enterprise: Unlimited
 
 ### ❌ "API key invalid"
 
 **Solution:**
+
 ```bash
 # Check config.yaml has correct keys
 cat config/config.yaml | grep unsplash_access_key
@@ -254,6 +278,7 @@ cat config/config.yaml | grep unsplash_access_key
 **Cause:** Network issues or API down
 
 **Solution:**
+
 ```bash
 # Check internet connection
 ping api.unsplash.com
@@ -274,6 +299,7 @@ timeout = 30  # seconds
 **Cause:** Another process using database
 
 **Solution:**
+
 ```bash
 # Find processes using the database
 lsof data/ai_artist.db
@@ -292,6 +318,7 @@ rm data/ai_artist.db-journal
 **Cause:** Migrations not run
 
 **Solution:**
+
 ```bash
 # Run migrations
 alembic upgrade head
@@ -300,6 +327,7 @@ alembic upgrade head
 ### ❌ Database corruption
 
 **Solution:**
+
 ```bash
 # Backup first
 cp data/ai_artist.db data/ai_artist.db.backup
@@ -323,11 +351,13 @@ alembic upgrade head
 **Solutions:**
 
 **Option 1: Use different port**
+
 ```bash
 ai-artist-web --port 8080
 ```
 
 **Option 2: Kill process using port**
+
 ```bash
 # macOS/Linux
 lsof -ti:8000 | xargs kill -9
@@ -344,16 +374,19 @@ taskkill /PID <PID> /F
 **Solutions:**
 
 **1. Check gallery directory exists:**
+
 ```bash
 ls -la gallery/
 ```
 
 **2. Check permissions:**
+
 ```bash
 chmod -R 755 gallery/
 ```
 
 **3. Check metadata files:**
+
 ```bash
 # Each image should have .json metadata
 ls gallery/2026/01/09/*.json
@@ -364,6 +397,7 @@ ls gallery/2026/01/09/*.json
 **Cause:** Static files not found
 
 **Solution:**
+
 ```bash
 # Check static directory structure
 ls src/ai_artist/web/static/
@@ -379,16 +413,19 @@ ls src/ai_artist/web/templates/
 **Solutions:**
 
 **1. Reduce batch size:**
+
 ```bash
 --train_batch_size 1
 ```
 
 **2. Reduce gradient accumulation:**
+
 ```bash
 --gradient_accumulation_steps 1
 ```
 
 **3. Use smaller rank:**
+
 ```bash
 --rank 4  # Instead of 16
 ```
@@ -398,6 +435,7 @@ ls src/ai_artist/web/templates/
 **Causes & Solutions:**
 
 **1. Learning rate too high/low:**
+
 ```bash
 # Try different learning rates
 --learning_rate 1e-4  # Start here
@@ -406,10 +444,12 @@ ls src/ai_artist/web/templates/
 ```
 
 **2. Not enough training data:**
+
 - Minimum: 15 images
 - Recommended: 30+ images
 
 **3. Poor quality training data:**
+
 - Images should be similar style/subject
 - Resolution should match target (1024x1024)
 - Diverse poses/angles
@@ -419,12 +459,14 @@ ls src/ai_artist/web/templates/
 **Causes & Solutions:**
 
 **1. LoRA scale too low:**
+
 ```yaml
 model:
   lora_scale: 1.0  # Try higher
 ```
 
 **2. Wrong LoRA path:**
+
 ```bash
 # Check path exists
 ls models/lora/my_style/
@@ -434,6 +476,7 @@ cat config/config.yaml | grep lora_path
 ```
 
 **3. Undertrained:**
+
 ```bash
 # Train longer
 --max_train_steps 3000  # Instead of 2000
@@ -448,6 +491,7 @@ cat config/config.yaml | grep lora_path
 **Cause:** Using CPU despite GPU available
 
 **Solution:**
+
 ```python
 # Check what device is being used
 import torch
@@ -463,6 +507,7 @@ print(f"CUDA available: {torch.cuda.is_available()}")
 **Cause:** Downloading model on every run
 
 **Solution:**
+
 ```bash
 # Models cached in:
 ls ~/.cache/huggingface/hub/
@@ -474,6 +519,7 @@ export HF_HOME=/path/to/cache
 ### ❌ Disk space running out
 
 **Solution:**
+
 ```bash
 # Check space
 df -h

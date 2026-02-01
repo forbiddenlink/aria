@@ -31,11 +31,11 @@ class ControlNetPreprocessor:
             image_np = np.concatenate([image_np, image_np, image_np], axis=2)
             canny_image = Image.fromarray(image_np)
             return canny_image
-        except ImportError:
+        except ImportError as e:
             logger.error("opencv_missing", action="install_opencv_python")
             raise RuntimeError(
                 "opencv-python is required for ControlNet Canny preprocessing"
-            )
+            ) from e
         except Exception as e:
             logger.error("canny_preprocessing_failed", error=str(e))
             raise

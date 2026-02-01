@@ -3,8 +3,9 @@
 from unittest.mock import patch
 
 import pytest
-from ai_artist.curation.curator import ImageCurator, QualityMetrics
 from PIL import Image
+
+from ai_artist.curation.curator import ImageCurator, QualityMetrics
 
 
 def test_quality_metrics_overall_score():
@@ -51,7 +52,6 @@ def test_curator_evaluate_with_mock():
         patch.object(curator, "_estimate_aesthetic", return_value=0.7),
         patch.object(curator, "_compute_technical_score", return_value=0.9),
     ):
-
         metrics = curator.evaluate(img, prompt)
 
         assert metrics.clip_score == 0.8

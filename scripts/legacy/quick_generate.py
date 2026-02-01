@@ -2,9 +2,11 @@
 """Quick single image generation test."""
 
 import sys
-import torch
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
+import torch
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.ai_artist.core.generator import ImageGenerator
@@ -28,7 +30,9 @@ generator.load_model()
 
 print("\n🎨 Generating test image...")
 
-prompt = "a beautiful sunset over mountains, golden hour, dramatic clouds, photorealistic"
+prompt = (
+    "a beautiful sunset over mountains, golden hour, dramatic clouds, photorealistic"
+)
 images = generator.generate(
     prompt=prompt,
     num_images=1,
@@ -50,5 +54,5 @@ for img in images:
 
 print(f"\n✅ Success! Generated and saved {len(images)} image(s)")
 print(f"📁 Gallery directory: {gallery.gallery_dir}")
-print(f"\n🌐 View in gallery: http://localhost:8000")
-print(f"\n🌐 View in gallery: http://localhost:8000")
+print("\n🌐 View in gallery: http://localhost:8000")
+print("\n🌐 View in gallery: http://localhost:8000")

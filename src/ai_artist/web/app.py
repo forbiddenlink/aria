@@ -52,11 +52,20 @@ from .middleware import (
 from .prompt_routes import router as prompt_router
 from .websocket import manager as ws_manager
 
+# Error message constants
+ERROR_INVALID_FILE_TYPE = "Invalid file type"
+ERROR_IMAGE_NOT_FOUND = "Image not found"
+ERROR_ACCESS_DENIED = "Access denied"
+METADATA_FILE_SUFFIX = ".json"
+
 # Concurrency control for image generation
 # Only allow 1 concurrent generation to prevent VRAM exhaustion
 _generation_semaphore = asyncio.Semaphore(1)
 _generation_timeout_seconds = 300  # 5 minute timeout for generation
 _generation_queue_size = 0  # Track queue depth
+
+# Background task tracking to prevent premature garbage collection
+_background_tasks: set = set()
 
 # Rate limiter instance
 limiter = Limiter(key_func=get_remote_address)
@@ -76,14 +85,15 @@ def set_web_config(config: WebConfig) -> None:
 
 def get_web_config() -> WebConfig:
     """Get the current web configuration."""
-    global _web_config
     if _web_config is None:
         # Return default config if not set (dev mode)
         return WebConfig()
     return _web_config
 
 
-async def require_api_key(api_key: str | None = Depends(api_key_header)) -> str:
+def require_api_key(
+    api_key: str | None = Depends(api_key_header),
+) -> str:
     """Require API key for admin endpoints.
 
     Admin endpoints always require authentication when API keys are configured.
@@ -289,12 +299,16 @@ app = FastAPI(
 app.state.limiter = limiter
 
 # Add exception handlers
-# Note: type: ignore needed because FastAPI's exception handler typing is overly strict
-# The handlers are correctly typed for their specific exception types
-app.add_exception_handler(HTTPException, http_exception_handler)  # type: ignore[arg-type]
-app.add_exception_handler(RequestValidationError, validation_exception_handler)  # type: ignore[arg-type]
+# Note: type: ignore needed because FastAPI's exception handler
+# typing is overly strict. The handlers are correctly typed for
+# their specific exception types
+# type: ignore[arg-type]
+app.add_exception_handler(HTTPException, http_exception_handler)
+# type: ignore[arg-type]
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, general_exception_handler)
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
+# type: ignore[arg-type]
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Add middleware (added in reverse order of execution)
 # CORS must be added last so it processes requests first
@@ -325,7 +339,10 @@ async def root(request: Request):
 
 @app.get("/aria", response_class=HTMLResponse)
 async def aria_page(request: Request):
-    """Serve Aria's creative studio - personality, mood, and creation interface."""
+    """Serve Aria's creative studio.
+
+    Personality, mood, and creation interface.
+    """
     return templates.TemplateResponse(
         "aria.html",
         {"request": request, "title": "Aria | Autonomous AI Artist"},
@@ -455,18 +472,18 @@ async def get_image_file(
     allowed_extensions = {".png", ".jpg", ".jpeg", ".webp"}
     file_ext = Path(file_path).suffix.lower()
     if file_ext not in allowed_extensions:
-        raise HTTPException(status_code=400, detail="Invalid file type")
+        raise HTTPException(status_code=400, detail=ERROR_INVALID_FILE_TYPE)
 
     full_path = gallery_path_obj / file_path
 
     if not full_path.exists() or not full_path.is_file():
-        raise HTTPException(status_code=404, detail="Image not found")
+        raise HTTPException(status_code=404, detail=ERROR_IMAGE_NOT_FOUND)
 
     # Security: ensure path is within gallery
     try:
         full_path.resolve().relative_to(gallery_path_obj.resolve())
     except ValueError as e:
-        raise HTTPException(status_code=403, detail="Access denied") from e
+        raise HTTPException(status_code=403, detail=ERROR_ACCESS_DENIED) from e
 
     return FileResponse(full_path, media_type="image/png")
 
@@ -504,20 +521,20 @@ async def delete_image(
 
     # Validate and resolve full paths
     full_image_path = gallery_path_obj / file_path
-    metadata_path = full_image_path.with_suffix(".json")
+    metadata_path = full_image_path.with_suffix(METADATA_FILE_SUFFIX)
 
     # Security check
     try:
         full_image_path.resolve().relative_to(gallery_path_obj.resolve())
     except ValueError as e:
-        raise HTTPException(status_code=403, detail="Access denied") from e
+        raise HTTPException(status_code=403, detail=ERROR_ACCESS_DENIED) from e
 
     # Delete image file
     if full_image_path.exists():
         full_image_path.unlink()
         logger.info("image_deleted", path=str(file_path))
     else:
-        raise HTTPException(status_code=404, detail="Image not found")
+        raise HTTPException(status_code=404, detail=ERROR_IMAGE_NOT_FOUND)
 
     # Delete metadata file if exists
     if metadata_path.exists():
@@ -538,17 +555,17 @@ async def toggle_featured(
     """Toggle featured status of an image."""
     gallery_path_obj = Path(gallery_path)
     full_image_path = gallery_path_obj / file_path
-    metadata_path = full_image_path.with_suffix(".json")
+    metadata_path = full_image_path.with_suffix(METADATA_FILE_SUFFIX)
 
     # Security check
     try:
         full_image_path.resolve().relative_to(gallery_path_obj.resolve())
     except ValueError as e:
-        raise HTTPException(status_code=403, detail="Access denied") from e
+        raise HTTPException(status_code=403, detail=ERROR_ACCESS_DENIED) from e
 
     # Check image exists
     if not full_image_path.exists():
-        raise HTTPException(status_code=404, detail="Image not found")
+        raise HTTPException(status_code=404, detail=ERROR_IMAGE_NOT_FOUND)
 
     # Load or create metadata (async file I/O)
     if metadata_path.exists():
@@ -556,7 +573,10 @@ async def toggle_featured(
             content = await f.read()
             metadata = json.loads(content)
     else:
-        metadata = {"prompt": "Unknown", "created_at": full_image_path.stat().st_mtime}
+        metadata = {
+            "prompt": "Unknown",
+            "created_at": full_image_path.stat().st_mtime,
+        }
 
     # Update featured status
     metadata["featured"] = featured
@@ -601,7 +621,7 @@ async def upload_image(
 
     # Validate file type
     if not image_file.content_type or not image_file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="Invalid file type")
+        raise HTTPException(status_code=400, detail=ERROR_INVALID_FILE_TYPE)
 
     # Read image data
     image_data = await image_file.read()
@@ -616,7 +636,6 @@ async def upload_image(
 
     # Generate filename based on timestamp if not provided
     import hashlib
-    from datetime import datetime
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     file_hash = hashlib.md5(image_data, usedforsecurity=False).hexdigest()[:8]
@@ -640,7 +659,7 @@ async def upload_image(
 
     # Save metadata if provided (async file I/O)
     if metadata:
-        metadata_path = image_path.with_suffix(".json")
+        metadata_path = image_path.with_suffix(METADATA_FILE_SUFFIX)
         async with aiofiles.open(metadata_path, "w") as f:
             await f.write(json.dumps(metadata, indent=2))
 
@@ -699,7 +718,6 @@ async def upload_batch(
 
             # Generate filename
             import hashlib
-            from datetime import datetime
 
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             file_hash = hashlib.md5(image_data, usedforsecurity=False).hexdigest()[:8]
@@ -723,7 +741,7 @@ async def upload_batch(
 
             # Save metadata (async file I/O)
             if metadata:
-                metadata_path = image_path.with_suffix(".json")
+                metadata_path = image_path.with_suffix(METADATA_FILE_SUFFIX)
                 async with aiofiles.open(metadata_path, "w") as f:
                     await f.write(json.dumps(metadata, indent=2))
 
@@ -810,7 +828,9 @@ async def create_template(
     save_templates(templates)
 
     logger.info(
-        "template_created", template_id=new_template["id"], name=new_template["name"]
+        "template_created",
+        template_id=new_template["id"],
+        name=new_template["name"],
     )
 
     return new_template
@@ -865,7 +885,8 @@ async def generate_artwork(
     """Start an artwork generation job.
 
     Returns a session ID that can be used to track progress via WebSocket.
-    Uses a semaphore to limit concurrent generations and prevent VRAM exhaustion.
+    Uses a semaphore to limit concurrent generations and prevent VRAM
+    exhaustion.
     Rate limited to 5 requests per minute due to expensive GPU operations.
     """
     import uuid
@@ -901,7 +922,9 @@ async def generate_artwork(
                 )
                 await ws_manager.send_generation_error(
                     session_id=session_id,
-                    error=f"Generation timed out after {_generation_timeout_seconds}s",
+                    error=(
+                        f"Generation timed out after {_generation_timeout_seconds}s"
+                    ),
                 )
         finally:
             _generation_queue_size -= 1
@@ -915,8 +938,9 @@ async def generate_artwork(
             # Check if config exists - if not, we're in gallery-only mode
             if not config_path.exists():
                 raise ValueError(
-                    "Image generation is not available. This instance is running in gallery-only mode. "
-                    "To enable generation, provide a config/config.yaml file with model settings."
+                    "Image generation is not available. This instance is "
+                    "running in gallery-only mode. To enable generation, "
+                    "provide a config/config.yaml file with model settings."
                 )
 
             config = load_config(config_path)
@@ -949,11 +973,11 @@ async def generate_artwork(
                 seed=generation_request.seed,
             )
 
-            # Save only valid images (black/blank already filtered by generator)
+            # Save only valid images
+            # (black/blank already filtered by generator)
             image_paths = []
-            from datetime import datetime as dt
 
-            now = dt.now()
+            now = datetime.now()
             for i, img in enumerate(images):
                 # Double-check validity before saving
                 is_invalid, reason = is_black_or_blank(img)
@@ -979,16 +1003,16 @@ async def generate_artwork(
                 image_paths.append(str(save_path))
 
                 # Save metadata
-                metadata_path = save_path.with_suffix(".json")
+                metadata_path = save_path.with_suffix(METADATA_FILE_SUFFIX)
                 metadata_path.write_text(
                     json.dumps(
                         {
                             "prompt": generation_request.prompt,
-                            "negative_prompt": generation_request.negative_prompt,
+                            "negative_prompt": (generation_request.negative_prompt),
                             "width": generation_request.width,
                             "height": generation_request.height,
                             "steps": generation_request.num_inference_steps,
-                            "guidance_scale": generation_request.guidance_scale,
+                            "guidance_scale": (generation_request.guidance_scale),
                             "seed": generation_request.seed,
                             "created_at": now.isoformat(),
                             "session_id": session_id,
@@ -1006,7 +1030,10 @@ async def generate_artwork(
             else:
                 await ws_manager.send_generation_error(
                     session_id=session_id,
-                    error="All generated images were invalid (black/blank). Try different settings.",
+                    error=(
+                        "All generated images were invalid (black/blank). "
+                        "Try different settings."
+                    ),
                 )
 
         except Exception as e:
@@ -1017,8 +1044,11 @@ async def generate_artwork(
             if generator:
                 generator.unload()
 
-    # Start background task
-    asyncio.create_task(generate_task())
+    # Start background task and keep reference to prevent GC
+    task = asyncio.create_task(generate_task())
+    # Store task reference to prevent premature garbage collection
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
 
     return GenerationResponse(
         session_id=session_id,

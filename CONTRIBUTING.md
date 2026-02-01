@@ -59,6 +59,7 @@ black --check src/
 ```
 
 **Black Configuration:**
+
 - Line length: 88 characters
 - Python 3.10+ syntax
 
@@ -90,13 +91,13 @@ def generate_artwork(
 ) -> List[Dict[str, str]]:
     """
     Generate artwork with specified parameters.
-    
+
     Args:
         prompt: Text description of desired artwork
         style: LoRA style name to apply
         size: Image dimensions (width, height)
         variations: Number of variations to generate
-    
+
     Returns:
         List of dictionaries containing artwork metadata
     """
@@ -111,21 +112,21 @@ Use Google-style docstrings:
 def curate_artwork(images: List[Image], threshold: float = 70.0) -> List[Image]:
     """
     Curate artwork based on quality metrics.
-    
+
     Evaluates images using multiple metrics including aesthetic score,
     technical quality, and diversity. Only images scoring above the
     threshold are returned.
-    
+
     Args:
         images: List of PIL Image objects to evaluate
         threshold: Minimum quality score (0-100) for selection
-    
+
     Returns:
         Filtered list of images meeting quality threshold
-    
+
     Raises:
         ValueError: If threshold is outside valid range
-        
+
     Example:
         >>> images = [load_image(p) for p in image_paths]
         >>> selected = curate_artwork(images, threshold=75.0)
@@ -133,7 +134,7 @@ def curate_artwork(images: List[Image], threshold: float = 70.0) -> List[Image]:
     """
     if not 0 <= threshold <= 100:
         raise ValueError("Threshold must be between 0 and 100")
-    
+
     # Implementation...
 ```
 
@@ -154,7 +155,8 @@ git checkout -b fix/api-rate-limit-handling
 git checkout -b docs/update-setup-guide
 ```
 
-### Branch Naming Conventions:
+### Branch Naming Conventions
+
 - `feature/` - New features
 - `fix/` - Bug fixes
 - `docs/` - Documentation updates
@@ -202,6 +204,7 @@ git commit -m "feat: add Pexels API support"
 ```
 
 **Types:**
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation changes
@@ -324,11 +327,11 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 class NewAPIClient:
     """Client for NewAPI image service."""
-    
+
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.base_url = "https://api.newservice.com"
-    
+
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=4, max=10)
@@ -336,13 +339,13 @@ class NewAPIClient:
     def fetch_random_image(self, query: Optional[str] = None) -> Dict[str, str]:
         """
         Fetch random image from NewAPI.
-        
+
         Args:
             query: Optional search query
-            
+
         Returns:
             Dictionary with image URL and metadata
-            
+
         Raises:
             APIError: If request fails after retries
         """
@@ -360,11 +363,11 @@ from unittest.mock import patch
 from src.inspiration.new_api_client import NewAPIClient
 
 class TestNewAPIClient:
-    
+
     @pytest.fixture
     def client(self):
         return NewAPIClient(api_key="test_key")
-    
+
     def test_fetch_random_image_success(self, client):
         # Test implementation
         pass
@@ -433,7 +436,7 @@ python src/train_lora.py --config config/training.yaml
 def upgrade(db):
     """Add diversity_score column to artworks table."""
     db.execute("""
-        ALTER TABLE artworks 
+        ALTER TABLE artworks
         ADD COLUMN diversity_score REAL DEFAULT 0
     """)
 
@@ -527,6 +530,7 @@ stats.print_stats(20)
 ## Recognition
 
 Contributors will be:
+
 - Listed in README.md
 - Credited in release notes
 - Appreciated in the community! 🎉
@@ -542,12 +546,14 @@ We are committed to providing a welcoming and inclusive environment for all cont
 ### Standards
 
 **Expected Behavior:**
+
 - Be respectful and inclusive
 - Welcome newcomers
 - Accept constructive criticism
 - Focus on what's best for the project
 
 **Unacceptable Behavior:**
+
 - Harassment or discrimination
 - Trolling or insulting comments
 - Personal or political attacks
@@ -564,6 +570,7 @@ By contributing, you agree that your contributions will be licensed under the MI
 ## Questions?
 
 If you have questions about contributing, feel free to:
+
 - Open an issue with the `question` label
 - Start a discussion on GitHub
 - Reach out to maintainers

@@ -6,10 +6,10 @@ The AI Artist now supports real-time progress updates via WebSocket! This allows
 
 ## Features
 
-✅ **Real-time Progress** - See generation progress update step-by-step  
-✅ **Session-Based** - Track multiple generations simultaneously  
-✅ **Auto-Reconnect** - Automatically reconnects if connection drops  
-✅ **Status Updates** - Get notified of completion, errors, and more  
+✅ **Real-time Progress** - See generation progress update step-by-step
+✅ **Session-Based** - Track multiple generations simultaneously
+✅ **Auto-Reconnect** - Automatically reconnects if connection drops
+✅ **Status Updates** - Get notified of completion, errors, and more
 ✅ **Modern UI** - Beautiful test interface included
 
 ## Quick Start
@@ -28,7 +28,7 @@ The server will start on `http://localhost:8000`
 
 ### 2. Open the Test Interface
 
-Navigate to: **http://localhost:8000/test/websocket**
+Navigate to: **<http://localhost:8000/test/websocket>**
 
 ### 3. Test Generation
 
@@ -89,6 +89,7 @@ ws.send(JSON.stringify({
 ### Message Types
 
 #### `generation_progress`
+
 ```json
 {
     "type": "generation_progress",
@@ -100,6 +101,7 @@ ws.send(JSON.stringify({
 ```
 
 #### `generation_complete`
+
 ```json
 {
     "type": "generation_complete",
@@ -113,6 +115,7 @@ ws.send(JSON.stringify({
 ```
 
 #### `generation_error`
+
 ```json
 {
     "type": "generation_error",
@@ -196,25 +199,28 @@ async def my_websocket(websocket: WebSocket):
 ## Troubleshooting
 
 ### WebSocket won't connect
+
 - Check that the server is running on the expected port
 - Verify no firewall is blocking WebSocket connections
 - Check browser console for errors
 
 ### No progress updates
+
 - Ensure you're passing `session_id` to `generator.generate()`
 - Check that WebSocket connection is established before starting generation
 - Verify the client subscribed to the session
 
 ### Progress updates stop mid-generation
+
 - Check for errors in server logs
 - Verify the WebSocket connection didn't drop
 - Check system resources (GPU memory, RAM)
 
 ## Next Steps
 
-🎯 **Modern Web UI** - Build a production-ready interface with Tailwind CSS  
-🎯 **Multiple Workers** - Support concurrent generation jobs  
-🎯 **Progress Persistence** - Store progress in database for recovery  
+🎯 **Modern Web UI** - Build a production-ready interface with Tailwind CSS
+🎯 **Multiple Workers** - Support concurrent generation jobs
+🎯 **Progress Persistence** - Store progress in database for recovery
 🎯 **Gallery Updates** - Push new images to gallery in real-time
 
 ## Resources

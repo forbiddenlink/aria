@@ -186,7 +186,7 @@ def main():
 
     # Generate manifest
     print("\n📝 Generating gallery manifest...")
-    manifest = generate_gallery_manifest(gallery_dir, output_dir / "manifest.json")
+    generate_gallery_manifest(gallery_dir, output_dir / "manifest.json")
 
     # Display results
     print("\n✅ Optimization Complete!")

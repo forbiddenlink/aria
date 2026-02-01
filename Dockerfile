@@ -45,11 +45,9 @@ COPY --from=builder /root/.local /home/aiartist/.local
 # Copy application code
 COPY --chown=aiartist:aiartist . .
 
-# Install package in non-editable mode for production
-RUN pip install --no-cache-dir .
-
-# Create necessary directories with proper ownership
-RUN mkdir -p gallery models logs config data \
+# Install package and create necessary directories with proper ownership
+RUN pip install --no-cache-dir . \
+    && mkdir -p gallery models logs config data \
     && chown -R aiartist:aiartist /app
 
 # Set environment variables
@@ -57,11 +55,9 @@ ENV PATH=/home/aiartist/.local/bin:$PATH
 ENV PYTHONUNBUFFERED=1
 ENV HF_HOME=/app/models/cache
 
-# Install gosu for safe user switching in entrypoint (Debian equivalent of su-exec)
-RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/*
-
-# Create entrypoint script that runs as root to fix permissions, then switches to aiartist
-RUN echo '#!/bin/sh\n\
+# Install gosu and create entrypoint script in one layer
+RUN apt-get update && apt-get install -y --no-install-recommends gosu && rm -rf /var/lib/apt/lists/* \
+    && echo '#!/bin/sh\n\
 # Run as root to ensure gallery directory exists and is writable\n\
 mkdir -p /app/gallery/2026 || true\n\
 chown -R aiartist:aiartist /app/gallery 2>/dev/null || true\n\

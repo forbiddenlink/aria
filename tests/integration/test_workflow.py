@@ -78,7 +78,6 @@ async def test_full_artwork_creation_workflow(
         patch("ai_artist.main.ImageCurator") as mock_curator_class,
         patch("ai_artist.main.GalleryManager") as mock_gallery_class,
     ):
-
         # Setup mocks
         mock_generator = MagicMock()
         mock_generator.generate.return_value = [MagicMock(), MagicMock()]  # 2 images
@@ -160,7 +159,6 @@ async def test_error_handling_api_failure(mock_config):
         patch("ai_artist.main.ImageGenerator") as mock_gen_class,
         patch("ai_artist.main.UnsplashClient") as mock_unsplash_class,
     ):
-
         # Setup mocks
         mock_generator = MagicMock()
         mock_gen_class.return_value = mock_generator

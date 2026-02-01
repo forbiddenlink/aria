@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
 from ai_artist.scheduling.scheduler import CreationScheduler, ScheduledArtist
 
 

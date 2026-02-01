@@ -1,7 +1,8 @@
 """Tests for Unsplash API client."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from src.ai_artist.api.unsplash import UnsplashClient
 
@@ -64,4 +65,3 @@ def test_get_attribution():
     assert "Test User" in attribution
     assert "Unsplash" in attribution
     assert "utm_source=ai-artist" in attribution
-

@@ -127,7 +127,13 @@ class ImageCurator:
             return True
 
         try:
-            import torch
+            from importlib.util import find_spec
+
+            # Check if torch is available without importing
+            if find_spec("torch") is None:
+                raise ImportError("torch not available")
+
+            import torch  # noqa: F401
             from aesthetics_predictor import AestheticsPredictorV2Linear
             from transformers import CLIPProcessor
 
@@ -321,17 +327,27 @@ class ImageCurator:
             aspect = max(width, height) / max(min(width, height), 1)
             golden_ratio = 1.618
             # Score how close to golden ratio or square (1.0)
-            aspect_score = 1.0 - min(abs(aspect - golden_ratio), abs(aspect - 1.0)) / 2.0
+            aspect_score = (
+                1.0 - min(abs(aspect - golden_ratio), abs(aspect - 1.0)) / 2.0
+            )
             aspect_score = max(0.0, min(1.0, aspect_score))
 
             # 2. Contrast score (standard deviation of luminance)
-            luminance = 0.299 * img_array[:, :, 0] + 0.587 * img_array[:, :, 1] + 0.114 * img_array[:, :, 2]
+            luminance = (
+                0.299 * img_array[:, :, 0]
+                + 0.587 * img_array[:, :, 1]
+                + 0.114 * img_array[:, :, 2]
+            )
             contrast = luminance.std() / 128.0  # Normalize by half the max value
             contrast_score = min(1.0, contrast)
 
             # 3. Color saturation score
             # Convert to HSV-like saturation without opencv
-            r, g, b = img_array[:, :, 0].astype(np.float32), img_array[:, :, 1].astype(np.float32), img_array[:, :, 2].astype(np.float32)
+            r, g, b = (
+                img_array[:, :, 0].astype(np.float32),
+                img_array[:, :, 1].astype(np.float32),
+                img_array[:, :, 2].astype(np.float32),
+            )
             max_rgb = np.maximum(np.maximum(r, g), b)
             min_rgb = np.minimum(np.minimum(r, g), b)
             # Saturation = (max - min) / max, avoiding division by zero
@@ -341,9 +357,7 @@ class ImageCurator:
 
             # Weighted combination
             aesthetic_score = (
-                aspect_score * 0.4
-                + contrast_score * 0.3
-                + saturation_score * 0.3
+                aspect_score * 0.4 + contrast_score * 0.3 + saturation_score * 0.3
             )
 
             logger.debug(

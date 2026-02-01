@@ -40,7 +40,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: 
+            background:
                 radial-gradient(circle at 20% 50%, rgba(18, 18, 18, 0.8) 0%, transparent 50%),
                 radial-gradient(circle at 80% 80%, rgba(28, 28, 30, 0.8) 0%, transparent 50%),
                 radial-gradient(circle at 40% 20%, rgba(15, 15, 17, 0.9) 0%, transparent 40%);
@@ -540,7 +540,7 @@
         // Render gallery
         function renderGallery(append = false) {
             const gallery = document.getElementById('gallery');
-            
+
             if (!append) {
                 gallery.innerHTML = '';
             }
@@ -629,7 +629,7 @@
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                
+
                 currentFilter = btn.dataset.filter === 'featured' ? 'featured' : null;
                 currentOffset = 0;
                 loadImages();

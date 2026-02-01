@@ -13,42 +13,42 @@
             background: #0f172a;
             color: #e2e8f0;
         }
-        
+
         .container {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 20px;
         }
-        
+
         .panel {
             background: #1e293b;
             border-radius: 12px;
             padding: 24px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
         }
-        
+
         h1 {
             color: #60a5fa;
             margin-top: 0;
         }
-        
+
         h2 {
             color: #94a3b8;
             font-size: 1.25rem;
             margin-top: 0;
         }
-        
+
         .form-group {
             margin-bottom: 16px;
         }
-        
+
         label {
             display: block;
             margin-bottom: 6px;
             color: #cbd5e1;
             font-weight: 500;
         }
-        
+
         input, textarea {
             width: 100%;
             padding: 10px;
@@ -58,12 +58,12 @@
             color: #e2e8f0;
             font-family: inherit;
         }
-        
+
         textarea {
             resize: vertical;
             min-height: 80px;
         }
-        
+
         button {
             background: #3b82f6;
             color: white;
@@ -74,40 +74,40 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-        
+
         button:hover {
             background: #2563eb;
         }
-        
+
         button:disabled {
             background: #475569;
             cursor: not-allowed;
         }
-        
+
         .status {
             padding: 12px;
             border-radius: 6px;
             margin-bottom: 16px;
             font-weight: 500;
         }
-        
+
         .status.connected {
             background: #065f46;
             color: #6ee7b7;
         }
-        
+
         .status.disconnected {
             background: #7f1d1d;
             color: #fca5a5;
         }
-        
+
         .progress-container {
             background: #0f172a;
             border-radius: 8px;
             padding: 16px;
             margin: 16px 0;
         }
-        
+
         .progress-bar {
             background: #1e293b;
             border-radius: 999px;
@@ -115,7 +115,7 @@
             overflow: hidden;
             position: relative;
         }
-        
+
         .progress-fill {
             background: linear-gradient(90deg, #3b82f6, #60a5fa);
             height: 100%;
@@ -127,7 +127,7 @@
             font-weight: 600;
             font-size: 0.875rem;
         }
-        
+
         .messages {
             background: #0f172a;
             border-radius: 8px;
@@ -137,7 +137,7 @@
             font-family: 'Courier New', monospace;
             font-size: 0.875rem;
         }
-        
+
         .message {
             padding: 8px;
             margin: 4px 0;
@@ -145,29 +145,29 @@
             border-left: 3px solid #3b82f6;
             background: #1e293b;
         }
-        
+
         .message.error {
             border-color: #ef4444;
             background: #7f1d1d;
         }
-        
+
         .message.success {
             border-color: #10b981;
             background: #065f46;
         }
-        
+
         .timestamp {
             color: #64748b;
             font-size: 0.75rem;
         }
-        
+
         .image-preview {
             margin-top: 16px;
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 12px;
         }
-        
+
         .image-preview img {
             width: 100%;
             border-radius: 8px;
@@ -177,80 +177,80 @@
 </head>
 <body>
     <h1>🎨 AI Artist WebSocket Test</h1>
-    
+
     <div class="container">
         <div class="panel">
             <h2>Generation Form</h2>
-            
+
             <div id="ws-status" class="status disconnected">
                 WebSocket: Disconnected
             </div>
-            
+
             <form id="generation-form">
                 <div class="form-group">
                     <label for="prompt">Prompt:</label>
                     <textarea id="prompt" name="prompt" required>A serene mountain landscape at sunset, photorealistic, 4K</textarea>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="negative-prompt">Negative Prompt:</label>
                     <textarea id="negative-prompt" name="negative_prompt">blurry, low quality, watermark</textarea>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="steps">Inference Steps: <span id="steps-value">30</span></label>
                     <input type="range" id="steps" name="num_inference_steps" min="10" max="100" value="30">
                 </div>
-                
+
                 <div class="form-group">
                     <label for="guidance">Guidance Scale: <span id="guidance-value">7.5</span></label>
                     <input type="range" id="guidance" name="guidance_scale" min="1" max="20" step="0.5" value="7.5">
                 </div>
-                
+
                 <button type="submit" id="generate-btn">Generate Artwork</button>
             </form>
-            
+
             <div class="progress-container" id="progress-container" style="display: none;">
                 <div class="progress-bar">
                     <div class="progress-fill" id="progress-fill" style="width: 0%">0%</div>
                 </div>
                 <p id="progress-message" style="margin-top: 8px; color: #94a3b8;"></p>
             </div>
-            
+
             <div class="image-preview" id="image-preview"></div>
         </div>
-        
+
         <div class="panel">
             <h2>WebSocket Messages</h2>
             <button onclick="clearMessages()">Clear Messages</button>
             <div class="messages" id="messages"></div>
         </div>
     </div>
-    
+
     <script>
         let ws = null;
         let currentSessionId = null;
-        
+
         // Update slider values
         document.getElementById('steps').addEventListener('input', (e) => {
             document.getElementById('steps-value').textContent = e.target.value;
         });
-        
+
         document.getElementById('guidance').addEventListener('input', (e) => {
             document.getElementById('guidance-value').textContent = e.target.value;
         });
-        
+
         // Connect to WebSocket
         function connectWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${protocol}//${window.location.host}/ws`;
-            
+
             ws = new WebSocket(wsUrl);
-            
+
             ws.onopen = () => {
                 updateStatus(true);
                 addMessage('WebSocket connected', 'success');
-                
+
                 // Send ping every 30 seconds
                 setInterval(() => {
                     if (ws.readyState === WebSocket.OPEN) {
@@ -258,113 +258,113 @@
                     }
                 }, 30000);
             };
-            
+
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 handleWebSocketMessage(data);
             };
-            
+
             ws.onerror = (error) => {
                 addMessage(`WebSocket error: ${error}`, 'error');
             };
-            
+
             ws.onclose = () => {
                 updateStatus(false);
                 addMessage('WebSocket disconnected', 'error');
-                
+
                 // Reconnect after 3 seconds
                 setTimeout(connectWebSocket, 3000);
             };
         }
-        
+
         function updateStatus(connected) {
             const statusEl = document.getElementById('ws-status');
             statusEl.className = connected ? 'status connected' : 'status disconnected';
             statusEl.textContent = connected ? 'WebSocket: Connected' : 'WebSocket: Disconnected';
         }
-        
+
         function handleWebSocketMessage(data) {
             addMessage(`Received: ${JSON.stringify(data, null, 2)}`);
-            
+
             switch (data.type) {
                 case 'generation_progress':
                     updateProgress(data.step, data.total_steps, data.message);
                     break;
-                    
+
                 case 'generation_complete':
                     showComplete(data.image_paths, data.metadata);
                     break;
-                    
+
                 case 'generation_error':
                     showError(data.error);
                     break;
             }
         }
-        
+
         function updateProgress(step, totalSteps, message) {
             const progressContainer = document.getElementById('progress-container');
             const progressFill = document.getElementById('progress-fill');
             const progressMessage = document.getElementById('progress-message');
-            
+
             progressContainer.style.display = 'block';
-            
+
             const percent = Math.round((step / totalSteps) * 100);
             progressFill.style.width = `${percent}%`;
             progressFill.textContent = `${percent}%`;
             progressMessage.textContent = message || `Step ${step}/${totalSteps}`;
         }
-        
+
         function showComplete(imagePaths, metadata) {
             const progressContainer = document.getElementById('progress-container');
             progressContainer.style.display = 'none';
-            
+
             addMessage('Generation complete!', 'success');
-            
+
             // Display images
             const preview = document.getElementById('image-preview');
             preview.innerHTML = '';
-            
+
             imagePaths.forEach(path => {
                 const img = document.createElement('img');
                 img.src = `/api/images/file/${path}`;
                 img.alt = metadata.prompt || 'Generated image';
                 preview.appendChild(img);
             });
-            
+
             document.getElementById('generate-btn').disabled = false;
         }
-        
+
         function showError(error) {
             const progressContainer = document.getElementById('progress-container');
             progressContainer.style.display = 'none';
-            
+
             addMessage(`Generation error: ${error}`, 'error');
             document.getElementById('generate-btn').disabled = false;
         }
-        
+
         function addMessage(text, type = '') {
             const messagesEl = document.getElementById('messages');
             const messageEl = document.createElement('div');
             messageEl.className = `message ${type}`;
-            
+
             const timestamp = new Date().toLocaleTimeString();
             messageEl.innerHTML = `
                 <div class="timestamp">${timestamp}</div>
                 <div>${text}</div>
             `;
-            
+
             messagesEl.appendChild(messageEl);
             messagesEl.scrollTop = messagesEl.scrollHeight;
         }
-        
+
         function clearMessages() {
             document.getElementById('messages').innerHTML = '';
         }
-        
+
         // Handle form submission
         document.getElementById('generation-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const formData = new FormData(e.target);
             const data = {
                 prompt: formData.get('prompt'),
@@ -373,22 +373,22 @@
                 guidance_scale: parseFloat(formData.get('guidance_scale')),
                 num_images: 1
             };
-            
+
             document.getElementById('generate-btn').disabled = true;
             addMessage(`Starting generation with prompt: "${data.prompt}"`);
-            
+
             try {
                 const response = await fetch('/api/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
-                
+
                 const result = await response.json();
                 currentSessionId = result.session_id;
-                
+
                 addMessage(`Session started: ${result.session_id}`, 'success');
-                
+
                 // Subscribe to updates for this session
                 if (ws && ws.readyState === WebSocket.OPEN) {
                     ws.send(JSON.stringify({
@@ -396,13 +396,13 @@
                         session_id: currentSessionId
                     }));
                 }
-                
+
             } catch (error) {
                 addMessage(`Failed to start generation: ${error}`, 'error');
                 document.getElementById('generate-btn').disabled = false;
             }
         });
-        
+
         // Connect on page load
         connectWebSocket();
     </script>

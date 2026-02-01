@@ -1,9 +1,8 @@
 """Test database operations."""
 
 import pytest
-from pathlib import Path
 
-from src.ai_artist.db.models import GeneratedImage, Base
+from src.ai_artist.db.models import Base, GeneratedImage
 from src.ai_artist.db.session import create_db_engine, create_session_factory
 
 
@@ -49,10 +48,13 @@ def test_image_defaults(test_db):
         session.add(image)
         session.commit()
 
-        result = session.query(GeneratedImage).filter_by(filename="test_defaults.png").first()
+        result = (
+            session.query(GeneratedImage)
+            .filter_by(filename="test_defaults.png")
+            .first()
+        )
         assert result.status == "pending"
         assert result.is_featured is False
         assert result.negative_prompt == ""
     finally:
         session.close()
-

@@ -51,11 +51,8 @@ class PromptEmphasis:
             text = match.group(1).strip()
             weight_str = match.group(2)
 
-            if weight_str:
-                weight = float(weight_str)
-            else:
-                # () without weight means 1.1x emphasis
-                weight = self.default_emphasis
+            # () without weight means 1.1x emphasis
+            weight = float(weight_str) if weight_str else self.default_emphasis
 
             if text:
                 segments.append((text, weight))

@@ -32,11 +32,13 @@ vercel env add GALLERY_ONLY_MODE true
 ```
 
 **What works on Vercel:**
+
 - Viewing gallery images
 - API endpoints for listing/filtering images
 - Health checks
 
 **What doesn't work on Vercel:**
+
 - Image generation (no GPU)
 - Long-running processes
 - Large model files
@@ -70,24 +72,28 @@ railway up
 ## Deployment Options
 
 ### Local Development
+
 - **Best for**: Initial development, testing, personal use
 - **Requirements**: GPU-enabled machine (NVIDIA RTX 3060+ recommended)
 - **Pros**: Full control, no ongoing costs, data privacy
 - **Cons**: Limited scalability, requires local GPU
 
 ### Docker Deployment
+
 - **Best for**: Consistent deployment across environments
 - **Requirements**: Docker, Docker Compose, NVIDIA Container Toolkit
 - **Pros**: Portable, reproducible, easy rollback
 - **Cons**: Additional complexity, resource overhead
 
 ### Kubernetes Deployment
+
 - **Best for**: Production, high availability, auto-scaling
 - **Requirements**: K8s cluster, GPU node pools
 - **Pros**: Auto-scaling, load balancing, high availability
 - **Cons**: Complex setup, higher operational overhead
 
 ### Cloud Platform Deployment
+
 - **Best for**: Managed infrastructure, elastic scaling
 - **Options**: AWS SageMaker, Azure ML, Google Cloud Vertex AI
 - **Pros**: Managed infrastructure, auto-scaling, built-in monitoring
@@ -191,6 +197,7 @@ CMD ["python3.11", "src/main.py"]
 ### AWS Deployment
 
 #### Using EC2 with GPU
+
 ```bash
 # Launch g4dn.xlarge instance (T4 GPU)
 aws ec2 run-instances \
@@ -209,6 +216,7 @@ docker run -d --gpus all your-registry/ai-artist:latest
 ```
 
 #### Using SageMaker
+
 ```python
 from sagemaker.estimator import Estimator
 
@@ -231,6 +239,7 @@ estimator.fit(wait=False)
 ### GCP Deployment
 
 #### Using GKE (Google Kubernetes Engine)
+
 ```bash
 # Create GKE cluster with GPU nodes
 gcloud container clusters create ai-artist-cluster \
@@ -250,6 +259,7 @@ kubectl apply -f k8s/deployment.yaml
 ```
 
 #### Kubernetes Deployment Manifest
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -301,6 +311,7 @@ spec:
 ### Azure Deployment
 
 #### Using Azure ML
+
 ```python
 from azureml.core import Workspace, Experiment, Environment, ScriptRunConfig
 from azureml.core.compute import AmlCompute
@@ -333,6 +344,7 @@ run = experiment.submit(config)
 ### GPU Cost Analysis (2026)
 
 #### Cloud Provider Comparison
+
 | Provider | Instance Type | GPU | Cost/Hour | Monthly (24/7) |
 |----------|--------------|-----|-----------|----------------|
 | AWS | g4dn.xlarge | T4 | $0.526 | ~$380 |
@@ -345,6 +357,7 @@ run = experiment.submit(config)
 #### Cost-Effective Strategies
 
 **1. Scheduled Generation (Recommended for this project)**
+
 ```python
 # Generate daily at 2 AM when costs are lowest
 schedule.every().day.at("02:00").do(generate_artwork)
@@ -353,6 +366,7 @@ schedule.every().day.at("02:00").do(generate_artwork)
 ```
 
 **2. Spot Instances (70% cost reduction)**
+
 ```bash
 # AWS Spot request
 aws ec2 request-spot-instances \
@@ -364,6 +378,7 @@ aws ec2 request-spot-instances \
 ```
 
 **3. Preemptible/Spot Instances on GCP**
+
 ```yaml
 # Add to deployment
 spec:
@@ -376,6 +391,7 @@ spec:
 ```
 
 **4. Auto-Scaling with Scale-to-Zero**
+
 ```yaml
 # KEDA ScaledObject for Kubernetes
 apiVersion: keda.sh/v1alpha1
@@ -421,16 +437,19 @@ spec:
 ### Budget Scenarios
 
 **Minimal Budget ($10-20/month)**
+
 - Local generation on personal GPU
 - Free tier API usage (Unsplash: 50 req/hr)
 - Local storage
 
 **Small Budget ($50-100/month)**
+
 - Scheduled cloud generation (1-2 hours/day)
 - Spot/preemptible instances
 - Cloud storage for gallery
 
 **Medium Budget ($200-500/month)**
+
 - Reserved instance for consistent availability
 - Higher API limits
 - Managed MLOps platform (MLflow, W&B)
@@ -442,6 +461,7 @@ spec:
 ### Using Alembic
 
 #### Setup
+
 ```bash
 # Install Alembic
 pip install alembic
@@ -454,6 +474,7 @@ sqlalchemy.url = sqlite:///data/ai_artist.db
 ```
 
 #### Configuration (alembic/env.py)
+
 ```python
 from src.database import Base
 from src.models import Artwork, InspirationImage, TrainingSession
@@ -493,6 +514,7 @@ def run_migrations_online():
 ```
 
 #### Create Migration
+
 ```bash
 # Auto-generate migration from model changes
 alembic revision --autogenerate -m "Add performance_metrics column"
@@ -502,6 +524,7 @@ alembic revision -m "Add indexes for performance"
 ```
 
 #### Example Migration (alembic/versions/001_initial.py)
+
 ```python
 """Initial schema
 
@@ -539,6 +562,7 @@ def downgrade():
 ```
 
 #### Example Migration with SQLite Batch Operations
+
 ```python
 def upgrade():
     # SQLite doesn't support ALTER COLUMN directly
@@ -555,6 +579,7 @@ def downgrade():
 ```
 
 #### Run Migrations
+
 ```bash
 # Check current version
 alembic current
@@ -573,6 +598,7 @@ alembic upgrade 003
 ```
 
 #### CI/CD Integration
+
 ```yaml
 # .github/workflows/ci.yml
 jobs:
@@ -594,12 +620,14 @@ jobs:
 ### Migration Best Practices
 
 1. **Always use batch operations for SQLite**
+
    ```python
    with op.batch_alter_table('table_name') as batch_op:
        batch_op.add_column(...)
    ```
 
 2. **Test migrations both ways**
+
    ```bash
    alembic upgrade head
    alembic downgrade base
@@ -607,6 +635,7 @@ jobs:
    ```
 
 3. **Backup before production migrations**
+
    ```bash
    cp data/ai_artist.db data/ai_artist.db.backup.$(date +%Y%m%d_%H%M%S)
    alembic upgrade head
@@ -624,6 +653,7 @@ jobs:
 ### Metrics to Track
 
 #### Application Metrics
+
 - Generation success/failure rate
 - Average generation time
 - API request latency
@@ -633,6 +663,7 @@ jobs:
 - Aesthetic score distribution
 
 #### Infrastructure Metrics
+
 - GPU utilization
 - GPU memory usage
 - CPU usage
@@ -643,6 +674,7 @@ jobs:
 ### Prometheus Integration
 
 #### Expose Metrics
+
 ```python
 from prometheus_client import start_http_server, Counter, Histogram, Gauge
 import time
@@ -672,6 +704,7 @@ def generate_artwork():
 ```
 
 #### Prometheus Configuration
+
 ```yaml
 # prometheus.yml
 scrape_configs:
@@ -684,6 +717,7 @@ scrape_configs:
 ### Grafana Dashboards
 
 #### Sample Dashboard JSON
+
 ```json
 {
   "dashboard": {
@@ -721,6 +755,7 @@ scrape_configs:
 ### Alerting Rules
 
 #### Prometheus Alerts
+
 ```yaml
 # alerts.yml
 groups:
@@ -756,6 +791,7 @@ groups:
 ### Logging Best Practices
 
 #### Structured Logging with Structlog
+
 ```python
 import structlog
 from structlog.processors import JSONRenderer
@@ -790,6 +826,7 @@ log.error("generation_failed",
 #### Log Aggregation
 
 **Using ELK Stack:**
+
 ```yaml
 # docker-compose.yml
 services:
@@ -822,6 +859,7 @@ services:
 ### Backup Strategy
 
 #### What to Backup
+
 1. **Critical Data (Daily)**
    - SQLite database (`data/ai_artist.db`)
    - Generated gallery images
@@ -836,6 +874,7 @@ services:
    - Training logs
 
 #### Automated Backup Script
+
 ```bash
 #!/bin/bash
 # backup.sh
@@ -876,6 +915,7 @@ echo "Backup completed: $BACKUP_DIR/$DATE"
 ```
 
 #### Cloud Backup Integration
+
 ```python
 # backup.py
 import boto3
@@ -906,6 +946,7 @@ def backup_to_s3():
 ### Recovery Procedures
 
 #### Database Recovery
+
 ```bash
 # Restore from backup
 cp /backups/ai-artist/20260115_120000/ai_artist.db data/ai_artist.db
@@ -918,6 +959,7 @@ docker-compose restart ai-artist
 ```
 
 #### Model Recovery
+
 ```bash
 # Restore models
 tar -xzf /backups/ai-artist/20260115_120000/models.tar.gz -C /app/
@@ -928,6 +970,7 @@ python -c "from safetensors import safe_open;
 ```
 
 #### Complete System Recovery
+
 ```bash
 #!/bin/bash
 # restore.sh
@@ -974,6 +1017,7 @@ echo "Recovery completed. Application restarted."
 ### High Availability Setup (Optional)
 
 #### Multi-Region Deployment
+
 ```yaml
 # For critical production environments
 regions:
@@ -988,6 +1032,7 @@ replication:
 ```
 
 #### Health Checks
+
 ```python
 from fastapi import FastAPI
 import torch

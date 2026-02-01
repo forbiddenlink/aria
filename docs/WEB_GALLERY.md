@@ -10,34 +10,38 @@ The AI Artist Web Gallery provides a beautiful web interface to browse and explo
 ai-artist-web
 ```
 
-The gallery will start on **http://localhost:8000**
+The gallery will start on **<http://localhost:8000>**
 
 ### Access Points
 
-- **Gallery Homepage**: http://localhost:8000
-- **API Documentation**: http://localhost:8000/docs
-- **Health Check**: http://localhost:8000/health
+- **Gallery Homepage**: <http://localhost:8000>
+- **API Documentation**: <http://localhost:8000/docs>
+- **Health Check**: <http://localhost:8000/health>
 
 ## Features
 
 ### 🖼️ Image Gallery
+
 - **Grid View**: Beautiful responsive grid layout
 - **Lazy Loading**: Images load as you scroll
 - **Modal View**: Click any image for full-screen viewing
 - **Metadata Display**: View prompts, dates, and generation details
 
 ### 🔍 Search & Filter
+
 - **Text Search**: Search artwork by prompt keywords
 - **Featured Filter**: Show only featured/curated artwork
 - **Real-time Results**: Search updates as you type
 
 ### 📊 Statistics Dashboard
+
 - Total artwork count
 - Featured artwork count
 - Unique prompts count
 - Date range information
 
 ### 📱 Responsive Design
+
 - Works on desktop, tablet, and mobile
 - Touch-friendly interface
 - Adaptive grid layout
@@ -45,17 +49,20 @@ The gallery will start on **http://localhost:8000**
 ## API Endpoints
 
 ### List Images
+
 ```bash
 GET /api/images?limit=50&offset=0&featured=true&search=sunset
 ```
 
 **Query Parameters**:
+
 - `limit`: Number of images (1-500, default: 50)
 - `offset`: Pagination offset (default: 0)
 - `featured`: Filter featured only (true/false)
 - `search`: Search in prompts
 
 **Response**:
+
 ```json
 [
   {
@@ -72,6 +79,7 @@ GET /api/images?limit=50&offset=0&featured=true&search=sunset
 ```
 
 ### Get Image File
+
 ```bash
 GET /api/images/file/2026/01/09/archive/20260109_102341_noseed.png
 ```
@@ -79,11 +87,13 @@ GET /api/images/file/2026/01/09/archive/20260109_102341_noseed.png
 Returns the actual PNG image file.
 
 ### Gallery Statistics
+
 ```bash
 GET /api/stats
 ```
 
 **Response**:
+
 ```json
 {
   "total_images": 42,
@@ -97,11 +107,13 @@ GET /api/stats
 ```
 
 ### Health Check
+
 ```bash
 GET /health
 ```
 
 **Response**:
+
 ```json
 {
   "status": "healthy",
@@ -113,9 +125,11 @@ GET /health
 ## Configuration
 
 ### Gallery Path
+
 The gallery reads from the `gallery/` directory by default. This is where `GalleryManager` saves generated images.
 
 ### Port Configuration
+
 Default port is **8000**. To change:
 
 ```python
@@ -154,18 +168,21 @@ CMD ["ai-artist-web"]
 ## Architecture
 
 ### Backend Stack
+
 - **FastAPI**: Modern Python web framework
 - **Uvicorn**: ASGI server
 - **Pydantic**: Data validation
 - **Jinja2**: Template engine
 
 ### Frontend
+
 - **Vanilla JavaScript**: No framework dependencies
 - **CSS Grid**: Responsive layout
 - **Fetch API**: Async image loading
 - **Modal Component**: Full-screen image viewing
 
 ### File Structure
+
 ```
 src/ai_artist/web/
 ├── __init__.py
@@ -214,22 +231,29 @@ async def custom_endpoint():
 ## Troubleshooting
 
 ### Port Already in Use
+
 ```
 ERROR: [Errno 48] Address already in use
 ```
+
 **Solution**: Change the port in `cli.py` or kill the process using port 8000:
+
 ```bash
 lsof -ti:8000 | xargs kill -9
 ```
 
 ### Gallery Not Found
+
 ```
 Gallery not initialized
 ```
+
 **Solution**: Ensure the `gallery/` directory exists and contains images with `.json` metadata files.
 
 ### Images Not Loading
+
 **Solution**: Check that:
+
 1. PNG files exist in `gallery/`
 2. Corresponding `.json` metadata files exist
 3. File paths are readable by the server
@@ -237,9 +261,11 @@ Gallery not initialized
 ## Security Notes
 
 ### Path Traversal Protection
+
 The API validates that requested image paths are within the gallery directory.
 
 ### CORS Configuration
+
 For API access from external domains, add CORS middleware:
 
 ```python
@@ -254,6 +280,7 @@ app.add_middleware(
 ```
 
 ### Production Security
+
 - Use HTTPS (TLS certificates)
 - Add authentication if needed
 - Rate limiting for API endpoints
@@ -264,6 +291,7 @@ app.add_middleware(
 1. **Image Optimization**: The gallery serves full-resolution PNGs. Consider adding thumbnail generation for faster loading.
 
 2. **Caching**: Add HTTP caching headers for static assets:
+
    ```python
    @app.get("/api/images/file/{file_path:path}")
    async def get_image_file(file_path: str, response: Response):

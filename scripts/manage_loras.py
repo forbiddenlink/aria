@@ -3,6 +3,7 @@
 
 import argparse
 from pathlib import Path
+
 import yaml
 
 
@@ -17,22 +18,28 @@ class LoRAManager:
         """List all available LoRAs."""
         print("🎨 Available LoRA Models:")
         print("=" * 60)
-        
+
         if not self.lora_dir.exists():
             print("No LoRA models found.")
             return
 
-        loras = [d for d in self.lora_dir.iterdir() if d.is_dir() and not d.name.startswith('.')]
-        
+        loras = [
+            d
+            for d in self.lora_dir.iterdir()
+            if d.is_dir() and not d.name.startswith(".")
+        ]
+
         if not loras:
             print("No LoRA models found.")
             return
 
         for idx, lora_path in enumerate(sorted(loras), 1):
             print(f"{idx}. {lora_path.name}")
-            
+
             # Check for adapter files
-            has_model = any(lora_path.glob("adapter_*.safetensors")) or any(lora_path.glob("*.safetensors"))
+            has_model = any(lora_path.glob("adapter_*.safetensors")) or any(
+                lora_path.glob("*.safetensors")
+            )
             status = "✅ Ready" if has_model else "⚠️  Empty/Training"
             print(f"   Status: {status}")
             print(f"   Path: {lora_path}")
@@ -48,7 +55,7 @@ class LoRAManager:
 
         lora_path = config.get("model", {}).get("lora_path")
         lora_scale = config.get("model", {}).get("lora_scale", 0.8)
-        
+
         return lora_path, lora_scale
 
     def set_lora(self, lora_name: str = None, scale: float = 0.8):
@@ -85,16 +92,16 @@ class LoRAManager:
     def show_status(self):
         """Show current LoRA status."""
         result = self.get_current_lora()
-        
+
         print("🎨 Current LoRA Status:")
         print("=" * 60)
-        
+
         if result is None or result[0] is None:
             print("Status: ❌ No LoRA active (using base model)")
         else:
             lora_path, scale = result
             lora_name = Path(lora_path).name
-            print(f"Status: ✅ LoRA active")
+            print("Status: ✅ LoRA active")
             print(f"Model: {lora_name}")
             print(f"Scale: {scale}")
             print(f"Path: {lora_path}")
@@ -103,24 +110,26 @@ class LoRAManager:
 def main():
     """CLI entry point."""
     parser = argparse.ArgumentParser(description="Manage LoRA models")
-    
+
     subparsers = parser.add_subparsers(dest="command", help="Commands")
-    
+
     # List command
     subparsers.add_parser("list", help="List all available LoRAs")
-    
+
     # Status command
     subparsers.add_parser("status", help="Show current LoRA status")
-    
+
     # Set command
     set_parser = subparsers.add_parser("set", help="Set active LoRA")
     set_parser.add_argument("name", help="LoRA name (or 'none' to disable)")
-    set_parser.add_argument("--scale", type=float, default=0.8, help="LoRA scale (0.0-1.0)")
-    
+    set_parser.add_argument(
+        "--scale", type=float, default=0.8, help="LoRA scale (0.0-1.0)"
+    )
+
     args = parser.parse_args()
-    
+
     manager = LoRAManager()
-    
+
     if args.command == "list":
         manager.list_loras()
     elif args.command == "status":

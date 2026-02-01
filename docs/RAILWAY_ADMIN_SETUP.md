@@ -7,6 +7,7 @@ To use the admin upload endpoints, you need to configure an API key on Railway.
 ### 1. Set Environment Variable in Railway
 
 Go to your Railway project dashboard:
+
 1. Navigate to your `aria` service
 2. Click on "Variables" tab
 3. Add new variable:
@@ -30,6 +31,7 @@ Save this key securely - you'll need it for uploads!
 The web app needs to validate this key. We need to update the config to read from environment:
 
 **Add to Railway Variables:**
+
 ```
 RAILWAY_API_KEY=your-generated-key-here
 ```
@@ -49,6 +51,7 @@ python scripts/upload_to_railway.py
 ```
 
 Or pass directly:
+
 ```bash
 python scripts/upload_to_railway.py --api-key "your-generated-key-here"
 ```
@@ -58,6 +61,7 @@ python scripts/upload_to_railway.py --api-key "your-generated-key-here"
 With API key configured, you can use:
 
 ### Upload Single Image
+
 ```bash
 curl -X POST https://aria-production-3084.up.railway.app/api/admin/upload-image \
   -H "X-API-Key: your-api-key-here" \
@@ -66,6 +70,7 @@ curl -X POST https://aria-production-3084.up.railway.app/api/admin/upload-image 
 ```
 
 ### Upload Batch
+
 ```bash
 python scripts/upload_to_railway.py --all
 ```
@@ -80,6 +85,7 @@ python scripts/upload_to_railway.py --all
 ## Testing
 
 Test that your API key works:
+
 ```bash
 curl -X GET https://aria-production-3084.up.railway.app/api/images \
   -H "X-API-Key: your-api-key-here"
