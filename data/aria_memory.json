@@ -18,4 +18,8 @@
       "metadata": {
         "creation_type": "autonomous_original",
         "generation_mode": "mashup",
-        "model": 
+        "model": "test-model"
+      }
+    }
+  ]
+}

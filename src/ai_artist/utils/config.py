@@ -204,33 +204,25 @@ class Config(BaseSettings):
         protected_namespaces=("settings_",),
     )  # type: ignore[misc]
 
-    # type: ignore[arg-type]
-    model: ModelConfig = Field(default_factory=ModelConfig)
-    # type: ignore[arg-type]
-    generation: GenerationConfig = Field(default_factory=GenerationConfig)
-    # type: ignore[arg-type]
-    upscaling: UpscalingConfig = Field(default_factory=UpscalingConfig)
-    # type: ignore[arg-type]
-    controlnet: ControlNetConfig = Field(default_factory=ControlNetConfig)
-    # type: ignore[arg-type]
-    inpainting: InpaintingConfig = Field(default_factory=InpaintingConfig)
+    model: ModelConfig = Field(default_factory=lambda: ModelConfig())
+    generation: GenerationConfig = Field(default_factory=lambda: GenerationConfig())
+    upscaling: UpscalingConfig = Field(default_factory=lambda: UpscalingConfig())
+    controlnet: ControlNetConfig = Field(default_factory=lambda: ControlNetConfig())
+    inpainting: InpaintingConfig = Field(default_factory=lambda: InpaintingConfig())
     face_restoration: FaceRestorationConfig = Field(
-        default_factory=FaceRestorationConfig
-    )  # type: ignore[arg-type]
-    # type: ignore[arg-type]
-    autonomy: AutonomyConfig = Field(default_factory=AutonomyConfig)
-    # type: ignore[arg-type]
-    trends: TrendsConfig = Field(default_factory=TrendsConfig)
-    # type: ignore[arg-type]
-    model_manager: ModelManagerConfig = Field(default_factory=ModelManagerConfig)
-    # type: ignore[arg-type]
-    api_keys: APIKeysConfig = Field(default_factory=APIKeysConfig)
-    # type: ignore[arg-type]
-    database: DatabaseConfig = Field(default_factory=DatabaseConfig)
-    # type: ignore[arg-type]
-    web: WebConfig = Field(default_factory=WebConfig)
-    # type: ignore[arg-type]
-    observability: ObservabilityConfig = Field(default_factory=ObservabilityConfig)
+        default_factory=lambda: FaceRestorationConfig()
+    )
+    autonomy: AutonomyConfig = Field(default_factory=lambda: AutonomyConfig())
+    trends: TrendsConfig = Field(default_factory=lambda: TrendsConfig())
+    model_manager: ModelManagerConfig = Field(
+        default_factory=lambda: ModelManagerConfig()
+    )
+    api_keys: APIKeysConfig = Field(default_factory=lambda: APIKeysConfig())
+    database: DatabaseConfig = Field(default_factory=lambda: DatabaseConfig())
+    web: WebConfig = Field(default_factory=lambda: WebConfig())
+    observability: ObservabilityConfig = Field(
+        default_factory=lambda: ObservabilityConfig()
+    )
 
 
 def load_config(config_path: Path | None = None) -> Config:

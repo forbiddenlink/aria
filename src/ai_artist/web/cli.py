@@ -17,8 +17,7 @@ def main():
     # Use PORT environment variable if available (Railway sets this)
     port = int(os.getenv("PORT", "8000"))
 
-    # nosec B104
-    logger.info("starting_web_gallery", host="0.0.0.0", port=port)
+    logger.info("starting_web_gallery", host="0.0.0.0", port=port)  # nosec B104
 
     print("\n🎨 AI Artist Web Gallery")
     print("=" * 50)
