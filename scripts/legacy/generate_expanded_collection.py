@@ -4,16 +4,16 @@
 A follow-up to the ultimate collection with all-new prompt categories.
 """
 
-import sys
-import random
 import argparse
+import random
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.ai_artist.main import AIArtist
-from src.ai_artist.utils.logging import configure_logging, get_logger
 from src.ai_artist.utils.config import load_config
+from src.ai_artist.utils.logging import configure_logging, get_logger
 
 configure_logging()
 logger = get_logger(__name__)
@@ -30,7 +30,6 @@ EXPANDED_PROMPTS = {
         "warrior facing massive dragon, scale contrast, fantasy epic battle",
         "explorer in bioluminescent cave system, glowing crystals, adventure scene",
     ],
-    
     "emotional_portraits": [
         "elderly artist painting at sunset, hands covered in paint, life reflection",
         "child wonder discovering fireflies at dusk, magical moment, pure joy",
@@ -41,7 +40,6 @@ EXPANDED_PROMPTS = {
         "lighthouse keeper on stormy night, lantern glow, solitary guardian",
         "chef plating masterpiece, intense concentration, culinary artistry",
     ],
-    
     "nature_spectacles": [
         "massive waterfall in tropical rainforest, rainbow mist, raw power of nature",
         "ancient redwood forest with shafts of morning light, cathedral atmosphere",
@@ -52,7 +50,6 @@ EXPANDED_PROMPTS = {
         "ice caves with blue crystalline walls, otherworldly frozen beauty",
         "coral reef teeming with colorful fish, underwater paradise, vibrant life",
     ],
-    
     "urban_poetry": [
         "empty subway platform at 3am, single light flickering, urban solitude",
         "rooftop garden in megacity, green oasis, contrast of nature and concrete",
@@ -63,7 +60,6 @@ EXPANDED_PROMPTS = {
         "street art mural being painted, urban canvas, creative expression",
         "morning market in marrakech, colorful spices, vibrant cultural tapestry",
     ],
-    
     "dreamscapes": [
         "paper boat sailing on clouds, childlike wonder, soft pastel dream",
         "grandfather clock melting into sand, time flowing away, surreal",
@@ -74,7 +70,6 @@ EXPANDED_PROMPTS = {
         "musician playing piano made of water, fluid melody visualization",
         "painter whose brush strokes become real butterflies, art coming alive",
     ],
-    
     "historical_reimagined": [
         "steampunk victorian london, brass airships, alternate history aesthetic",
         "samurai in cyberpunk tokyo, tradition meets future, neon and katana",
@@ -85,7 +80,6 @@ EXPANDED_PROMPTS = {
         "roman colosseum hosting drone races, classical architecture repurposed",
         "art deco underwater city, retro futuristic atlantis, 1920s meets ocean",
     ],
-    
     "seasonal_moods": [
         "first snow on japanese zen garden, peaceful transformation, winter serenity",
         "spring meadow explosion of wildflowers, bees busy, life returning",
@@ -96,7 +90,6 @@ EXPANDED_PROMPTS = {
         "autumn fog rolling through vineyard at dawn, mysterious morning",
         "summer night beach with bioluminescent waves, natural magic, romance",
     ],
-    
     "animal_majesty": [
         "white wolf in snowy forest, piercing blue eyes, wild nobility",
         "elephant herd at watering hole, golden dust, family bonds",
@@ -107,7 +100,6 @@ EXPANDED_PROMPTS = {
         "owl perched in moonlit tree, wise observer, nocturnal guardian",
         "dolphin pod jumping in synchronized arc, ocean joy, playful intelligence",
     ],
-    
     "abstract_concepts": [
         "chaos and order collision, geometric shapes versus organic flow",
         "time visualization, clock faces dissolving into sand streams",
@@ -118,7 +110,6 @@ EXPANDED_PROMPTS = {
         "digital consciousness, binary code forming human face, AI awakening",
         "interconnectedness, golden threads linking all living things",
     ],
-    
     "food_art": [
         "molecular gastronomy dish being plated, artistic precision, culinary innovation",
         "rustic italian pasta making, flour dusted hands, traditional craft",
@@ -129,7 +120,6 @@ EXPANDED_PROMPTS = {
         "spice market close-up, colorful pyramids of powder, aromatic visual",
         "sourdough bread being scored, artisan baker, simple perfection",
     ],
-    
     "sci_fi_worlds": [
         "colony dome on mars, red planet settlement, human perseverance",
         "massive space station orbiting ringed planet, orbital city, future home",
@@ -140,7 +130,6 @@ EXPANDED_PROMPTS = {
         "cyborg meditation in zen garden, humanity and tech harmonized",
         "time traveler library, doors to different eras, temporal archive",
     ],
-    
     "mystical_elements": [
         "crystal cave with wizard studying ancient runes, magical scholarship",
         "fairy ring in moonlit forest, mushroom circle glowing, fae portal",
@@ -151,7 +140,6 @@ EXPANDED_PROMPTS = {
         "witch brewing potion, colorful smoke swirling, mystical crafting",
         "celestial being descending on light beam, divine visitation, holy moment",
     ],
-    
     "adventure_scenes": [
         "treasure hunter discovering golden city in jungle, lost civilization",
         "mountain climber reaching summit at sunrise, triumph and exhaustion",
@@ -162,7 +150,6 @@ EXPANDED_PROMPTS = {
         "archaeologist uncovering dinosaur fossil, paleontology discovery",
         "storm chaser capturing tornado, dangerous pursuit, nature's fury",
     ],
-    
     "cozy_scenes": [
         "reading nook with rain on window, warm tea, perfect afternoon",
         "fireplace crackling, cat sleeping, knitting supplies, domestic peace",
@@ -173,7 +160,6 @@ EXPANDED_PROMPTS = {
         "greenhouse workshop, plants everywhere, potter at wheel, creative space",
         "mountain cabin interior, wood stove, snow outside, refuge from cold",
     ],
-    
     "movement_frozen": [
         "ballet dancer mid-leap, fabric flowing, suspended grace",
         "water drop crown splash, macro photography, liquid sculpture",
@@ -184,7 +170,6 @@ EXPANDED_PROMPTS = {
         "horse galloping, mane flowing, muscles defined, athletic beauty",
         "paint being thrown, color explosion frozen, chaos organized",
     ],
-    
     "light_studies": [
         "cathedral interior, stained glass colors on stone floor, sacred geometry",
         "desert sunrise, long shadows, warm orange light painting dunes",
@@ -195,7 +180,6 @@ EXPANDED_PROMPTS = {
         "prism splitting sunlight into rainbow, physics made beautiful",
         "city lights reflected in rain puddles, urban mirror, night glow",
     ],
-    
     "architectural_wonders": [
         "gothic cathedral reaching toward sky, flying buttresses, medieval majesty",
         "futuristic curved skyscraper, parametric design, architectural innovation",
@@ -206,7 +190,6 @@ EXPANDED_PROMPTS = {
         "traditional japanese house in snow, sliding doors, harmonious design",
         "art nouveau building facade, organic forms, architectural artistry",
     ],
-    
     "texture_focus": [
         "tree bark close-up, intricate patterns, natural complexity",
         "weathered wood planks, grain and knots, aged beauty",
@@ -217,7 +200,6 @@ EXPANDED_PROMPTS = {
         "stone wall weathered by centuries, layers of history, tactile time",
         "ice crystals forming on glass, fractal patterns, frozen art",
     ],
-    
     "cultural_celebrations": [
         "holi festival, colored powder explosion, joyful chaos, vibrant tradition",
         "dia de los muertos altar, marigolds and photos, honoring ancestors",
@@ -228,7 +210,6 @@ EXPANDED_PROMPTS = {
         "venetian masquerade ball, ornate masks, mysterious elegance",
         "midsummer bonfire ritual, flames leaping, ancient celebration",
     ],
-    
     "minimalist_beauty": [
         "single bonsai on zen table, negative space, mindful simplicity",
         "lone figure in vast white desert, scale and isolation",
@@ -250,21 +231,21 @@ def count_all_prompts() -> int:
 def collect_prompts(categories: list = None, randomize: bool = False):
     """Collect prompts from specified categories."""
     available_prompts = []
-    
+
     # Filter categories if specified
     prompt_dict = EXPANDED_PROMPTS
     if categories:
         prompt_dict = {k: v for k, v in EXPANDED_PROMPTS.items() if k in categories}
-    
+
     # Collect all prompts with their categories
     for category, prompts in prompt_dict.items():
         for prompt in prompts:
             available_prompts.append((category, prompt))
-    
+
     # Randomize if requested
     if randomize:
         random.shuffle(available_prompts)
-    
+
     return available_prompts
 
 
@@ -286,10 +267,10 @@ def get_generation_params(vary_parameters: bool) -> dict:
 
 def print_header(total: int, artist: AIArtist, randomize: bool, vary_parameters: bool):
     """Print generation header."""
-    print(f"\n{'='*70}")
-    print(f"🎨 AI ARTIST - EXPANDED COLLECTION GENERATOR")
-    print(f"{'='*70}")
-    print(f"📊 Statistics:")
+    print(f"\n{'=' * 70}")
+    print("🎨 AI ARTIST - EXPANDED COLLECTION GENERATOR")
+    print(f"{'=' * 70}")
+    print("📊 Statistics:")
     print(f"   • Total categories: {len(EXPANDED_PROMPTS)}")
     print(f"   • Available prompts: {count_all_prompts()}")
     print(f"   • Generating: {total} artworks")
@@ -297,36 +278,44 @@ def print_header(total: int, artist: AIArtist, randomize: bool, vary_parameters:
     print(f"   • Model: {artist.generator.model_id}")
     print(f"   • Randomized: {'Yes' if randomize else 'No'}")
     print(f"   • Parameter variation: {'Yes' if vary_parameters else 'No'}")
-    print(f"{'='*70}\n")
+    print(f"{'=' * 70}\n")
 
 
-def print_progress(i: int, total: int, category: str, prompt: str, params: dict, vary: bool):
+def print_progress(
+    i: int, total: int, category: str, prompt: str, params: dict, vary: bool
+):
     """Print progress for current generation."""
     print(f"[{i}/{total}] Category: {category}")
     print(f"   Prompt: {prompt[:65]}...")
     if vary:
-        print(f"   Params: steps={params['steps']}, guidance={params['guidance']}, seed={params['seed']}")
+        print(
+            f"   Params: steps={params['steps']}, guidance={params['guidance']}, seed={params['seed']}"
+        )
 
 
-def print_summary(success_count: int, total: int, failed_prompts: list, category_counts: dict):
+def print_summary(
+    success_count: int, total: int, failed_prompts: list, category_counts: dict
+):
     """Print final summary."""
-    print(f"\n{'='*70}")
-    print(f"✨ GENERATION COMPLETE!")
-    print(f"{'='*70}")
-    print(f"📊 Results:")
-    print(f"   ✅ Successful: {success_count}/{total} ({success_count/total*100:.1f}%)")
+    print(f"\n{'=' * 70}")
+    print("✨ GENERATION COMPLETE!")
+    print(f"{'=' * 70}")
+    print("📊 Results:")
+    print(
+        f"   ✅ Successful: {success_count}/{total} ({success_count / total * 100:.1f}%)"
+    )
     print(f"   ❌ Failed: {len(failed_prompts)}")
-    print(f"\n📁 Category breakdown:")
+    print("\n📁 Category breakdown:")
     for cat, count in sorted(category_counts.items(), key=lambda x: x[1], reverse=True):
         print(f"   • {cat}: {count} images")
-    
+
     if failed_prompts:
-        print(f"\n❌ Failed prompts:")
+        print("\n❌ Failed prompts:")
         for cat, prompt in failed_prompts:
             print(f"   • [{cat}] {prompt[:50]}...")
-    
-    print(f"\n💾 All images saved to gallery/2026/")
-    print(f"{'='*70}\n")
+
+    print("\n💾 All images saved to gallery/2026/")
+    print(f"{'=' * 70}\n")
 
 
 def generate_expanded_collection(
@@ -336,28 +325,30 @@ def generate_expanded_collection(
     vary_parameters: bool = True,
 ):
     """Generate expanded collection with fresh prompts.
-    
+
     Args:
         num_images: Number of images to generate (None = all prompts)
         categories: Specific categories to use (None = all categories)
         randomize: Whether to shuffle prompts randomly
         vary_parameters: Whether to vary generation parameters for variety
     """
-    logger.info("expanded_collection_started", 
-                num_images=num_images, 
-                categories=categories,
-                randomize=randomize)
-    
+    logger.info(
+        "expanded_collection_started",
+        num_images=num_images,
+        categories=categories,
+        randomize=randomize,
+    )
+
     # Load configuration
     config_path = Path("config/config.yaml")
     config = load_config(config_path)
-    
+
     # Initialize AI Artist
     artist = AIArtist(config)
-    
+
     # Detect best available device
     import torch
-    
+
     if torch.cuda.is_available():
         device = "cuda"
         dtype = torch.float16
@@ -370,44 +361,44 @@ def generate_expanded_collection(
         device = "cpu"
         dtype = torch.float32
         logger.info("using_cpu_device")
-    
+
     # Configure generator for optimal performance
     artist.generator.device = device
     artist.generator.dtype = dtype
     artist.generator.model_id = "runwayml/stable-diffusion-v1-5"
-    
+
     # Load model
     artist.generator.load_model()
-    
+
     # Collect and prepare prompts
     available_prompts = collect_prompts(categories, randomize)
-    
+
     # Limit to requested number
     if num_images:
         available_prompts = available_prompts[:num_images]
-    
+
     total = len(available_prompts)
-    
+
     # Display header
     print_header(total, artist, randomize, vary_parameters)
-    
+
     # Generation statistics
     success_count = 0
     failed_prompts = []
     category_counts = {}
-    
+
     # Generate images
     for i, (category, prompt) in enumerate(available_prompts, 1):
         try:
             # Track category stats
             category_counts[category] = category_counts.get(category, 0) + 1
-            
+
             # Get generation parameters
             params = get_generation_params(vary_parameters)
-            
+
             # Display progress
             print_progress(i, total, category, prompt, params, vary_parameters)
-            
+
             # Generate image with proper resolution for SD 1.5
             images = artist.generator.generate(
                 prompt=prompt,
@@ -419,7 +410,7 @@ def generate_expanded_collection(
                 guidance_scale=params["guidance"],
                 seed=params["seed"],
             )
-            
+
             # Save to gallery
             if images:
                 metadata = {
@@ -431,38 +422,42 @@ def generate_expanded_collection(
                     "seed": params["seed"] if params["seed"] else "random",
                     "collection": "expanded",
                 }
-                
+
                 saved_path = artist.gallery.save_image(
                     image=images[0],
                     prompt=prompt,
                     metadata=metadata,
                     featured=False,
                 )
-                
+
                 success_count += 1
                 print(f"   ✅ Saved: {saved_path.name}\n")
             else:
                 failed_prompts.append((category, prompt))
-                print(f"   ❌ Generation failed\n")
-                
+                print("   ❌ Generation failed\n")
+
         except KeyboardInterrupt:
             logger.info("generation_interrupted_by_user")
             print("\n\n⚠️  Generation interrupted by user")
             break
         except Exception as e:
-            logger.error("generation_failed", category=category, prompt=prompt[:50], error=str(e))
+            logger.error(
+                "generation_failed", category=category, prompt=prompt[:50], error=str(e)
+            )
             failed_prompts.append((category, prompt))
             print(f"   ❌ Error: {e}\n")
             continue
-    
+
     # Print final summary
     print_summary(success_count, total, failed_prompts, category_counts)
-    
+
     # Cleanup
     artist.generator.unload()
-    logger.info("expanded_collection_complete", 
-                success=success_count, 
-                failed=len(failed_prompts))
+    logger.info(
+        "expanded_collection_complete",
+        success=success_count,
+        failed=len(failed_prompts),
+    )
 
 
 def main():
@@ -471,7 +466,8 @@ def main():
         description="Generate expanded art collection with fresh creative prompts"
     )
     parser.add_argument(
-        "-n", "--num-images",
+        "-n",
+        "--num-images",
         type=int,
         help="Number of images to generate (default: all)",
     )
@@ -481,7 +477,8 @@ def main():
         help="Generate all prompts (same as omitting -n)",
     )
     parser.add_argument(
-        "-c", "--categories",
+        "-c",
+        "--categories",
         nargs="+",
         help="Specific categories to generate from",
     )
@@ -500,16 +497,18 @@ def main():
         action="store_true",
         help="List all available categories and exit",
     )
-    
+
     args = parser.parse_args()
-    
+
     if args.list_categories:
         print("\n📋 Available Categories:\n")
         for i, (category, prompts) in enumerate(EXPANDED_PROMPTS.items(), 1):
             print(f"{i:2}. {category:25} ({len(prompts)} prompts)")
-        print(f"\nTotal: {len(EXPANDED_PROMPTS)} categories, {count_all_prompts()} prompts\n")
+        print(
+            f"\nTotal: {len(EXPANDED_PROMPTS)} categories, {count_all_prompts()} prompts\n"
+        )
         return
-    
+
     generate_expanded_collection(
         num_images=args.num_images,
         categories=args.categories,

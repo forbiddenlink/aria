@@ -211,12 +211,12 @@ CREATE TABLE artworks (
     id INTEGER PRIMARY KEY,
     filename TEXT UNIQUE,
     created_at TIMESTAMP,
-    
+
     -- Source tracking
     source_url TEXT,
     source_query TEXT,
     source_license TEXT,  -- Track for legal compliance
-    
+
     -- Generation parameters
     prompt TEXT,
     negative_prompt TEXT,
@@ -225,7 +225,7 @@ CREATE TABLE artworks (
     seed INTEGER,
     cfg_scale REAL,
     steps INTEGER,
-    
+
     -- Quality metrics
     aesthetic_score REAL,
     technical_score REAL,
@@ -233,17 +233,17 @@ CREATE TABLE artworks (
     diversity_score REAL,
     style_consistency REAL,
     final_score REAL,
-    
+
     -- Metadata
     file_size_bytes INTEGER,
     generation_time_seconds REAL,
     clip_embedding BLOB,  -- For similarity search
-    
+
     -- User interaction
     user_rating INTEGER,
     user_feedback TEXT,
     views INTEGER DEFAULT 0,
-    
+
     -- Organization
     style_name TEXT,
     is_featured BOOLEAN,
@@ -314,7 +314,7 @@ schedules:
     time: "09:00"
     timezone: "America/Los_Angeles"
     theme: "random"
-    
+
   weekend_series:
     days: ["Saturday", "Sunday"]
     time: "14:00"
@@ -437,3 +437,95 @@ schedules:
 1. Implement scorer in `curation/scorers/`
 2. Register in evaluation pipeline
 3. Configure weight in settings
+
+## Web Application Architecture
+
+### FastAPI Async Patterns
+
+The web application uses FastAPI with fully async request handling.
+All file I/O uses `aiofiles` to avoid blocking the event loop.
+
+**Async File I/O with aiofiles**:
+
+```python
+import aiofiles
+
+# Reading files (templates, config, etc.)
+async with aiofiles.open(file_path, "r") as f:
+    content = await f.read()
+
+# Writing files (uploads, cache)
+async with aiofiles.open(file_path, "wb") as f:
+    await f.write(data)
+
+# JSON loading
+async def load_json_async(path: Path) -> dict:
+    async with aiofiles.open(path, "r") as f:
+        return json.loads(await f.read())
+```
+
+**Why aiofiles over sync I/O**:
+
+- Non-blocking: Doesn't freeze other requests during file operations
+- Consistency: All endpoints remain async, no thread pool overhead
+- Scalability: Better performance under concurrent load
+
+**Response Models with Pydantic V2**:
+
+All ARIA API endpoints use typed response models for:
+
+- OpenAPI documentation generation
+- Runtime validation
+- Type safety
+
+```python
+from pydantic import BaseModel
+
+class AriaEvolveResponse(BaseModel):
+    prompt: str
+    seed: int | None
+    guidance_scale: float
+    steps: int
+    image_path: str
+    mood: str
+    creativity: float
+
+@app.post("/aria/evolve", response_model=AriaEvolveResponse)
+async def evolve(request: EvolveRequest) -> AriaEvolveResponse:
+    ...
+```
+
+**mypy Configuration for aiofiles**:
+
+Even with `types-aiofiles` installed, add explicit override in `pyproject.toml`:
+
+```toml
+[[tool.mypy.overrides]]
+module = "aiofiles.*"
+ignore_missing_imports = true
+```
+
+### Prompt Collections Module
+
+All generation prompts are centralized in `src/ai_artist/prompts/`:
+
+```text
+prompts/
+├── __init__.py      # get_collection_prompts(), get_all_collections()
+├── artistic.py      # Impressionist, cubist, surrealist styles
+├── artistic2.py     # Renaissance, photo-realism, op-art
+├── expanded.py      # Cinematic, emotional, nature themes
+└── ultimate.py      # Cosmic, mythological, fantasy themes
+```
+
+**Usage**:
+
+```python
+from ai_artist.prompts import get_collection_prompts, get_collection_names
+
+# Get specific collection
+prompts = get_collection_prompts("artistic")
+
+# List available collections
+names = get_collection_names()  # ["artistic", "artistic2", "expanded", "ultimate"]
+```

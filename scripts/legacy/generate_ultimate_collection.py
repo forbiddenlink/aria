@@ -5,17 +5,16 @@ This script combines and expands upon all previous generation scripts,
 offering the most comprehensive collection of prompt categories and themes.
 """
 
-import sys
-import random
 import asyncio
+import random
+import sys
 from pathlib import Path
-from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.ai_artist.main import AIArtist
-from src.ai_artist.utils.logging import configure_logging, get_logger
 from src.ai_artist.utils.config import load_config
+from src.ai_artist.utils.logging import configure_logging, get_logger
 
 configure_logging()
 logger = get_logger(__name__)
@@ -32,7 +31,6 @@ ULTIMATE_PROMPTS = {
         "pulsar neutron star, magnetic field lines, high energy beams, scientific art",
         "planetary nebula, dying star, colorful expanding shells, deep field image",
     ],
-    
     "mythological_beings": [
         "phoenix rising from golden flames, glowing embers, mythical firebird, epic wings spread",
         "ancient dragon perched on castle ruins, detailed scales, moonlit night, fantasy epic",
@@ -43,7 +41,6 @@ ULTIMATE_PROMPTS = {
         "griffin guardian of ancient temple, lion and eagle hybrid, golden hour light",
         "basilisk serpent with crown, poisonous gaze, dark cavern, mythical monster art",
     ],
-    
     "retro_aesthetics": [
         "1980s neon cityscape, retrowave sunset, palm trees silhouette, vaporwave pink and purple",
         "vintage arcade cabinet glowing, pixel art game, dim room, nostalgic 80s atmosphere",
@@ -54,7 +51,6 @@ ULTIMATE_PROMPTS = {
         "vintage transistor radio, wood paneling, glowing dial, 1970s living room",
         "classic jukebox with vinyl records, colorful lights, 1960s soda shop interior",
     ],
-    
     "surreal_dreams": [
         "melting clocks draped over twisted trees, salvador dali inspired, dreamscape reality",
         "floating islands connected by impossible waterfalls, clouds below, surreal physics",
@@ -65,7 +61,6 @@ ULTIMATE_PROMPTS = {
         "bedroom ceiling covered with ocean waves, underwater room, reality inversion",
         "tree growing upside down from sky, roots in clouds, leaves underground, paradox",
     ],
-    
     "four_seasons": [
         "autumn forest path, carpet of red and gold leaves, misty morning, peaceful serenity",
         "spring cherry blossom tunnel, pink petals falling like snow, soft romantic light",
@@ -76,7 +71,6 @@ ULTIMATE_PROMPTS = {
         "winter northern lights, snow-covered log cabin, aurora borealis dancing, starry night",
         "summer beach at sunrise, pastel sky, calm turquoise water, peaceful morning meditation",
     ],
-    
     "portrait_characters": [
         "wise elderly wizard reading ancient spellbook, candlelight, long white beard, magical study",
         "cyberpunk hacker with neon tattoos, city lights reflected in eyes, rain, futuristic",
@@ -87,7 +81,6 @@ ULTIMATE_PROMPTS = {
         "geisha in traditional kimono, kyoto streets, cherry blossoms, cultural elegance",
         "viking shield maiden with braided hair, war paint, fierce nordic warrior, dramatic",
     ],
-    
     "macro_mysteries": [
         "dewdrop on spider web at sunrise, backlit golden light, macro detail, nature close-up",
         "butterfly wing scales extreme macro, iridescent colors, scientific photography",
@@ -98,7 +91,6 @@ ULTIMATE_PROMPTS = {
         "peacock feather eye, microscopic detail, vibrant blues and greens, natural art",
         "salt crystals forming patterns, macro closeup, geometric mineral structures, abstract",
     ],
-    
     "minimalist_zen": [
         "single red balloon floating against clear blue sky, minimalist composition, simple joy",
         "solitary tree on rolling green hill, negative space, fog, zen landscape meditation",
@@ -109,7 +101,6 @@ ULTIMATE_PROMPTS = {
         "abstract color field, rothko inspired, soft edge rectangles, contemplative art",
         "single leaf floating on water, concentric ripples, zen moment, natural minimalism",
     ],
-    
     "culinary_art": [
         "gourmet chocolate dessert, gold leaf decoration, artistic plating, fine dining photography",
         "colorful macarons arranged on marble, pastel rainbow, french patisserie, overhead shot",
@@ -120,7 +111,6 @@ ULTIMATE_PROMPTS = {
         "italian pasta making, flour dust, hands kneading dough, rustic kitchen, tradition",
         "coffee latte art, heart foam design, ceramic cup, cafe morning light, inviting",
     ],
-    
     "weather_phenomena": [
         "lightning bolt striking ocean during storm, long exposure, dramatic power of nature",
         "morning fog rolling through mountain valley, layers of hills, moody atmosphere",
@@ -131,7 +121,6 @@ ULTIMATE_PROMPTS = {
         "ice storm coating trees, crystalline branches, winter wonderland, frozen beauty",
         "dust devil in arizona desert, red rock landscape, swirling sand, wild weather",
     ],
-    
     "architectural_marvels": [
         "futuristic glass skyscraper, reflective facade, blue sky, modern architectural photography",
         "ancient gothic cathedral interior, stained glass windows, divine light rays, sacred space",
@@ -142,7 +131,6 @@ ULTIMATE_PROMPTS = {
         "art deco building facade, gold accents, 1920s elegance, miami beach style",
         "bamboo forest temple, zen architecture, natural materials, harmony with nature",
     ],
-    
     "urban_exploration": [
         "tokyo street at night, neon signs reflecting in rain, cyberpunk atmosphere, cinematic",
         "abandoned factory interior, rust and decay, urban exploration, dramatic shafts of light",
@@ -153,7 +141,6 @@ ULTIMATE_PROMPTS = {
         "london fog, big ben clock tower, red telephone booth, moody urban atmosphere",
         "dubai skyline at dusk, illuminated skyscrapers, desert modern, luxury cityscape",
     ],
-    
     "wildlife_moments": [
         "peacock displaying full tail feathers, vibrant iridescent colors, botanical garden",
         "arctic fox in snow, white fur, blue hour lighting, nature documentary style",
@@ -164,7 +151,6 @@ ULTIMATE_PROMPTS = {
         "red panda in bamboo forest, cute expression, endangered species, natural habitat",
         "cheetah running at full speed, motion blur, hunting, wild africa, powerful grace",
     ],
-    
     "fantasy_landscapes": [
         "crystal cave with glowing minerals, underground lake, magical geodes, fantasy exploration",
         "floating castle in clouds, waterfalls cascading down, epic fantasy architecture",
@@ -175,7 +161,6 @@ ULTIMATE_PROMPTS = {
         "desert oasis, palm trees, clear spring water, sand dunes, serene refuge",
         "Scottish highlands, misty mountains, castle ruins, heather fields, celtic atmosphere",
     ],
-    
     "sci_fi_futures": [
         "space station interior, holographic displays, futuristic design, sci-fi concept art",
         "cyberpunk street market, neon signs, androids, rain reflections, blade runner aesthetic",
@@ -186,7 +171,6 @@ ULTIMATE_PROMPTS = {
         "underwater city, geodesic domes, submarines, futuristic ocean colonization",
         "robot factory, assembly line, industrial sci-fi, mechanical precision, future industry",
     ],
-    
     "abstract_expressions": [
         "fluid art, swirling marble patterns, gold and turquoise, abstract expressionism",
         "geometric mandala, intricate symmetrical patterns, vibrant gradients, spiritual art",
@@ -197,7 +181,6 @@ ULTIMATE_PROMPTS = {
         "kinetic motion blur, light trails, abstract movement, dynamic energy",
         "molecular structure, atoms and bonds, scientific abstract, microscopic beauty",
     ],
-    
     "still_life_classics": [
         "vintage typewriter, old books, coffee cup, wooden desk, writer's atmosphere",
         "fresh fruit bowl, dramatic chiaroscuro lighting, dutch masters style, oil painting aesthetic",
@@ -208,7 +191,6 @@ ULTIMATE_PROMPTS = {
         "seashell collection on driftwood, beach findings, natural history, coastal aesthetic",
         "vintage perfume bottles, art deco glass, vanity table, feminine elegance, soft focus",
     ],
-    
     "underwater_worlds": [
         "coral reef ecosystem, tropical fish, sunlight filtering through water, marine biodiversity",
         "shipwreck covered in coral, underwater exploration, mysterious depths, diving photography",
@@ -219,7 +201,6 @@ ULTIMATE_PROMPTS = {
         "sea anemone closeup, clownfish, symbiotic relationship, macro marine life",
         "underwater cave, light shafts penetrating, cenote diving, mysterious blue depths",
     ],
-    
     "cultural_celebrations": [
         "indian holi festival, explosion of color powder, celebration, joyful energy",
         "day of the dead altar, marigolds, sugar skulls, candles, mexican tradition",
@@ -230,7 +211,6 @@ ULTIMATE_PROMPTS = {
         "venetian carnival mask, ornate decoration, mysterious elegance, italian tradition",
         "diwali lights, oil lamps, rangoli patterns, indian festival of lights, celebration",
     ],
-    
     "time_of_day": [
         "golden hour meadow, warm sunlight, wildflowers, magic hour photography, peaceful",
         "blue hour cityscape, twilight, lights beginning to glow, transitional beauty",
@@ -241,7 +221,6 @@ ULTIMATE_PROMPTS = {
         "dusk silhouettes, sunset colors, dramatic sky, day ending, contemplative",
         "predawn darkness, last stars fading, anticipation of sunrise, quiet moment",
     ],
-    
     "textural_studies": [
         "tree bark macro, detailed texture, natural patterns, organic surface, close-up",
         "rusted metal surface, oxidation patterns, industrial decay, abstract texture",
@@ -252,7 +231,6 @@ ULTIMATE_PROMPTS = {
         "sand ripples, wind patterns, desert texture, natural waves, minimalist",
         "brick wall detail, mortar lines, architectural texture, urban surface, geometric",
     ],
-    
     "emotional_atmospheres": [
         "lonely bench in fog, empty park, solitude, melancholy mood, contemplative",
         "joyful child running through sprinkler, summer fun, happiness, candid moment",
@@ -263,7 +241,6 @@ ULTIMATE_PROMPTS = {
         "nostalgic childhood bedroom, vintage toys, memories, sentimental, soft focus",
         "triumphant mountain summit, arms raised, achievement, inspiring, victory pose",
     ],
-    
     "light_and_shadow": [
         "venetian blinds casting striped shadows, noir aesthetic, dramatic contrast, mystery",
         "spotlight on empty stage, dramatic lighting, theater atmosphere, anticipation",
@@ -274,7 +251,6 @@ ULTIMATE_PROMPTS = {
         "long shadow at sunset, extended form, golden hour, artistic photography",
         "paper cutout shadow art, layered shadows, creative lighting, artistic installation",
     ],
-    
     "magical_realism": [
         "books flying around library, magical literacy, whimsical, fantasy atmosphere",
         "garden where flowers bloom instantly, time-lapse effect, magical nature, wonder",
@@ -293,13 +269,15 @@ def count_all_prompts() -> int:
     return sum(len(prompts) for prompts in ULTIMATE_PROMPTS.values())
 
 
-def _collect_prompts(categories: Optional[list[str]], randomize: bool) -> list[tuple[str, str]]:
+def _collect_prompts(
+    categories: list[str] | None, randomize: bool
+) -> list[tuple[str, str]]:
     """Collect and prepare prompts based on category selection.
-    
+
     Args:
         categories: Specific categories to use (None = all categories)
         randomize: Whether to shuffle prompts randomly
-        
+
     Returns:
         List of (category, prompt) tuples
     """
@@ -308,32 +286,36 @@ def _collect_prompts(categories: Optional[list[str]], randomize: bool) -> list[t
         for cat in categories:
             if cat in ULTIMATE_PROMPTS:
                 available_prompts.extend([(cat, p) for p in ULTIMATE_PROMPTS[cat]])
-        logger.info("using_categories", categories=categories, total=len(available_prompts))
+        logger.info(
+            "using_categories", categories=categories, total=len(available_prompts)
+        )
     else:
         available_prompts = []
         for cat, prompts in ULTIMATE_PROMPTS.items():
             available_prompts.extend([(cat, p) for p in prompts])
         logger.info("using_all_categories", total=len(available_prompts))
-    
+
     if randomize:
         random.shuffle(available_prompts)
-    
+
     return available_prompts
 
 
 def _get_generation_params(vary_parameters: bool) -> dict:
     """Get generation parameters with optional variation.
-    
+
     Args:
         vary_parameters: Whether to vary generation parameters
-        
+
     Returns:
         Dictionary with steps, guidance_scale, and seed
     """
     if vary_parameters:
         return {
             "steps": random.choice([20, 25, 30]),  # Removed 15 - too low for quality
-            "guidance": round(random.uniform(7.0, 8.0), 1),  # Narrower range for consistency
+            "guidance": round(
+                random.uniform(7.0, 8.0), 1
+            ),  # Narrower range for consistency
             "seed": random.randint(0, 999999),
         }
     else:
@@ -344,12 +326,14 @@ def _get_generation_params(vary_parameters: bool) -> dict:
         }
 
 
-def _print_collection_header(total: int, artist: AIArtist, randomize: bool, vary_parameters: bool):
+def _print_collection_header(
+    total: int, artist: AIArtist, randomize: bool, vary_parameters: bool
+):
     """Print the collection generation header."""
-    print(f"\n{'='*70}")
-    print(f"🎨 AI ARTIST - ULTIMATE COLLECTION GENERATOR")
-    print(f"{'='*70}")
-    print(f"📊 Statistics:")
+    print(f"\n{'=' * 70}")
+    print("🎨 AI ARTIST - ULTIMATE COLLECTION GENERATOR")
+    print(f"{'=' * 70}")
+    print("📊 Statistics:")
     print(f"   • Total categories: {len(ULTIMATE_PROMPTS)}")
     print(f"   • Available prompts: {count_all_prompts()}")
     print(f"   • Generating: {total} artworks")
@@ -357,66 +341,76 @@ def _print_collection_header(total: int, artist: AIArtist, randomize: bool, vary
     print(f"   • Model: {artist.generator.model_id}")
     print(f"   • Randomized: {'Yes' if randomize else 'No'}")
     print(f"   • Parameter variation: {'Yes' if vary_parameters else 'No'}")
-    print(f"{'='*70}\n")
+    print(f"{'=' * 70}\n")
 
 
-def _print_progress(i: int, total: int, category: str, prompt: str, params: dict, vary: bool):
+def _print_progress(
+    i: int, total: int, category: str, prompt: str, params: dict, vary: bool
+):
     """Print progress for current generation."""
     print(f"[{i}/{total}] Category: {category}")
     print(f"   Prompt: {prompt[:65]}...")
     if vary:
-        print(f"   Params: steps={params['steps']}, guidance={params['guidance']}, seed={params['seed']}")
+        print(
+            f"   Params: steps={params['steps']}, guidance={params['guidance']}, seed={params['seed']}"
+        )
 
 
-def _print_final_summary(success_count: int, total: int, failed_prompts: list, category_counts: dict):
+def _print_final_summary(
+    success_count: int, total: int, failed_prompts: list, category_counts: dict
+):
     """Print final generation summary."""
-    print(f"\n{'='*70}")
-    print(f"✨ GENERATION COMPLETE!")
-    print(f"{'='*70}")
-    print(f"📊 Results:")
-    print(f"   ✅ Successful: {success_count}/{total} ({success_count/total*100:.1f}%)")
+    print(f"\n{'=' * 70}")
+    print("✨ GENERATION COMPLETE!")
+    print(f"{'=' * 70}")
+    print("📊 Results:")
+    print(
+        f"   ✅ Successful: {success_count}/{total} ({success_count / total * 100:.1f}%)"
+    )
     print(f"   ❌ Failed: {len(failed_prompts)}")
-    print(f"\n📁 Category breakdown:")
+    print("\n📁 Category breakdown:")
     for cat, count in sorted(category_counts.items(), key=lambda x: x[1], reverse=True):
         print(f"   • {cat}: {count} images")
-    
+
     if failed_prompts:
-        print(f"\n⚠️  Failed generations:")
+        print("\n⚠️  Failed generations:")
         for idx, cat, prompt in failed_prompts[:10]:  # Show first 10
             print(f"   [{idx}] {cat}: {prompt[:50]}...")
-    
-    print(f"{'='*70}\n")
+
+    print(f"{'=' * 70}\n")
 
 
 async def generate_ultimate_collection(
-    num_images: Optional[int] = None,
-    categories: Optional[list[str]] = None,
+    num_images: int | None = None,
+    categories: list[str] | None = None,
     randomize: bool = True,
     vary_parameters: bool = True,
 ):
     """Generate the ultimate diverse artwork collection.
-    
+
     Args:
         num_images: Number of images to generate (None = all prompts)
         categories: Specific categories to use (None = all categories)
         randomize: Whether to shuffle prompts randomly
         vary_parameters: Whether to vary generation parameters for variety
     """
-    logger.info("ultimate_collection_started", 
-                num_images=num_images, 
-                categories=categories,
-                randomize=randomize)
-    
+    logger.info(
+        "ultimate_collection_started",
+        num_images=num_images,
+        categories=categories,
+        randomize=randomize,
+    )
+
     # Load configuration
     config_path = Path("config/config.yaml")
     config = load_config(config_path)
-    
+
     # Initialize AI Artist
     artist = AIArtist(config)
-    
+
     # Detect best available device for optimal performance
     import torch
-    
+
     if torch.cuda.is_available():
         device = "cuda"
         dtype = torch.float16
@@ -429,44 +423,44 @@ async def generate_ultimate_collection(
         device = "cpu"
         dtype = torch.float32
         logger.info("using_cpu_device")
-    
+
     # Configure generator for optimal performance
     artist.generator.device = device
     artist.generator.dtype = dtype
     artist.generator.model_id = "runwayml/stable-diffusion-v1-5"
-    
+
     # Load model
     artist.generator.load_model()
-    
+
     # Collect and prepare prompts
     available_prompts = _collect_prompts(categories, randomize)
-    
+
     # Limit to requested number
     if num_images:
         available_prompts = available_prompts[:num_images]
-    
+
     total = len(available_prompts)
-    
+
     # Display header
     _print_collection_header(total, artist, randomize, vary_parameters)
-    
+
     # Generation statistics
     success_count = 0
     failed_prompts = []
     category_counts = {}
-    
+
     # Generate images
     for i, (category, prompt) in enumerate(available_prompts, 1):
         try:
             # Track category stats
             category_counts[category] = category_counts.get(category, 0) + 1
-            
+
             # Get generation parameters
             params = _get_generation_params(vary_parameters)
-            
+
             # Display progress
             _print_progress(i, total, category, prompt, params, vary_parameters)
-            
+
             # Generate image with proper resolution for SD 1.5
             images = artist.generator.generate(
                 prompt=prompt,
@@ -478,7 +472,7 @@ async def generate_ultimate_collection(
                 guidance_scale=params["guidance"],
                 seed=params["seed"],
             )
-            
+
             # Save to gallery
             if images:
                 metadata = {
@@ -490,116 +484,114 @@ async def generate_ultimate_collection(
                     "seed": params["seed"] if params["seed"] else "random",
                     "collection": "ultimate",
                 }
-                
+
                 saved_path = artist.gallery.save_image(
                     image=images[0],
                     prompt=prompt,
                     metadata=metadata,
                     featured=False,
                 )
-                
+
                 success_count += 1
                 print(f"   ✅ Saved: {saved_path.name}\n")
             else:
-                print(f"   ❌ No images generated\n")
+                print("   ❌ No images generated\n")
                 failed_prompts.append((i, category, prompt))
-        
+
         except Exception as e:
             logger.error("generation_failed", error=str(e), prompt=prompt)
             print(f"   ❌ Error: {e}\n")
             failed_prompts.append((i, category, prompt))
             continue
-    
+
     # Final summary
     _print_final_summary(success_count, total, failed_prompts, category_counts)
-    
+
     if len(failed_prompts) > 10:
-        print(f"   ... and {len(failed_prompts)-10} more")
-    
-    print(f"\n🌐 View your gallery:")
-    print(f"   • Web interface: http://localhost:8000")
+        print(f"   ... and {len(failed_prompts) - 10} more")
+
+    print("\n🌐 View your gallery:")
+    print("   • Web interface: http://localhost:8000")
     print(f"   • File location: {artist.gallery.gallery_dir}")
-    print(f"{'='*70}\n")
-    
-    logger.info("ultimate_collection_complete", 
-                success=success_count, 
-                failed=len(failed_prompts),
-                categories=len(category_counts))
+    print(f"{'=' * 70}\n")
+
+    logger.info(
+        "ultimate_collection_complete",
+        success=success_count,
+        failed=len(failed_prompts),
+        categories=len(category_counts),
+    )
 
 
 if __name__ == "__main__":
     import argparse
-    
+
     # Build category choices
     all_categories = list(ULTIMATE_PROMPTS.keys())
-    
+
     parser = argparse.ArgumentParser(
         description="Generate the ultimate diverse art collection with 200+ prompts",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
 🎨 Available Categories ({len(all_categories)}):
-  {', '.join(all_categories)}
+  {", ".join(all_categories)}
 
 📊 Total Available Prompts: {count_all_prompts()}
 
 💡 Examples:
   # Generate all prompts from all categories
   python scripts/generate_ultimate_collection.py --all
-  
+
   # Generate 50 random images
   python scripts/generate_ultimate_collection.py -n 50
-  
+
   # Generate 20 images from specific categories
   python scripts/generate_ultimate_collection.py -n 20 -c cosmic_wonders mythological_beings
-  
+
   # Generate without randomization (in order)
   python scripts/generate_ultimate_collection.py -n 30 --no-random
-  
+
   # Generate with fixed parameters
   python scripts/generate_ultimate_collection.py -n 10 --no-variation
-        """
+        """,
     )
-    
+
     parser.add_argument(
-        "-n", "--num-images",
+        "-n",
+        "--num-images",
         type=int,
-        help="Number of images to generate (omit for all prompts)"
+        help="Number of images to generate (omit for all prompts)",
     )
-    
+
     parser.add_argument(
-        "-c", "--categories",
+        "-c",
+        "--categories",
         type=str,
         nargs="+",
         choices=all_categories,
-        help="Specific categories to use (omit for all)"
+        help="Specific categories to use (omit for all)",
     )
-    
+
     parser.add_argument(
-        "--all",
-        action="store_true",
-        help="Generate all available prompts"
+        "--all", action="store_true", help="Generate all available prompts"
     )
-    
+
     parser.add_argument(
-        "--no-random",
-        action="store_true",
-        help="Don't randomize prompt order"
+        "--no-random", action="store_true", help="Don't randomize prompt order"
     )
-    
+
     parser.add_argument(
         "--no-variation",
         action="store_true",
-        help="Use fixed parameters instead of varying them"
+        help="Use fixed parameters instead of varying them",
     )
-    
+
     parser.add_argument(
-        "--list-categories",
-        action="store_true",
-        help="List all categories and exit"
+        "--list-categories", action="store_true", help="List all categories and exit"
     )
-    
+
     args = parser.parse_args()
-    
+
     # Handle list categories
     if args.list_categories:
         print(f"\n🎨 Available Categories ({len(all_categories)}):\n")
@@ -608,16 +600,18 @@ if __name__ == "__main__":
             print(f"  • {cat:30} ({count} prompts)")
         print(f"\n📊 Total: {count_all_prompts()} prompts\n")
         sys.exit(0)
-    
+
     # Determine number of images
     num_images = None
     if not args.all:
         num_images = args.num_images or 10  # Default to 10 if not specified
-    
+
     # Run generation
-    asyncio.run(generate_ultimate_collection(
-        num_images=num_images,
-        categories=args.categories,
-        randomize=not args.no_random,
-        vary_parameters=not args.no_variation,
-    ))
+    asyncio.run(
+        generate_ultimate_collection(
+            num_images=num_images,
+            categories=args.categories,
+            randomize=not args.no_random,
+            vary_parameters=not args.no_variation,
+        )
+    )

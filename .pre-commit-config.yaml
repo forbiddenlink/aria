@@ -42,7 +42,8 @@ repos:
           - types-PyYAML
           - types-requests
           - types-Pillow
-        args: [--ignore-missing-imports]
+        args: [--ignore-missing-imports, --explicit-package-bases]
+        exclude: ^scripts/
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.6
