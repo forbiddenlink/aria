@@ -1,4 +1,5 @@
 # Research Report: Vector Database Options for AI Artist Semantic Search
+
 Generated: 2026-01-31
 
 ## Executive Summary
@@ -14,6 +15,7 @@ What vector database should be used for semantic artwork search in a Python/Fast
 ### Finding 1: pgvector - Recommended for This Use Case
 
 **Pros:**
+
 - Native PostgreSQL extension - vectors and relational data in one system, one transaction
 - Railway has **one-click deployment templates** (pgvector-pg17, pgvector-pg18, postgres-with-pgvector-engine)
 - Natural migration from SQLite using existing Alembic setup already in the codebase
@@ -23,11 +25,13 @@ What vector database should be used for semantic artwork search in a Python/Fast
 - Realistic limit: 10-100 million vectors before performance degradation
 
 **Cons:**
+
 - Not as fast as purpose-built vector DBs at billion-scale
 - Requires self-management of indexes (HNSW, IVFFlat)
 - No built-in embedding generation (need external service)
 
 **Integration with existing codebase:**
+
 - `/Volumes/LizsDisk/ai-artist/src/ai_artist/db/session.py` already has SQLAlchemy setup
 - `/Volumes/LizsDisk/ai-artist/alembic/` already configured for migrations
 - Change from `sqlite:///` to `postgresql://` connection string
@@ -38,6 +42,7 @@ What vector database should be used for semantic artwork search in a Python/Fast
 ### Finding 2: Chroma - Best for Prototyping Only
 
 **Pros:**
+
 - Lightweight, in-memory by default
 - `pip install chromadb` - zero infrastructure
 - Built-in Sentence Transformers embeddings
@@ -45,6 +50,7 @@ What vector database should be used for semantic artwork search in a Python/Fast
 - ~20ms median search latency on 100k vectors (384 dimensions)
 
 **Cons:**
+
 - **Not production-ready for Railway deployment** - designed for local/embedded use
 - No managed hosting option
 - SQLite-backed internally (ironic given current stack)
@@ -58,6 +64,7 @@ What vector database should be used for semantic artwork search in a Python/Fast
 ### Finding 3: Pinecone - Overkill for This Scale
 
 **Pros:**
+
 - Fully managed, zero ops
 - 50,000 insertions/sec, 5,000 QPS on 1M vectors
 - p50 < 10ms, p99 < 50ms at billion-scale
@@ -65,6 +72,7 @@ What vector database should be used for semantic artwork search in a Python/Fast
 - Scale to zero (serverless) option
 
 **Cons:**
+
 - **Cost escalates quickly**: $70-2000/month for moderate workloads
 - External dependency - network latency added
 - No relational data - must maintain separate PostgreSQL
@@ -78,6 +86,7 @@ What vector database should be used for semantic artwork search in a Python/Fast
 ### Finding 4: Weaviate - Strong But Complex
 
 **Pros:**
+
 - Open source, can self-host or use managed
 - Built-in CLIP modules for image embeddings
 - Multi-modal search (text, image, video) out of the box
@@ -85,6 +94,7 @@ What vector database should be used for semantic artwork search in a Python/Fast
 - ~$85/month for 10M vectors (managed)
 
 **Cons:**
+
 - More complex to set up than pgvector
 - Separate infrastructure from main database
 - Self-hosting: ~$660/month when including DevOps time
@@ -103,6 +113,7 @@ Current database setup in `/Volumes/LizsDisk/ai-artist/src/ai_artist/db/`:
 3. **alembic/**: Already configured for migrations
 
 Current search in `/Volumes/LizsDisk/ai-artist/src/ai_artist/web/helpers.py`:
+
 - `filter_by_search()` does naive string matching on prompts
 - Loads JSON metadata files for each image
 - No semantic understanding - "sunset" won't find "orange sky over water"
@@ -112,17 +123,20 @@ Image count estimate: Gallery structure suggests hundreds to low thousands of ar
 ## Migration Path: SQLite to pgvector
 
 ### Step 1: Deploy PostgreSQL with pgvector on Railway
+
 ```bash
 # Railway CLI or one-click template
 railway add postgresql-with-pgvector
 ```
 
 ### Step 2: Update environment variables
+
 ```env
 DATABASE_URL=postgresql://...  # Railway provides this
 ```
 
 ### Step 3: Modify session.py for PostgreSQL
+
 ```python
 # Remove SQLite-specific PRAGMAs
 # Use postgresql:// connection string
@@ -130,6 +144,7 @@ DATABASE_URL=postgresql://...  # Railway provides this
 ```
 
 ### Step 4: Alembic migration to add vector column
+
 ```python
 # alembic/versions/xxxx_add_embeddings.py
 from pgvector.sqlalchemy import Vector
@@ -145,11 +160,13 @@ def upgrade():
 ```
 
 ### Step 5: Generate embeddings for existing images
+
 - Use OpenAI CLIP or open-source CLIP model
 - Batch process existing gallery images
 - Store embeddings in new column
 
 ### Step 6: Add semantic search endpoint
+
 ```python
 @app.get("/api/search")
 async def semantic_search(query: str, limit: int = 20):
@@ -187,6 +204,7 @@ async def semantic_search(query: str, limit: int = 20):
 ### Embedding Strategy
 
 For artwork search, use **CLIP** (Contrastive Language-Image Pre-Training):
+
 - Unified embedding space for text and images
 - Search by description ("vibrant sunset landscape")
 - Search by similar image (upload reference)

@@ -153,6 +153,7 @@ class WebConfig(BaseModel):
     """Web server configuration."""
 
     # API key authentication - empty list means no auth required (dev mode)
+    # Can be set via RAILWAY_API_KEY environment variable
     api_keys: list[SecretStr] = []
 
     # CORS origins - empty list uses secure localhost defaults
@@ -161,6 +162,17 @@ class WebConfig(BaseModel):
     # Rate limiting
     rate_limit_generate: str = "5/minute"  # For /api/generate endpoint
     rate_limit_api: str = "60/minute"  # For other API endpoints
+
+    @classmethod
+    def from_env(cls) -> "WebConfig":
+        """Create WebConfig from environment variables."""
+        import os
+        
+        api_keys = []
+        if api_key := os.getenv("RAILWAY_API_KEY"):
+            api_keys = [SecretStr(api_key)]
+        
+        return cls(api_keys=api_keys)
 
 
 class Config(BaseSettings):

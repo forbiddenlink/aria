@@ -247,19 +247,24 @@ async def lifespan(app: FastAPI):
         set_gallery_manager(gallery_manager_instance, str(gallery_path))
         logger.info("web_gallery_started", gallery_path=str(gallery_path))
 
-    # Try to load web config from config file
+    # Try to load web config from config file or environment
     try:
         from ..utils.config import load_config
 
         config_path = Path("config/config.yaml")
         if config_path.exists():
             config = load_config(config_path)
-            set_web_config(config.web)
-            logger.info(
-                "web_config_loaded",
-                api_keys_configured=len(config.web.api_keys) > 0,
-                cors_origins=config.web.cors_origins,
-            )
+            web_config = config.web
+        else:
+            # Load from environment variables (e.g., RAILWAY_API_KEY)
+            web_config = WebConfig.from_env()
+        
+        set_web_config(web_config)
+        logger.info(
+            "web_config_loaded",
+            api_keys_configured=len(web_config.api_keys) > 0,
+            cors_origins=web_config.cors_origins,
+        )
     except Exception as e:
         logger.warning("web_config_load_failed", error=str(e))
         # Use default config (no auth required)
