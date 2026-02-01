@@ -343,6 +343,9 @@ app.include_router(feedback_router)
 templates_dir = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(templates_dir))
 
+# Static files directory
+static_dir = Path(__file__).parent.parent.parent / "static"
+
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
@@ -402,6 +405,33 @@ async def sitemap_xml(request: Request):
 </urlset>
 """
     return Response(content=sitemap_content, media_type="application/xml")
+
+
+@app.get("/manifest.json")
+async def manifest():
+    """Serve PWA manifest file."""
+    manifest_path = static_dir / "manifest.json"
+    if not manifest_path.exists():
+        raise HTTPException(status_code=404, detail="Manifest not found")
+    return FileResponse(manifest_path, media_type="application/manifest+json")
+
+
+@app.get("/service-worker.js")
+async def service_worker():
+    """Serve service worker for PWA."""
+    sw_path = static_dir / "service-worker.js"
+    if not sw_path.exists():
+        raise HTTPException(status_code=404, detail="Service worker not found")
+    return FileResponse(sw_path, media_type="application/javascript")
+
+
+@app.get("/offline.html", response_class=HTMLResponse)
+async def offline_page():
+    """Serve offline fallback page."""
+    offline_path = static_dir / "offline.html"
+    if not offline_path.exists():
+        raise HTTPException(status_code=404, detail="Offline page not found")
+    return FileResponse(offline_path)
 
 
 @app.get("/classic", response_class=HTMLResponse)
