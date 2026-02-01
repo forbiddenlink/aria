@@ -576,7 +576,7 @@ async def toggle_featured(
 
 # Admin Upload Endpoints
 @app.post("/api/admin/upload-image")
-@limiter.limit("10/minute")
+@limiter.limit("100/minute")
 async def upload_image(
     request: Request,
     gallery_path: GalleryPathDep,
