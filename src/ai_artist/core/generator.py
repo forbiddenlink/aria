@@ -206,32 +206,69 @@ class ImageGenerator:
                 # Enable memory-efficient optimizations for CUDA/CPU
                 logger.info("applying_memory_optimizations", device=self.device)
 
-                # Enable attention slicing for memory efficiency
-                try:
-                    pipeline.enable_attention_slicing(1)
-                    logger.debug("attention_slicing_enabled")
-                except Exception as e:
-                    logger.warning("attention_slicing_failed", error=str(e))
+                # Try optimizations in order of performance (best to fallback)
+                attention_enabled = False
 
-                # Enable VAE slicing for large images
+                # 1. Try xFormers (fastest, requires separate install)
+                try:
+                    pipeline.enable_xformers_memory_efficient_attention()
+                    logger.info(
+                        "xformers_enabled",
+                        benefit="30-50% faster inference, 20% memory reduction",
+                    )
+                    attention_enabled = True
+                except Exception:
+                    pass
+
+                # 2. Try PyTorch 2.0+ SDPA (fast, built-in)
+                if not attention_enabled:
+                    try:
+                        if hasattr(torch.nn.functional, "scaled_dot_product_attention"):
+                            # SDPA is available in PyTorch 2.0+
+                            # Diffusers automatically uses it if available
+                            logger.info(
+                                "sdpa_available",
+                                benefit="20-30% faster than standard attention",
+                                pytorch_version=torch.__version__,
+                            )
+                            attention_enabled = True
+                    except Exception:
+                        pass
+
+                # 3. Fallback to attention slicing (slower but memory efficient)
+                if not attention_enabled:
+                    try:
+                        pipeline.enable_attention_slicing(1)
+                        logger.info(
+                            "attention_slicing_enabled",
+                            note="Install xformers for better performance: pip install xformers",
+                        )
+                    except Exception as e:
+                        logger.warning("attention_slicing_failed", error=str(e))
+
+                # Enable VAE slicing for large images (always beneficial)
                 try:
                     pipeline.enable_vae_slicing()
                     logger.debug("vae_slicing_enabled")
                 except Exception as e:
                     logger.warning("vae_slicing_failed", error=str(e))
 
-                # Try to enable xformers memory efficient attention
-                try:
-                    pipeline.enable_xformers_memory_efficient_attention()
-                    logger.info("xformers_enabled", benefit="reduced_memory_usage")
-                except Exception as e:
-                    logger.debug(
-                        "xformers_not_available",
-                        hint="pip install xformers",
-                        error=str(e),
-                    )
-                pipeline.enable_attention_slicing()
-                pipeline.enable_vae_slicing()
+                # Try torch.compile() for PyTorch 2.0+ (10-20% speedup)
+                if hasattr(torch, "compile") and torch.__version__ >= "2.0":
+                    try:
+                        # Compile UNet for faster inference
+                        pipeline.unet = torch.compile(
+                            pipeline.unet,
+                            mode="reduce-overhead",
+                            fullgraph=True,
+                        )
+                        logger.info(
+                            "torch_compile_enabled",
+                            benefit="10-20% faster inference after warmup",
+                            target="unet",
+                        )
+                    except Exception as e:
+                        logger.debug("torch_compile_unavailable", error=str(e))
 
             # Assign to instance attribute after all setup is complete
             self.pipeline = pipeline
