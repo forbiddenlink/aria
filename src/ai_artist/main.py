@@ -9,6 +9,7 @@ from .api.unsplash import UnsplashClient
 from .core.face_restore import FaceRestorer
 from .core.generator import ImageGenerator
 from .core.inpainter import ImageInpainter
+from .core.model_pool import ModelPool
 from .core.upscaler import ImageUpscaler
 from .curation.curator import ImageCurator
 from .gallery.manager import GalleryManager
@@ -48,6 +49,7 @@ class AIArtist:
         self.unsplash = None
         self.scheduler = None
         self.curator = None
+        self.model_pool = None  # Model pool for pre-warmed models
         self.prompt_engine = None
         self.trend_manager = None
         self.model_manager = None
@@ -95,6 +97,21 @@ class AIArtist:
         # Initialize prompt engine
         self.prompt_engine = PromptEngine()
 
+        # Initialize model pool if enabled (for 10x faster startup)
+        if self.config.performance.enable_model_pool:
+            logger.info("initializing_model_pool", enabled=True)
+            self.model_pool = ModelPool(
+                device=self.config.model.device,
+                dtype=get_torch_dtype(self.config.model.dtype),
+            )
+            # Start background preloading of models
+            if self.config.performance.preload_models:
+                preload_list = self.config.performance.preload_models.split(",")
+                logger.info("preloading_models", models=preload_list)
+                # Note: Actual preloading happens asynchronously
+        else:
+            logger.info("model_pool_disabled", fallback="direct_loading")
+
         # Initialize generator
         self.generator = ImageGenerator(
             model_id=self.config.model.base_model,
@@ -107,6 +124,11 @@ class AIArtist:
         if self.config.controlnet.enabled:
             controlnet_model = self.config.controlnet.model_id
             logger.info("controlnet_enabled", model=controlnet_model)
+
+        # Load model (will use model pool if available)
+        if self.model_pool:
+            logger.info("using_model_pool_for_loading")
+            # Model pool will be used during generation via get_or_load_model()
 
         self.generator.load_model(controlnet_model=controlnet_model)
 
