@@ -1,10 +1,30 @@
 """Database session management."""
 
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
+
+# Global session factory (initialized on first use)
+_session_factory: sessionmaker | None = None
+
+
+def get_session_factory() -> sessionmaker:
+    """Get or create the global session factory."""
+    global _session_factory
+    if _session_factory is None:
+        # Default to a database in the current directory
+        db_path = Path.cwd() / "data" / "ai_artist.db"
+        _session_factory = create_session_factory(db_path)
+    return _session_factory
+
+
+def set_session_factory(session_factory: sessionmaker) -> None:
+    """Set the global session factory."""
+    global _session_factory
+    _session_factory = session_factory
 
 
 def create_db_engine(db_path: Path):
@@ -36,6 +56,24 @@ def create_session_factory(db_path: Path) -> sessionmaker:
 @contextmanager
 def get_db_session(session_factory: sessionmaker):
     """Context manager for database sessions."""
+    session = session_factory()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+def get_db() -> Generator[Session, None, None]:
+    """FastAPI dependency for database sessions.
+
+    Yields:
+        Database session
+    """
+    session_factory = get_session_factory()
     session = session_factory()
     try:
         yield session

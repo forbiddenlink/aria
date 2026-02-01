@@ -33,7 +33,7 @@ class Personality:
 
     def __init__(self, name: str = "Aria"):
         self.name = name
-        self.current_mood = Mood.CONTEMPLATIVE
+        self.current_mood = self._get_time_based_mood()
         self.energy_level = 0.7  # 0.0 to 1.0
         self.creativity_level = 0.8
         self.experimentation_openness = 0.75
@@ -85,6 +85,30 @@ class Personality:
             mood=self.current_mood.value,
             energy=self.energy_level,
         )
+
+    def _get_time_based_mood(self) -> Mood:
+        """Determine initial mood based on time of day.
+
+        Returns:
+            Mood appropriate for current time
+        """
+        current_hour = datetime.now().hour
+
+        # Morning (6am-12pm): Fresh, energized, playful
+        if 6 <= current_hour < 12:
+            return random.choice([Mood.ENERGIZED, Mood.PLAYFUL, Mood.FOCUSED])
+
+        # Afternoon (12pm-6pm): Bold, experimental, creative
+        elif 12 <= current_hour < 18:
+            return random.choice([Mood.REBELLIOUS, Mood.RESTLESS, Mood.PLAYFUL])
+
+        # Evening (6pm-12am): Reflective, calm, artistic
+        elif 18 <= current_hour < 24:
+            return random.choice([Mood.CONTEMPLATIVE, Mood.MELANCHOLIC, Mood.SERENE])
+
+        # Night (12am-6am): Deep, dreamy, introspective
+        else:
+            return random.choice([Mood.DREAMY, Mood.CONTEMPLATIVE, Mood.FOCUSED])
 
     def update_mood(self, external_factors: dict[str, float] | None = None) -> Mood:
         """Update Aria's mood based on energy, creativity, and external factors.

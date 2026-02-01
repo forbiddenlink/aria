@@ -3112,13 +3112,21 @@
 
         // Load all images
         async function loadImages() {
-            const params = new URLSearchParams({ limit: 500 });
+            // Add timestamp to prevent browser caching
+            const params = new URLSearchParams({
+                limit: 500,
+                _t: Date.now()
+            });
             if (currentSearch) params.append('search', currentSearch);
 
             try {
                 const response = await fetch(`/api/images?${params}`);
                 allImages = await response.json();
+                console.log('Loaded images from API:', allImages.length);
+                console.log('First 3 images from API:', allImages.slice(0, 3).map(img => ({ filename: img.filename, created_at: img.created_at })));
+                console.log('Current sort before sortImages():', currentSort);
                 sortImages();
+                console.log('First 3 images after sortImages():', allImages.slice(0, 3).map(img => ({ filename: img.filename, created_at: img.created_at })));
                 renderGallery();
             } catch (error) {
                 console.error('Failed to load images:', error);
@@ -3130,11 +3138,19 @@
         // Sort images
         function sortImages() {
             if (currentSort === 'newest') {
-                allImages.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                allImages.sort((a, b) => {
+                    const dateA = a.created_at ? new Date(a.created_at) : new Date(0);
+                    const dateB = b.created_at ? new Date(b.created_at) : new Date(0);
+                    return dateB - dateA;
+                });
             } else if (currentSort === 'oldest') {
-                allImages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+                allImages.sort((a, b) => {
+                    const dateA = a.created_at ? new Date(a.created_at) : new Date(0);
+                    const dateB = b.created_at ? new Date(b.created_at) : new Date(0);
+                    return dateA - dateB;
+                });
             } else if (currentSort === 'prompt') {
-                allImages.sort((a, b) => a.prompt.localeCompare(b.prompt));
+                allImages.sort((a, b) => (a.prompt || '').localeCompare(b.prompt || ''));
             }
         }
 
@@ -3361,7 +3377,8 @@
 
                         lastSelectedIndex = index;
                     } else {
-                        openModal(image, index);
+                        // Pass only the image object, let openModal find the correct index
+                        openModal(image);
                     }
                 };
 

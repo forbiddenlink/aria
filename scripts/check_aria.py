@@ -24,8 +24,9 @@ def check_aria_status():
     print("=" * 60)
 
     # Basic stats
-    total = memory["stats"]["total_created"]
-    best_score = memory["stats"]["best_score"]
+    stats = memory.get("stats", {})
+    total = stats.get("total_created", 0)
+    best_score = stats.get("best_score", 0.0)
 
     print("\n📊 Creative Journey:")
     print(f"   Total Artworks: {total}")
@@ -36,22 +37,25 @@ def check_aria_status():
         return
 
     # Recent works
-    recent = memory["paintings"][-5:]
+    paintings = memory.get("paintings", [])
+    recent = paintings[-5:] if paintings else []
 
-    print("\n🎨 Recent Creations:")
-    for i, painting in enumerate(recent, 1):
-        timestamp = datetime.fromisoformat(painting["timestamp"])
-        print(f"\n   {i}. {painting['subject']}")
-        print(f"      Mood: {painting['mood']}")
-        print(f"      Score: {painting['score']:.3f}")
-        print(f"      Style: {painting['style']}")
-        print(f"      Created: {timestamp.strftime('%Y-%m-%d %H:%M')}")
-        if "metadata" in painting and "reflection" in painting["metadata"]:
-            print(f"      Reflection: {painting['metadata']['reflection'][:80]}...")
+    if recent:
+        print("\n🎨 Recent Creations:")
+        for i, painting in enumerate(recent, 1):
+            timestamp = datetime.fromisoformat(painting["timestamp"])
+            print(f"\n   {i}. {painting.get('subject', 'Unknown')}")
+            print(f"      Mood: {painting.get('mood', 'Unknown')}")
+            print(f"      Score: {painting.get('score', 0.0):.3f}")
+            print(f"      Style: {painting.get('style', 'Unknown')}")
+            print(f"      Created: {timestamp.strftime('%Y-%m-%d %H:%M')}")
+            if "metadata" in painting and "reflection" in painting["metadata"]:
+                print(f"      Reflection: {painting['metadata']['reflection'][:80]}...")
 
     # Preferences
-    fav_subjects = memory["preferences"]["favorite_subjects"]
-    fav_styles = memory["preferences"]["favorite_styles"]
+    preferences = memory.get("preferences", {})
+    fav_subjects = preferences.get("favorite_subjects", {})
+    fav_styles = preferences.get("favorite_styles", {})
 
     if fav_subjects:
         top_subject = max(fav_subjects.items(), key=lambda x: x[1])

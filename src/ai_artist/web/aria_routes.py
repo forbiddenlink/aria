@@ -9,11 +9,15 @@ from pathlib import Path
 from typing import Any
 
 import aiofiles
-from fastapi import APIRouter, Request
+import torch
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+from sqlalchemy.orm import Session
 
+from ..db.models import GeneratedImage
+from ..db.session import get_db
 from ..personality.enhanced_memory import EnhancedMemorySystem
 from ..personality.moods import Mood, MoodSystem
 from ..personality.profile import ArtisticProfile
@@ -238,13 +242,14 @@ async def get_aria_state(request: Request):
 
 @router.post("/create", response_model=AriaCreateResponse)
 @limiter.limit("5/minute")
-async def create_artwork(request: Request):
+async def create_artwork(request: Request, db: Session = Depends(get_db)):
     """Trigger Aria to create a new artwork with actual image generation.
 
     Returns concept info immediately and starts background generation.
     The session_id can be used to track progress via WebSocket.
     """
     from ..core.generator import ImageGenerator
+    from ..inspiration.autonomous import AutonomousInspiration
     from ..web.websocket import manager as ws_manager
 
     state = _get_aria_state()
@@ -254,7 +259,7 @@ async def create_artwork(request: Request):
     session_id = str(uuid.uuid4())
 
     try:
-        # Get mood influences
+        # Get mood influences for style and colors
         mood = mood_system.current_mood
         mood_influences = mood_system.mood_influences.get(
             mood,
@@ -265,9 +270,18 @@ async def create_artwork(request: Request):
             },
         )
 
-        # Build concept based on mood
-        subject = random.choice(mood_influences.get("subjects", ["abstract"]))
-        style = random.choice(mood_influences.get("styles", ["digital art"]))
+        # Use comprehensive subject list for variety (not mood-restricted)
+        autonomous = AutonomousInspiration()
+        subject = random.choice(autonomous.subjects)
+
+        # Use comprehensive style list for variety (mix mood-influenced with autonomous)
+        # 70% chance to use autonomous styles, 30% chance to use mood-specific style
+        if random.random() < 0.7:
+            style = random.choice(autonomous.styles)
+        else:
+            style = random.choice(mood_influences.get("styles", ["digital art"]))
+
+        # Colors still influenced by mood for emotional coherence
         colors = random.choice(mood_influences.get("colors", ["vibrant colors"]))
 
         # Build prompt
@@ -292,6 +306,11 @@ async def create_artwork(request: Request):
         thinking_parts.append(f"I'll use a {style} approach with {colors}.")
         thinking = " ".join(thinking_parts)
 
+        # Send thinking update to WebSocket clients
+        await ws_manager.send_thinking_update(
+            session_id=session_id, thought_type="observe", content=thinking
+        )
+
         # Simple critique simulation
         critique_history = [
             {
@@ -307,6 +326,11 @@ async def create_artwork(request: Request):
             {"subject": subject, "style": style, "mood": mood.value}
         )
 
+        # Send reflection as thinking update
+        await ws_manager.send_thinking_update(
+            session_id=session_id, thought_type="reflect", content=reflection
+        )
+
         logger.info(
             "aria_concept_created",
             subject=subject,
@@ -318,18 +342,43 @@ async def create_artwork(request: Request):
         # Start background generation
         async def generate_task():
             generator = None
+            from ..db.session import get_session_factory
+
             try:
                 config_path = Path("config/config.yaml")
                 config = load_config(config_path)
                 gallery_path = Path("gallery")
 
                 # Send start event
-                await ws_manager.send_generation_start(session_id=session_id)
+                await ws_manager.send_generation_start(
+                    session_id=session_id, prompt=prompt
+                )
 
-                # Create generator
+                # Send thinking update about starting creation
+                await ws_manager.send_thinking_update(
+                    session_id=session_id,
+                    thought_type="create",
+                    content="Beginning the creation process... channeling my vision into form.",
+                )
+
+                # Parse dtype correctly
+                dtype = (
+                    torch.float32 if config.model.dtype == "float32" else torch.float16
+                )
+
+                logger.info(
+                    "creating_generator",
+                    session_id=session_id,
+                    device=config.model.device,
+                    dtype=config.model.dtype,
+                    model=config.model.base_model,
+                )
+
+                # Create generator with proper dtype
                 generator = ImageGenerator(
                     model_id=config.model.base_model,
                     device=config.model.device,
+                    dtype=dtype,
                 )
                 generator.load_model()
 
@@ -356,7 +405,7 @@ async def create_artwork(request: Request):
                 )
 
                 # Save image
-                if images:
+                if images and len(images) > 0:
                     import json as json_module
 
                     now = datetime.now()
@@ -364,28 +413,60 @@ async def create_artwork(request: Request):
                     date_path.mkdir(parents=True, exist_ok=True)
                     filename = f"{now.strftime('%Y%m%d_%H%M%S')}_noseed.png"
                     save_path = date_path / filename
+
+                    # Save the image file
                     images[0].save(save_path)
+                    logger.info("image_saved_to_disk", path=str(save_path))
 
                     # Save metadata JSON for gallery API
                     metadata_path = save_path.with_suffix(".json")
-                    metadata_path.write_text(
-                        json_module.dumps(
-                            {
-                                "prompt": prompt,
-                                "metadata": {
-                                    "mood": mood.value,
-                                    "subject": subject,
-                                    "style": style,
-                                    "model": config.model.base_model,
-                                },
-                                "created_at": now.isoformat(),
-                                "featured": False,
-                            },
-                            indent=2,
-                        )
-                    )
+                    metadata_json = {
+                        "prompt": prompt,
+                        "metadata": {
+                            "mood": mood.value,
+                            "subject": subject,
+                            "style": style,
+                            "model": config.model.base_model,
+                        },
+                        "created_at": now.isoformat(),
+                        "featured": False,
+                    }
+                    metadata_path.write_text(json_module.dumps(metadata_json, indent=2))
 
                     image_url = f"/api/images/file/{now.strftime('%Y/%m/%d')}/archive/{filename}"
+
+                    # Save to database
+                    try:
+                        session_factory = get_session_factory()
+                        if session_factory:
+                            with session_factory() as db_session:
+                                db_image = GeneratedImage(
+                                    filename=str(save_path),
+                                    prompt=prompt,
+                                    negative_prompt=negative_prompt,
+                                    status=mood.value,
+                                    seed=None,
+                                    model_id=config.model.base_model,
+                                    generation_params={
+                                        "width": 768,
+                                        "height": 768,
+                                        "steps": 30,
+                                        "guidance_scale": 7.5,
+                                        "subject": subject,
+                                        "style": style,
+                                    },
+                                    final_score=0.8,  # Default score
+                                    tags=[mood.value, subject, style],
+                                    created_at=now,
+                                )
+                                db_session.add(db_image)
+                                db_session.commit()
+                                logger.info("image_saved_to_database", id=db_image.id)
+                        else:
+                            logger.warning("database_not_configured_skipping_db_save")
+                    except Exception as db_error:
+                        logger.error("database_save_failed", error=str(db_error))
+                        # Don't fail the whole operation if DB save fails
 
                     # Update mood after successful creation
                     mood_system.update_mood()
@@ -403,25 +484,50 @@ async def create_artwork(request: Request):
                         image_url=image_url,
                     )
                 else:
+                    error_msg = "No valid images generated. This often happens with MPS + float16. Try using float32 in config.yaml."
+                    logger.error(
+                        "generation_produced_no_images",
+                        session_id=session_id,
+                        device=config.model.device,
+                        dtype=config.model.dtype,
+                        hint="Set dtype: 'float32' in config/config.yaml if using MPS",
+                    )
                     await ws_manager.send_generation_error(
                         session_id=session_id,
-                        error="No valid images generated",
+                        error=error_msg,
                     )
 
             except Exception as e:
+                import traceback
+
+                error_details = traceback.format_exc()
                 logger.error(
-                    "aria_generation_failed", error=str(e), session_id=session_id
+                    "aria_generation_failed",
+                    error=str(e),
+                    session_id=session_id,
+                    traceback=error_details,
                 )
                 await ws_manager.send_generation_error(
                     session_id=session_id,
-                    error=str(e),
+                    error=f"Generation failed: {str(e)}",
                 )
             finally:
                 if generator:
                     generator.clear_vram()
 
-        # Start generation in background
-        asyncio.create_task(generate_task())
+        # Start generation in background with exception handling
+        task = asyncio.create_task(generate_task())
+
+        # Add exception handler for the background task
+        def handle_task_exception(task):
+            try:
+                task.result()
+            except Exception as e:
+                logger.error(
+                    "background_task_exception", error=str(e), session_id=session_id
+                )
+
+        task.add_done_callback(handle_task_exception)
 
         return AriaCreateResponse(
             success=True,

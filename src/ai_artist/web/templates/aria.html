@@ -1321,7 +1321,7 @@
                     console.error('Error fetching state:', e);
                     // Fallback to images API
                     if (loadGallery) {
-                        fetch('/api/images?limit=50')
+                        fetch('/api/images?limit=50&_t=' + Date.now())
                             .then(function(res) { return res.json(); })
                             .then(function(images) { renderGalleryFromImages(images); })
                             .catch(function(err) { console.error('Error fetching images:', err); });
@@ -1333,11 +1333,13 @@
             var grid = document.getElementById('gallery-grid');
             grid.textContent = '';
 
-            var reversed = portfolio.slice().reverse();
-            reversed.forEach(function(p, i) {
-                var id = p.number || i;
-                paintingsData[id] = p;
-                grid.appendChild(createArtCard(p, id));
+            // API already returns newest first, no need to reverse
+            // Reset paintingsData to ensure clean state
+            paintingsData = {};
+            portfolio.forEach(function(p, i) {
+                // Always use iteration index, not p.number which may be stale
+                paintingsData[i] = p;
+                grid.appendChild(createArtCard(p, i));
             });
         }
 
@@ -1345,6 +1347,8 @@
             var grid = document.getElementById('gallery-grid');
             grid.textContent = '';
 
+            // Reset paintingsData to ensure clean state
+            paintingsData = {};
             images.forEach(function(img, i) {
                 var painting = {
                     number: i,

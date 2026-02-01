@@ -410,8 +410,9 @@ class ImageGenerator:
         if seed is not None:
             generator = torch.Generator(device=self.device).manual_seed(seed)
 
-        # Progress callback
-        def progress_callback(step: int, timestep: int, latents):
+        # Progress callback using modern API (callback_on_step_end)
+        def progress_callback_modern(pipeline, step_index, timestep, callback_kwargs):
+            step = step_index + 1  # Make it 1-based for display
             progress_pct = int((step / num_inference_steps) * 100)
             bar_length = 30
             filled = int(bar_length * step // num_inference_steps)
@@ -425,13 +426,14 @@ class ImageGenerator:
             if on_progress is not None:
                 message = f"Generating: step {step}/{num_inference_steps}"
                 on_progress(step, num_inference_steps, message)
+            return callback_kwargs
 
         # If using refiner, we need to output latents from base
         output_type = "pil"
         if use_refiner and self.refiner:
             output_type = "latent"
 
-        # Prepare kwargs
+        # Prepare kwargs with modern callback API
         call_kwargs = {
             "prompt": prompt,
             "negative_prompt": negative_prompt,
@@ -441,8 +443,7 @@ class ImageGenerator:
             "guidance_scale": guidance_scale,
             "num_images_per_prompt": num_images,
             "generator": generator,
-            "callback": progress_callback,
-            "callback_steps": 1,
+            "callback_on_step_end": progress_callback_modern,
             "output_type": output_type,
         }
 

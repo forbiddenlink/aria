@@ -9,8 +9,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from ..db.models import Artwork
-from ..db.session import get_db_session
+from ..db.models import GeneratedImage
+from ..db.session import get_db
 from ..utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -40,7 +40,7 @@ async def admin_dashboard(request: Request) -> HTMLResponse:
 
 @router.get("/stats")
 async def get_statistics(
-    db: Session = Depends(get_db_session),
+    db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Get system statistics.
 
@@ -52,30 +52,44 @@ async def get_statistics(
     """
     try:
         # Total artworks
-        total_artworks = db.query(Artwork).count()
+        total_artworks = db.query(GeneratedImage).count()
 
-        # Artworks by mood
+        # Artworks by status
         from sqlalchemy import func
 
-        moods = (
-            db.query(Artwork.mood, func.count(Artwork.id)).group_by(Artwork.mood).all()
+        statuses = (
+            db.query(GeneratedImage.status, func.count(GeneratedImage.id))
+            .group_by(GeneratedImage.status)
+            .all()
         )
 
         # Recent artworks
-        recent = db.query(Artwork).order_by(Artwork.created_at.desc()).limit(10).all()
+        recent = (
+            db.query(GeneratedImage)
+            .order_by(GeneratedImage.created_at.desc())
+            .limit(10)
+            .all()
+        )
 
         # Top rated
-        top_rated = db.query(Artwork).order_by(Artwork.score.desc()).limit(10).all()
+        top_rated = (
+            db.query(GeneratedImage)
+            .filter(GeneratedImage.final_score.isnot(None))
+            .order_by(GeneratedImage.final_score.desc())
+            .limit(10)
+            .all()
+        )
 
         return {
             "total_artworks": total_artworks,
-            "moods": dict(moods),
+            "statuses": dict(statuses),
             "recent": [
                 {
                     "id": a.id,
-                    "theme": a.theme,
-                    "mood": a.mood,
-                    "score": a.score,
+                    "filename": a.filename,
+                    "prompt": a.prompt,
+                    "status": a.status,
+                    "final_score": a.final_score,
                     "created_at": a.created_at.isoformat(),
                 }
                 for a in recent
@@ -83,9 +97,11 @@ async def get_statistics(
             "top_rated": [
                 {
                     "id": a.id,
-                    "theme": a.theme,
-                    "score": a.score,
-                    "image_path": a.image_path,
+                    "filename": a.filename,
+                    "final_score": a.final_score,
+                    "prompt": (
+                        a.prompt[:100] + "..." if len(a.prompt) > 100 else a.prompt
+                    ),
                 }
                 for a in top_rated
             ],
@@ -169,7 +185,7 @@ async def get_system_info() -> dict[str, Any]:
 @router.delete("/artworks/{artwork_id}")
 async def delete_artwork(
     artwork_id: str,
-    db: Session = Depends(get_db_session),
+    db: Session = Depends(get_db),
 ) -> dict[str, str]:
     """Delete artwork.
 
@@ -181,16 +197,21 @@ async def delete_artwork(
         Success message
     """
     try:
-        artwork = db.query(Artwork).filter(Artwork.id == artwork_id).first()
+        artwork = (
+            db.query(GeneratedImage).filter(GeneratedImage.id == artwork_id).first()
+        )
 
         if not artwork:
             raise HTTPException(status_code=404, detail="Artwork not found")
 
         # Delete image file if exists
-        if artwork.image_path:
-            image_path = Path(artwork.image_path)
-            if image_path.exists():
-                image_path.unlink()
+        if artwork.filename:
+            from ..config import get_config
+
+            config = get_config()
+            gallery_path = Path(config.output.directory) / artwork.filename
+            if gallery_path.exists():
+                gallery_path.unlink()
 
         db.delete(artwork)
         db.commit()

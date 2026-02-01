@@ -460,6 +460,7 @@ async def test_websocket(request: Request):
 @limiter.limit("60/minute")
 async def list_images(
     request: Request,
+    response: Response,
     gallery_manager: GalleryManagerDep,
     gallery_path: GalleryPathDep,
     featured: bool | None = Query(None, description="Filter by featured status"),
@@ -468,6 +469,11 @@ async def list_images(
     search: str | None = Query(None, description="Search in prompts"),
 ):
     """List all images with metadata."""
+    # Prevent caching to ensure fresh results
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+
     # Get image paths
     image_paths = gallery_manager.list_images(featured_only=bool(featured))
     total_images = len(image_paths)
@@ -476,10 +482,7 @@ async def list_images(
     if search:
         image_paths = filter_by_search(image_paths, search)
 
-    # Apply pagination
-    image_paths = image_paths[offset : offset + limit]
-
-    # Build response with validation
+    # Build response with validation (before pagination to get accurate metadata)
     results = []
     for img_path in image_paths:
         # Validate image
@@ -495,9 +498,21 @@ async def list_images(
         else:
             logger.debug("skipping_image_no_metadata", path=str(img_path))
 
+    # Sort by created_at to ensure newest first (more reliable than file mtime)
+    # Use file path timestamp as fallback for any missing created_at
+    results.sort(
+        key=lambda x: x.created_at if x.created_at else "1970-01-01T00:00:00",
+        reverse=True,
+    )
+
+    # Apply pagination after sorting
+    total_valid = len(results)
+    results = results[offset : offset + limit]
+
     logger.info(
         "images_listed",
         total=total_images,
+        valid=total_valid,
         returned=len(results),
         featured=featured,
         search=search,

@@ -336,7 +336,7 @@ class MoodSystem:
     MIN_INTENSITY_THRESHOLD = 0.3
 
     def __init__(self):
-        self.current_mood = Mood.CONTEMPLATIVE
+        self.current_mood = self._get_time_based_mood()
         self.energy_level = 0.5  # 0.0 to 1.0
         self.mood_duration = 0
 
@@ -408,6 +408,32 @@ class MoodSystem:
             initial_mood=self.current_mood,
             intensity=round(self.mood_intensity, 2),
         )
+
+    def _get_time_based_mood(self) -> Mood:
+        """Determine initial mood based on time of day.
+
+        Returns:
+            Mood appropriate for current time
+        """
+        import random
+
+        current_hour = datetime.now().hour
+
+        # Morning (6am-12pm): Fresh, energized, creative
+        if 6 <= current_hour < 12:
+            return random.choice([Mood.ENERGIZED, Mood.PLAYFUL, Mood.BOLD])
+
+        # Afternoon (12pm-6pm): Active, experimental, dynamic
+        elif 12 <= current_hour < 18:
+            return random.choice([Mood.REBELLIOUS, Mood.CHAOTIC, Mood.PLAYFUL])
+
+        # Evening (6pm-12am): Reflective, calm, thoughtful
+        elif 18 <= current_hour < 24:
+            return random.choice([Mood.CONTEMPLATIVE, Mood.MELANCHOLIC, Mood.SERENE])
+
+        # Night (12am-6am): Deep, dreamy, introspective
+        else:
+            return random.choice([Mood.DREAMY, Mood.INTROSPECTIVE, Mood.CONTEMPLATIVE])
 
     def apply_decay(self) -> None:
         """Apply natural mood decay based on time elapsed.
