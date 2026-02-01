@@ -42,6 +42,7 @@ No external plan document - user gave open-ended "improve everything" request. R
 ## Recent changes
 
 **Mood System** (`src/ai_artist/personality/moods.py`):
+
 - Lines 1-220: Added `StyleAxes` class with 10 granular creativity controls
 - Lines 221-280: Added mood decay constants (`NEUTRAL_MOODS`, `MOOD_INTENSITY_BASELINE`)
 - Lines 281-350: Added `MoodSystem.apply_decay()`, `_decay_to_neutral()` methods
@@ -51,6 +52,7 @@ No external plan document - user gave open-ended "improve everything" request. R
 - Lines 620-700: Enriched `reflect_on_work()` with poetic, mood-specific reflections
 
 **Memory System** (`src/ai_artist/personality/enhanced_memory.py`):
+
 - Lines 20-180: Added `ExperienceSystem` class with XP, levels, milestones
 - Lines 180-300: Added `ReflectionSystem` class for periodic insight synthesis
 - Lines 380-450: Updated `EnhancedMemorySystem` to include experience and reflection
@@ -58,11 +60,13 @@ No external plan document - user gave open-ended "improve everything" request. R
 - Added `get_experience_progress()`, `get_latest_reflection()`, `force_reflection()` methods
 
 **Gallery Manager** (`src/ai_artist/gallery/manager.py`):
+
 - Lines 1-50: Added `METADATA_KEYS` constant for standardized PNG metadata
 - Lines 56-190: Rewrote `save_image()` to embed comprehensive EXIF-style metadata
 - Lines 193-267: Added `extract_metadata()` static method for reading metadata back
 
 **UI Template** (`src/ai_artist/web/templates/aria.html`):
+
 - Lines 18-80: Added CSS variables for accessibility (`--focus-ring`, `--xp-bar`)
 - Lines 80-120: Added skip link, focus-visible styles, reduced motion support
 - Lines 260-380: Added experience section CSS (`.level-badge`, `.xp-bar-*`, `.style-axes`)
@@ -72,6 +76,7 @@ No external plan document - user gave open-ended "improve everything" request. R
 - Lines 1140-1195: Added `updateExperienceDisplay()` JS function
 
 **API Routes** (`src/ai_artist/web/aria_routes.py`):
+
 - Lines 33-45: Updated `AriaStateResponse` with `mood_intensity`, `experience`, `style_axes`
 - Lines 144-175: Updated `get_aria_state()` to apply decay and return experience data
 
@@ -90,15 +95,18 @@ No external plan document - user gave open-ended "improve everything" request. R
 ## Post-Mortem (Required for Artifact Index)
 
 ### What Worked
+
 - **Incremental implementation**: Tackling one system at a time (mood → experience → reflection → EXIF → UI) kept complexity manageable
 - **Testing after each change**: Running `python -c "from module import ..."` after each file verified syntax and basic functionality
 - **Research-driven design**: GitHub search for similar projects (lofn, generative.monster) provided proven patterns for style axes and experience systems
 
 ### What Failed
+
 - **Initial test suite run timed out**: Unit tests took too long; had to verify manually instead
 - **Codacy warnings**: Several methods exceeded 50 lines (reflect_on_work, save_image, extract_metadata) - acceptable for readability but could be refactored later
 
 ### Key Decisions
+
 - **Decision**: Used JSON serialization for memory persistence (not vector DB)
   - Alternatives: SQLite, FAISS vector store
   - Reason: Simpler, sufficient for current scale, matches existing pattern in codebase
@@ -114,6 +122,7 @@ No external plan document - user gave open-ended "improve everything" request. R
 ## Artifacts
 
 All modified files:
+
 - `src/ai_artist/personality/moods.py` - Mood decay, intensity, style axes (~700 lines)
 - `src/ai_artist/personality/enhanced_memory.py` - Experience + reflection systems (~600 lines)
 - `src/ai_artist/gallery/manager.py` - EXIF metadata embedding (~320 lines)
@@ -134,16 +143,19 @@ All modified files:
 ## Other Notes
 
 **Key directories**:
+
 - `src/ai_artist/personality/` - All personality modules (moods, memory, cognition, critic, profile)
 - `src/ai_artist/web/templates/` - HTML templates (aria.html is the main creative studio)
 - `gallery/` - Generated artworks organized by date
 
 **Existing documentation**:
+
 - `ARIA.md` - Full system design and roadmap
 - `README.md` - Project overview
 - `QUICKSTART.md` - 10-minute setup guide
 
 **Testing commands**:
+
 ```bash
 # Quick import test
 python -c "from ai_artist.personality.moods import MoodSystem; print(MoodSystem().describe_feeling())"

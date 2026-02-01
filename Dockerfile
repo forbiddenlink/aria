@@ -57,6 +57,14 @@ ENV PATH=/home/aiartist/.local/bin:$PATH
 ENV PYTHONUNBUFFERED=1
 ENV HF_HOME=/app/models/cache
 
+# Create entrypoint script to handle volume permissions
+RUN echo '#!/bin/sh\n\
+# Ensure gallery directory is writable (Railway volumes may override permissions)\n\
+mkdir -p /app/gallery/2026\n\
+exec "$@"' > /app/entrypoint.sh \
+    && chmod +x /app/entrypoint.sh \
+    && chown aiartist:aiartist /app/entrypoint.sh
+
 # Switch to non-root user
 USER aiartist
 
@@ -66,6 +74,9 @@ EXPOSE 8000
 # Health check - Railway sets PORT, fallback to 8000
 # Note: Railway's healthcheckPath in railway.toml handles this, so we disable Docker healthcheck
 # HEALTHCHECK NONE means Railway's external healthcheck will be used instead
+
+# Use entrypoint to handle volume permissions
+ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Run web server - use explicit shell to properly expand PORT variable
 CMD ["sh", "-c", "uvicorn ai_artist.web.app:app --host 0.0.0.0 --port ${PORT:-8000}"]

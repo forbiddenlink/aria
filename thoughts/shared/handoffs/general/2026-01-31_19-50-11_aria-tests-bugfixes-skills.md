@@ -37,10 +37,12 @@ Previous handoff: `thoughts/shared/handoffs/general/2026-01-31_19-24-24_aria-com
 ## Recent changes
 
 **Bug Fixes:**
+
 - `src/ai_artist/personality/moods.py:100-109` - Fixed `StyleAxes.from_dict()` by adding `AXIS_NAMES` class constant. Was using `hasattr(cls, k)` which failed for instance attributes.
 - `src/ai_artist/personality/enhanced_memory.py:116-134` - Fixed milestone detection order. Moved `_check_milestones()` BEFORE incrementing quality counts so `first_high_quality` and `first_masterpiece` milestones trigger correctly.
 
 **Test Additions:**
+
 - `tests/unit/test_moods.py:304-312` - Fixed outdated reflection sentiment tests
 - `tests/unit/test_moods.py:354-500` - Added 25 new tests for StyleAxes, mood decay, intensity, serialization
 - `tests/unit/test_memory_expanded.py:648-900` - Added 29 new tests for ExperienceSystem, ReflectionSystem
@@ -58,15 +60,18 @@ Previous handoff: `thoughts/shared/handoffs/general/2026-01-31_19-24-24_aria-com
 ## Post-Mortem (Required for Artifact Index)
 
 ### What Worked
+
 - **Test-driven bug discovery**: Running existing tests revealed 2 failures from handoff changes, which led to discovering the actual bugs
 - **Incremental verification**: Testing each system individually (`python -c "from ... import ..."`) before full test suite
 - **Web search for skills**: Found multiple community skill marketplaces with relevant skills
 
 ### What Failed
+
 - Tried: `hasattr(cls, k)` for from_dict validation → Failed because instance attrs not on class
 - Error: Milestone tests failing → Fixed by reordering check before count increment
 
 ### Key Decisions
+
 - Decision: Fix bugs in production code rather than adjusting tests
   - Alternatives: Could have changed tests to match buggy behavior
   - Reason: The tests correctly identified real bugs that would affect users
@@ -78,6 +83,7 @@ Previous handoff: `thoughts/shared/handoffs/general/2026-01-31_19-24-24_aria-com
 ## Artifacts
 
 **Modified files:**
+
 - `src/ai_artist/personality/moods.py:100-109` - StyleAxes.from_dict fix
 - `src/ai_artist/personality/enhanced_memory.py:116-134` - Milestone order fix
 - `tests/unit/test_moods.py` - 25 new tests + 2 fixes
@@ -88,6 +94,7 @@ Previous handoff: `thoughts/shared/handoffs/general/2026-01-31_19-24-24_aria-com
 ## Action Items & Next Steps
 
 1. **Install recommended skills** (not yet done):
+
    ```bash
    /plugin marketplace add Jeffallan/claude-skills
    /plugin marketplace add anthropics/skills
@@ -104,15 +111,18 @@ Previous handoff: `thoughts/shared/handoffs/general/2026-01-31_19-24-24_aria-com
 ## Other Notes
 
 **Recommended skills for this codebase:**
+
 - FastAPI Expert, Python Pro, ML Pipeline from [Jeffallan/claude-skills](https://github.com/Jeffallan/claude-skills)
 - Algorithmic Art, Canvas Design from [anthropics/skills](https://github.com/anthropics/skills)
 
 **Key test commands:**
+
 ```bash
 uv run pytest tests/unit/test_moods.py tests/unit/test_memory_expanded.py -v
 python -c "from ai_artist.personality.moods import MoodSystem; print(MoodSystem().describe_feeling())"
 ```
 
 **Uncommitted changes to commit:**
+
 - Bug fixes in moods.py and enhanced_memory.py
 - New test coverage in test_moods.py and test_memory_expanded.py
