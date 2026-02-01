@@ -52,6 +52,12 @@ repos:
         args: ["-ll"]
         exclude: tests/
 
+  - repo: https://github.com/pypa/pip-audit
+    rev: v2.10.0
+    hooks:
+      - id: pip-audit
+        args: ["--strict", "--vulnerability-service", "osv"]
+
   - repo: https://github.com/igorshubovych/markdownlint-cli
     rev: v0.39.0
     hooks:
