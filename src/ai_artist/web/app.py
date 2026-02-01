@@ -83,22 +83,22 @@ def get_web_config() -> WebConfig:
     return _web_config
 
 
-async def verify_api_key(api_key: str | None = Depends(api_key_header)) -> str | None:
-    """Verify API key if authentication is enabled.
+async def require_api_key(api_key: str | None = Depends(api_key_header)) -> str:
+    """Require API key for admin endpoints.
 
-    If no API keys are configured (empty list), all requests are allowed (dev mode).
-    If API keys are configured, a valid key must be provided in X-API-Key header.
+    Admin endpoints always require authentication when API keys are configured.
+    If no API keys are configured, allow access (dev mode).
 
     Returns:
-        The validated API key or None if auth is disabled
+        The validated API key
     Raises:
-        HTTPException: If auth is enabled and key is invalid/missing
+        HTTPException: If key is invalid/missing and auth is enabled
     """
     config = get_web_config()
 
     # If no API keys configured, allow all requests (dev mode)
     if not config.api_keys:
-        return None
+        return "dev-mode"
 
     # Auth is enabled - key is required
     if api_key is None:
@@ -258,7 +258,7 @@ async def lifespan(app: FastAPI):
         else:
             # Load from environment variables (e.g., RAILWAY_API_KEY)
             web_config = WebConfig.from_env()
-        
+
         set_web_config(web_config)
         logger.info(
             "web_config_loaded",
@@ -399,7 +399,6 @@ async def list_images(
     limit: int = Query(50, ge=1, le=500, description="Number of images to return"),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
     search: str | None = Query(None, description="Search in prompts"),
-    _api_key: str | None = Depends(verify_api_key),
 ):
     """List all images with metadata."""
     # Get image paths
@@ -446,7 +445,6 @@ async def get_image_file(
     request: Request,
     file_path: str,
     gallery_path: GalleryPathDep,
-    _api_key: str | None = Depends(verify_api_key),
 ):
     """Serve image file."""
     gallery_path_obj = Path(gallery_path)
@@ -478,7 +476,6 @@ async def get_image_file(
 async def get_stats(
     request: Request,
     gallery_manager: GalleryManagerDep,
-    _api_key: str | None = Depends(verify_api_key),
 ):
     """Get gallery statistics."""
     featured_images = gallery_manager.list_images(featured_only=True)
@@ -500,7 +497,7 @@ async def delete_image(
     request: Request,
     file_path: str,
     gallery_path: GalleryPathDep,
-    _api_key: str | None = Depends(verify_api_key),
+    _api_key: str = Depends(require_api_key),
 ):
     """Delete an image and its metadata."""
     gallery_path_obj = Path(gallery_path)
@@ -536,7 +533,7 @@ async def toggle_featured(
     file_path: str,
     featured: bool,
     gallery_path: GalleryPathDep,
-    _api_key: str | None = Depends(verify_api_key),
+    _api_key: str = Depends(require_api_key),
 ):
     """Toggle featured status of an image."""
     gallery_path_obj = Path(gallery_path)
@@ -583,7 +580,7 @@ async def toggle_featured(
 async def upload_image(
     request: Request,
     gallery_path: GalleryPathDep,
-    _api_key: str | None = Depends(verify_api_key),
+    _api_key: str = Depends(require_api_key),
 ):
     """Upload a single image with optional metadata.
 
@@ -661,7 +658,7 @@ async def upload_image(
 async def upload_batch(
     request: Request,
     gallery_path: GalleryPathDep,
-    _api_key: str | None = Depends(verify_api_key),
+    _api_key: str = Depends(require_api_key),
 ):
     """Upload multiple images in a single request.
 
@@ -778,7 +775,6 @@ def save_templates(templates: list[dict]):
 @limiter.limit("60/minute")
 async def get_templates(
     request: Request,
-    _api_key: str | None = Depends(verify_api_key),
 ):
     """Get all prompt templates."""
     templates = load_templates()
@@ -790,7 +786,7 @@ async def get_templates(
 async def create_template(
     request: Request,
     template_request: CreateTemplateRequest,
-    _api_key: str | None = Depends(verify_api_key),
+    _api_key: str = Depends(require_api_key),
 ):
     """Create a new prompt template."""
     import uuid
@@ -825,7 +821,7 @@ async def create_template(
 async def delete_template(
     request: Request,
     template_id: str,
-    _api_key: str | None = Depends(verify_api_key),
+    _api_key: str = Depends(require_api_key),
 ):
     """Delete a prompt template."""
     templates = load_templates()
@@ -843,7 +839,7 @@ async def cleanup_gallery(
     request: Request,
     gallery_manager: GalleryManagerDep,
     dry_run: bool = Query(True, description="If true, only report without deleting"),
-    _api_key: str | None = Depends(verify_api_key),
+    _api_key: str = Depends(require_api_key),
 ):
     """Scan and remove black/blank/invalid images from the gallery.
 
@@ -864,7 +860,7 @@ async def cleanup_gallery(
 async def generate_artwork(
     request: Request,
     generation_request: GenerationRequest,
-    _api_key: str | None = Depends(verify_api_key),
+    _api_key: str = Depends(require_api_key),
 ):
     """Start an artwork generation job.
 

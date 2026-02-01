@@ -8,7 +8,6 @@ import yaml  # type: ignore[import-untyped]
 from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 # Model constants to avoid string duplication
 MODEL_SDXL = "stabilityai/stable-diffusion-xl-base-1.0"
 MODEL_SD15 = "runwayml/stable-diffusion-v1-5"
@@ -167,11 +166,11 @@ class WebConfig(BaseModel):
     def from_env(cls) -> "WebConfig":
         """Create WebConfig from environment variables."""
         import os
-        
+
         api_keys = []
         if api_key := os.getenv("RAILWAY_API_KEY"):
             api_keys = [SecretStr(api_key)]
-        
+
         return cls(api_keys=api_keys)
 
 
