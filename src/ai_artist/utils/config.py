@@ -128,6 +128,9 @@ class ModelManagerConfig(BaseModel):
     auto_download_trending: bool = False
     max_models: int = 50
     civitai_api_key: str | None = None
+    # Model preloading for instant generation
+    preload_models: list[str] = []  # Models to preload on startup
+    enable_model_pool: bool = True  # Use model pooling for performance
 
 
 class APIKeysConfig(BaseModel):
