@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - AI Artist Admin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            color: #667eea;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .chart {
+            height: 200px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .artwork-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+        .artwork-item {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #f0f0f0;
+        }
+
+        .artwork-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .progress-bar {
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 AI Artist Admin Dashboard</h1>
+            <p class="subtitle">System monitoring and management</p>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>📊 Statistics</h2>
+                <div id="stats-content" class="loading">Loading...</div>
+            </div>
+
+            <div class="card">
+                <h2>⚡ Performance</h2>
+                <div id="performance-content" class="loading">Loading...</div>
+            </div>
+
+            <div class="card">
+                <h2>💻 System</h2>
+                <div id="system-content" class="loading">Loading...</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🖼️ Recent Artworks</h2>
+            <div id="recent-artworks" class="loading">Loading...</div>
+        </div>
+
+        <div class="card">
+            <h2>🛠️ Actions</h2>
+            <button class="btn btn-danger" onclick="clearCache()">Clear Cache</button>
+        </div>
+    </div>
+
+    <script>
+        async function loadStats() {
+            try {
+                const response = await fetch('/admin/stats');
+                const data = await response.json();
+
+                const statsHtml = `
+                    <div class="stat">
+                        <span class="stat-label">Total Artworks</span>
+                        <span class="stat-value">${data.total_artworks}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Moods</span>
+                        <span class="stat-value">${Object.keys(data.moods).length}</span>
+                    </div>
+                `;
+
+                document.getElementById('stats-content').innerHTML = statsHtml;
+
+                // Display recent artworks
+                const artworksHtml = data.recent.map(a => `
+                    <div class="stat">
+                        <span>${a.theme || 'Untitled'}</span>
+                        <span>${a.mood} (${a.score?.toFixed(2) || 'N/A'})</span>
+                    </div>
+                `).join('');
+
+                document.getElementById('recent-artworks').innerHTML = artworksHtml || '<p>No artworks yet</p>';
+            } catch (error) {
+                document.getElementById('stats-content').innerHTML = '<p>Error loading stats</p>';
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        async function loadPerformance() {
+            try {
+                const response = await fetch('/admin/performance');
+                const data = await response.json();
+
+                const perfHtml = `
+                    <div class="stat">
+                        <span class="stat-label">Total Generations</span>
+                        <span class="stat-value">${data.total_generations}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Avg Duration</span>
+                        <span class="stat-value">${data.avg_duration.toFixed(2)}s</span>
+                    </div>
+                `;
+
+                document.getElementById('performance-content').innerHTML = perfHtml;
+            } catch (error) {
+                document.getElementById('performance-content').innerHTML = '<p>Error loading performance</p>';
+                console.error('Error loading performance:', error);
+            }
+        }
+
+        async function loadSystem() {
+            try {
+                const response = await fetch('/admin/system');
+                const data = await response.json();
+
+                const sysHtml = `
+                    <div class="stat">
+                        <span class="stat-label">CPU Usage</span>
+                        <span class="stat-value">${data.cpu_percent.toFixed(1)}%</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Memory</span>
+                        <span class="stat-value">${data.memory.percent.toFixed(1)}%</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">GPU</span>
+                        <span class="stat-value">${data.gpu.available ? '✓' : '✗'}</span>
+                    </div>
+                `;
+
+                document.getElementById('system-content').innerHTML = sysHtml;
+            } catch (error) {
+                document.getElementById('system-content').innerHTML = '<p>Error loading system info</p>';
+                console.error('Error loading system:', error);
+            }
+        }
+
+        async function clearCache() {
+            if (!confirm('Are you sure you want to clear the cache?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/admin/cache/clear', { method: 'POST' });
+                const data = await response.json();
+                alert(data.message);
+            } catch (error) {
+                alert('Error clearing cache');
+                console.error('Error clearing cache:', error);
+            }
+        }
+
+        // Load data on page load
+        loadStats();
+        loadPerformance();
+        loadSystem();
+
+        // Refresh every 30 seconds
+        setInterval(() => {
+            loadStats();
+            loadPerformance();
+            loadSystem();
+        }, 30000);
+    </script>
+</body>
+</html>

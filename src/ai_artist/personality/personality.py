@@ -76,7 +76,7 @@ class Personality:
         }
 
         # Recent subjects (for boredom tracking)
-        self.recent_subjects = []
+        self.recent_subjects: list[str] = []
         self.max_recent = 5
 
         logger.info(
@@ -86,7 +86,7 @@ class Personality:
             energy=self.energy_level,
         )
 
-    def update_mood(self, external_factors: dict[str, float] = None) -> Mood:
+    def update_mood(self, external_factors: dict[str, float] | None = None) -> Mood:
         """Update Aria's mood based on energy, creativity, and external factors.
 
         Args:

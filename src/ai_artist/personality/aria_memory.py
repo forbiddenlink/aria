@@ -2,8 +2,7 @@
 
 import json
 from datetime import datetime
-from pathlib import Path
-
+from pathlib import Pathfrom typing import Any
 from ..utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -73,11 +72,11 @@ class ArtistMemory:
         subject: str,
         score: float,
         reflection: str,
-        metadata: dict = None,
-    ):
+        metadata: dict[Any, Any] | None = None,
+    ) -> None:
         """Record a newly created painting."""
         painting_record = {
-            "number": self.memory["total_creations"] + 1,
+            "number": int(self.memory.get("total_creations", 0)) + 1,
             "timestamp": datetime.now().isoformat(),
             "image_path": image_path,
             "prompt": prompt,
@@ -89,8 +88,12 @@ class ArtistMemory:
             "metadata": metadata or {},
         }
 
-        self.memory["paintings"].append(painting_record)
-        self.memory["total_creations"] += 1
+        paintings = self.memory.get("paintings", [])
+        if not isinstance(paintings, list):
+            paintings = []
+        paintings.append(painting_record)
+        self.memory["paintings"] = paintings
+        self.memory["total_creations"] = int(self.memory.get("total_creations", 0)) + 1
 
         logger.info(
             "painting_recorded",
@@ -101,7 +104,9 @@ class ArtistMemory:
 
         self.save_memory()
 
-    def record_reflection(self, reflection: str, context: dict = None):
+    def record_reflection(
+        self, reflection: str, context: dict[Any, Any] | None = None
+    ) -> None:
         """Record a general reflection or thought."""
         reflection_entry = {
             "timestamp": datetime.now().isoformat(),
@@ -109,7 +114,11 @@ class ArtistMemory:
             "context": context or {},
         }
 
-        self.memory["reflections"].append(reflection_entry)
+        reflections = self.memory.get("reflections", [])
+        if not isinstance(reflections, list):
+            reflections = []
+        reflections.append(reflection_entry)
+        self.memory["reflections"] = reflections
         logger.debug("reflection_recorded", length=len(reflection))
         self.save_memory()
 
@@ -134,7 +143,11 @@ class ArtistMemory:
             "state": personality_state,
         }
 
-        self.memory["personality_snapshots"].append(snapshot)
+        snapshots = self.memory.get("personality_snapshots", [])
+        if not isinstance(snapshots, list):
+            snapshots = []
+        snapshots.append(snapshot)
+        self.memory["personality_snapshots"] = snapshots
 
         # Keep only last 50 snapshots to avoid bloat
         if len(self.memory["personality_snapshots"]) > 50:

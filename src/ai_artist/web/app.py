@@ -29,6 +29,7 @@ from slowapi.util import get_remote_address
 from ..gallery.manager import GalleryManager
 from ..utils.config import WebConfig
 from ..utils.logging import get_logger
+from .admin import router as admin_router
 from .aria_routes import router as aria_router
 from .dependencies import GalleryManagerDep, GalleryPathDep, set_gallery_manager
 from .exception_handlers import (
@@ -340,6 +341,7 @@ app.include_router(aria_router)
 app.include_router(prompt_router)
 app.include_router(feedback_router)
 app.include_router(metrics_router)
+app.include_router(admin_router)
 
 # Templates directory
 templates_dir = Path(__file__).parent / "templates"

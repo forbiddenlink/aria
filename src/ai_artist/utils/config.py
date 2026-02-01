@@ -120,6 +120,27 @@ class TrendsConfig(BaseModel):
     sources: list[str] = ["civitai", "artstation"]
 
 
+class CacheConfig(BaseModel):
+    """Redis caching configuration."""
+
+    enabled: bool = False
+    host: str = "localhost"
+    port: int = 6379
+    db: int = 0
+    password: str | None = None
+    generation_ttl: int = 3600  # 1 hour
+    curation_ttl: int = 7200  # 2 hours
+
+
+class SocialConfig(BaseModel):
+    """Social media sharing configuration."""
+
+    enabled: bool = False
+    platforms: list[str] = ["twitter", "instagram", "pinterest"]
+    auto_share: bool = False
+    share_threshold: float = 0.3  # Only share artworks above this score
+
+
 class ModelManagerConfig(BaseModel):
     """Model management configuration."""
 
@@ -217,6 +238,8 @@ class Config(BaseSettings):
     )
     autonomy: AutonomyConfig = Field(default_factory=lambda: AutonomyConfig())
     trends: TrendsConfig = Field(default_factory=lambda: TrendsConfig())
+    cache: CacheConfig = Field(default_factory=lambda: CacheConfig())
+    social: SocialConfig = Field(default_factory=lambda: SocialConfig())
     model_manager: ModelManagerConfig = Field(
         default_factory=lambda: ModelManagerConfig()
     )
