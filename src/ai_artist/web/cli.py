@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """CLI tool to launch the web gallery."""
 
+import os
 import sys
 
 import uvicorn
@@ -13,21 +14,24 @@ logger = get_logger(__name__)
 
 def main():
     """Launch the web gallery server."""
-    logger.info("starting_web_gallery", host="0.0.0.0", port=8000)
+    # Use PORT environment variable if available (Railway sets this)
+    port = int(os.getenv("PORT", "8000"))
+
+    logger.info("starting_web_gallery", host="0.0.0.0", port=port)  # nosec B104
 
     print("\n🎨 AI Artist Web Gallery")
     print("=" * 50)
-    print("\n📍 Gallery URL: http://localhost:8000")
-    print("📊 API Docs:    http://localhost:8000/docs")
-    print("❤️  Health:     http://localhost:8000/health")
+    print(f"\n📍 Gallery URL: http://localhost:{port}")
+    print(f"📊 API Docs:    http://localhost:{port}/docs")
+    print(f"❤️  Health:     http://localhost:{port}/health")
     print("\nPress Ctrl+C to stop the server\n")
     print("=" * 50)
 
     try:
         uvicorn.run(
             "ai_artist.web.app:app",
-            host="0.0.0.0",
-            port=8000,
+            host="0.0.0.0",  # nosec B104
+            port=port,
             log_level="info",
             reload=False,
             ws="websockets",  # Explicitly force websockets

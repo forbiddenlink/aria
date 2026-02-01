@@ -42,7 +42,23 @@
       "Bash(uv run uvicorn:*)",
       "Bash(lsof:*)",
       "Bash(xargs kill:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Skill(perplexity-search)",
+      "WebFetch(domain:skillsmp.com)",
+      "WebFetch(domain:www.skillhub.club)",
+      "Bash(claude /plugin marketplace add:*)",
+      "Bash(~/.claude/scripts/spec_metadata.sh)",
+      "Skill(turingmind)",
+      "Bash(echo:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(uv run mypy:*)",
+      "Bash(uv run:*)",
+      "Bash(uv pip list:*)",
+      "Bash(railway whoami:*)",
+      "Bash(railway up:*)",
+      "Bash(railway service:*)",
+      "Bash(railway:*)",
+      "Bash(pre-commit run:*)"
     ]
   }
 }
