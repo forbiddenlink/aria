@@ -884,6 +884,11 @@
                 <div id="xp-bar" class="xp-bar-fill" style="width: 0%"></div>
             </div>
             <div id="xp-text" class="xp-text">0 / 100 XP</div>
+
+            <!-- Style Axes -->
+            <div id="style-axes-container" class="style-axes" role="group" aria-label="Creative style axes">
+                <!-- Populated by JS -->
+            </div>
         </div>
 
         <!-- Stats -->
@@ -1192,6 +1197,53 @@
             }
         }
 
+        function updateStyleAxesDisplay(styleAxes) {
+            if (!styleAxes) return;
+
+            var container = document.getElementById('style-axes-container');
+            if (!container) return;
+
+            container.textContent = '';
+
+            // Friendly labels for axes
+            var axisLabels = {
+                abstraction: 'Abstract',
+                saturation: 'Saturated',
+                complexity: 'Complex',
+                drama: 'Dramatic',
+                symmetry: 'Symmetric',
+                novelty: 'Novel',
+                line_quality: 'Sharp',
+                palette_temperature: 'Warm',
+                motion: 'Dynamic',
+                symbolism: 'Symbolic'
+            };
+
+            Object.keys(styleAxes).forEach(function(axis) {
+                var value = styleAxes[axis] || 0.5;
+                var pct = Math.round(value * 100);
+
+                var axisEl = document.createElement('div');
+                axisEl.className = 'style-axis';
+
+                var name = document.createElement('span');
+                name.className = 'axis-name';
+                name.textContent = axisLabels[axis] || axis;
+                axisEl.appendChild(name);
+
+                var bar = document.createElement('div');
+                bar.className = 'axis-bar';
+
+                var fill = document.createElement('div');
+                fill.className = 'axis-fill';
+                fill.style.width = pct + '%';
+                bar.appendChild(fill);
+                axisEl.appendChild(bar);
+
+                container.appendChild(axisEl);
+            });
+        }
+
         function updatePersonalityDisplay(personality) {
             if (!personality) return;
 
@@ -1255,6 +1307,11 @@
 
                     // Update experience/level display
                     updateExperienceDisplay(data);
+
+                    // Update style axes display
+                    if (data.style_axes) {
+                        updateStyleAxesDisplay(data.style_axes);
+                    }
 
                     if (loadGallery && data.portfolio) {
                         renderGallery(data.portfolio);
