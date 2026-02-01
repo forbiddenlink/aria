@@ -265,9 +265,11 @@ async def lifespan(app: FastAPI):
         if config_path.exists():
             config = load_config(config_path)
             web_config = config.web
+            observability_config = config.observability
         else:
             # Load from environment variables (e.g., RAILWAY_API_KEY)
             web_config = WebConfig.from_env()
+            observability_config = None
 
         set_web_config(web_config)
         logger.info(
@@ -275,6 +277,18 @@ async def lifespan(app: FastAPI):
             api_keys_configured=len(web_config.api_keys) > 0,
             cors_origins=web_config.cors_origins,
         )
+
+        # Initialize Sentry error tracking if configured
+        if observability_config and observability_config.sentry_dsn:
+            from ..monitoring import init_sentry
+
+            init_sentry(
+                dsn=observability_config.sentry_dsn.get_secret_value(),
+                environment=observability_config.sentry_environment,
+                traces_sample_rate=observability_config.sentry_traces_sample_rate,
+                profiles_sample_rate=observability_config.sentry_profiles_sample_rate,
+            )
+
     except Exception as e:
         logger.warning("web_config_load_failed", error=str(e))
         # Use default config (no auth required)

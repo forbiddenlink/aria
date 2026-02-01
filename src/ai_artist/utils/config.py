@@ -176,6 +176,24 @@ class WebConfig(BaseModel):
         return cls(api_keys=api_keys)
 
 
+class ObservabilityConfig(BaseModel):
+    """Observability and monitoring configuration."""
+
+    # Sentry error tracking
+    sentry_dsn: SecretStr | None = None
+    sentry_environment: str = "development"
+    sentry_traces_sample_rate: float = 0.1  # 10% of transactions
+    sentry_profiles_sample_rate: float = 0.1  # 10% of transactions
+
+    # Metrics export
+    enable_prometheus: bool = False
+    prometheus_port: int = 9090
+
+    # Performance monitoring
+    enable_performance_logging: bool = True
+    log_slow_operations_threshold: float = 1.0  # seconds
+
+
 class Config(BaseSettings):
     """Main application configuration."""
 
@@ -211,6 +229,8 @@ class Config(BaseSettings):
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     # type: ignore[arg-type]
     web: WebConfig = Field(default_factory=WebConfig)
+    # type: ignore[arg-type]
+    observability: ObservabilityConfig = Field(default_factory=ObservabilityConfig)
 
 
 def load_config(config_path: Path | None = None) -> Config:

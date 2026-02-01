@@ -78,6 +78,10 @@ aesthetics = [
     "simple-aesthetics-predictor>=0.1.2",
     "transformers>=4.38.0",
 ]
+monitoring = [
+    "sentry-sdk[fastapi]>=2.0.0",
+    "prometheus-client>=0.20.0",
+]
 
 [tool.ruff]
 target-version = "py311"
