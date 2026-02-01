@@ -1,0 +1,35 @@
+# Codeaudit Security Issue Suppressions
+# https://codeaudit.nocomplexity.com
+
+# SUPPRESSED: Random module usage for artistic/creative purposes
+# All uses of the 'random' module in this codebase are for non-security purposes:
+# - Selecting art styles, moods, colors, subjects (creative choices)
+# - Adding artistic variation and randomness to generated art
+# - Simulating natural artistic decision-making processes
+#
+# The 'random' module is APPROPRIATE for these use cases.
+# The 'secrets' module is NOT needed as none of these operations involve:
+# - Cryptographic key generation
+# - Token or session ID creation
+# - Password generation or salting
+# - Authentication or authorization decisions
+# - Any security-sensitive random number generation
+#
+# Files with suppressed random warnings:
+# - src/ai_artist/main.py (creative query selection)
+# - src/ai_artist/inspiration/autonomous.py (artistic inspiration)
+# - src/ai_artist/personality/*.py (mood and personality simulation)
+# - src/ai_artist/utils/prompt_engine.py (prompt variations)
+# - src/ai_artist/web/aria_routes.py (artistic suggestions)
+
+# Pattern: pseudo-random generators not suitable for security
+# Severity: INFO (downgraded from WARNING)
+# Reason: All random usage is for artistic purposes, not security
+random-module-usage:INFO
+
+# External Egress Risk: API keys for legitimate services
+# Files with API integrations (expected and documented):
+# - src/ai_artist/main.py (Unsplash API for inspiration)
+# - src/ai_artist/web/*.py (FastAPI web service)
+# All API keys are properly managed using Pydantic SecretStr
+external-egress:INFO
