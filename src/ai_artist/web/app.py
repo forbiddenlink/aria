@@ -38,6 +38,7 @@ from .exception_handlers import (
     validation_exception_handler,
 )
 from .feedback import router as feedback_router
+from .gallery_routes import router as gallery_router
 from .health import router as health_router
 from .helpers import (
     calculate_gallery_stats,
@@ -340,6 +341,7 @@ app.include_router(health_router)
 app.include_router(aria_router)
 app.include_router(prompt_router)
 app.include_router(feedback_router)
+app.include_router(gallery_router)
 app.include_router(metrics_router)
 app.include_router(admin_router)
 
