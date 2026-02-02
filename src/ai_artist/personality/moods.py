@@ -5,16 +5,20 @@ Enhanced with:
 - Mood intensity tracking (how strongly she feels)
 - Style axes for granular creative control
 - Richer emotional vocabulary
+- FLUX model routing based on mood
 """
 
 import random
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 from ..utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+# Model type for mood-based selection
+ModelType = Literal["sdxl", "flux-schnell", "flux-dev"]
 
 
 class Mood(str, Enum):
@@ -431,9 +435,9 @@ class MoodSystem:
         elif 18 <= current_hour < 24:
             return random.choice([Mood.CONTEMPLATIVE, Mood.MELANCHOLIC, Mood.SERENE])
 
-        # Night (12am-6am): Deep, dreamy, introspective
+        # Night (12am-6am): Deep, calm, introspective
         else:
-            return random.choice([Mood.DREAMY, Mood.INTROSPECTIVE, Mood.CONTEMPLATIVE])
+            return random.choice([Mood.SERENE, Mood.INTROSPECTIVE, Mood.CONTEMPLATIVE])
 
     def apply_decay(self) -> None:
         """Apply natural mood decay based on time elapsed.
@@ -844,3 +848,88 @@ class MoodSystem:
         influences = self.mood_influences[self.current_mood]
         style: str = random.choice(influences["styles"])
         return style
+
+    def get_preferred_model_type(self) -> ModelType:
+        """Get the preferred model type based on current mood.
+
+        Contemplative/Introspective moods prefer FLUX.1-dev for higher quality.
+        Energized/Chaotic moods prefer FLUX.1-schnell for faster iteration.
+        Balanced moods default to SDXL for reliability.
+
+        Returns:
+            Model type identifier: "sdxl", "flux-schnell", or "flux-dev"
+        """
+        # High intensity contemplative moods benefit from quality (FLUX.1-dev)
+        quality_moods = {
+            Mood.CONTEMPLATIVE,
+            Mood.INTROSPECTIVE,
+            Mood.MELANCHOLIC,
+            Mood.SERENE,
+        }
+
+        # High energy moods benefit from fast iteration (FLUX.1-schnell)
+        fast_moods = {Mood.CHAOTIC, Mood.ENERGIZED, Mood.REBELLIOUS, Mood.RESTLESS}
+
+        # Balanced/playful moods work well with SDXL reliability
+        balanced_moods = {Mood.PLAYFUL, Mood.BOLD}
+
+        if self.current_mood in quality_moods:
+            # High intensity contemplation wants maximum quality
+            if self.mood_intensity > 0.6:
+                logger.debug(
+                    "mood_model_selection",
+                    mood=self.current_mood,
+                    intensity=round(self.mood_intensity, 2),
+                    selected="flux-dev",
+                    reason="high_intensity_quality_mood",
+                )
+                return "flux-dev"
+            else:
+                # Lower intensity, SDXL is fine
+                return "sdxl"
+
+        elif self.current_mood in fast_moods:
+            # High energy wants fast feedback loops
+            if self.mood_intensity > 0.5:
+                logger.debug(
+                    "mood_model_selection",
+                    mood=self.current_mood,
+                    intensity=round(self.mood_intensity, 2),
+                    selected="flux-schnell",
+                    reason="high_energy_fast_mood",
+                )
+                return "flux-schnell"
+            else:
+                return "sdxl"
+
+        elif self.current_mood in balanced_moods:
+            # Balanced moods prefer SDXL reliability
+            return "sdxl"
+
+        # Default to SDXL for unknown moods
+        return "sdxl"
+
+    def get_flux_model_id(self) -> str | None:
+        """Get the FLUX model ID if FLUX is preferred for current mood.
+
+        Returns:
+            FLUX model ID string, or None if SDXL is preferred
+        """
+        from ..core.flux_generator import FLUX_DEV, FLUX_SCHNELL
+
+        model_type = self.get_preferred_model_type()
+
+        if model_type == "flux-dev":
+            return FLUX_DEV
+        elif model_type == "flux-schnell":
+            return FLUX_SCHNELL
+        else:
+            return None
+
+    def should_use_flux(self) -> bool:
+        """Check if FLUX should be used based on current mood.
+
+        Returns:
+            True if FLUX is the preferred model for current mood
+        """
+        return self.get_preferred_model_type() in ("flux-schnell", "flux-dev")
