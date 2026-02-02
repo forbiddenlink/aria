@@ -12,14 +12,51 @@ from diffusers import (
     DiffusionPipeline,
     DPMSolverMultistepScheduler,
     StableDiffusionControlNetPipeline,
+    StableDiffusionXLControlNetPipeline,
     StableDiffusionXLImg2ImgPipeline,
 )
 from PIL import Image
 
 from ..curation.curator import is_black_or_blank
 from ..utils.logging import get_logger
+from .controlnet import ControlNetLoader, ControlNetType, SDXL_CONTROLNET_MODELS
+from .ip_adapter import IPAdapterManager, get_ip_adapter_manager
 
 logger = get_logger(__name__)
+
+
+def _is_sdxl_model(model_id: str) -> bool:
+    """Check if a model ID is an SDXL-based model.
+
+    Args:
+        model_id: HuggingFace model ID or local path
+
+    Returns:
+        True if model is SDXL-based, False otherwise
+    """
+    sdxl_indicators = ["sdxl", "stable-diffusion-xl", "sd-xl"]
+    model_lower = model_id.lower()
+    return any(indicator in model_lower for indicator in sdxl_indicators)
+
+
+def _is_sdxl_controlnet(controlnet_model: str) -> bool:
+    """Check if a ControlNet model is SDXL-compatible.
+
+    Args:
+        controlnet_model: HuggingFace ControlNet model ID
+
+    Returns:
+        True if ControlNet is SDXL-compatible, False otherwise
+    """
+    # Check if it's one of the known SDXL ControlNet models
+    sdxl_controlnets = set(SDXL_CONTROLNET_MODELS.values())
+    if controlnet_model in sdxl_controlnets:
+        return True
+
+    # Check common naming patterns
+    sdxl_indicators = ["sdxl", "xl", "sd-xl"]
+    model_lower = controlnet_model.lower()
+    return any(indicator in model_lower for indicator in sdxl_indicators)
 
 
 class ImageGenerator:
@@ -48,6 +85,13 @@ class ImageGenerator:
         # Cache for loaded models to avoid reloading
         self._model_cache: dict[str, DiffusionPipeline] = {}
         self._current_model_id: str | None = None
+
+        # IP-Adapter manager for reference image conditioning
+        self._ip_adapter_manager: IPAdapterManager | None = None
+
+        # ControlNet state
+        self._controlnet_loaded: bool = False
+        self._controlnet_models: list[ControlNetModel] | None = None
 
         # MPS + float16 can produce black/NaN images - warn and suggest float32
         if device == "mps" and dtype == torch.float16:
@@ -122,32 +166,83 @@ class ImageGenerator:
         return True
 
     def load_model(
-        self, controlnet_model: str | None = None, model_override: str | None = None
+        self,
+        controlnet_model: str | list[str] | None = None,
+        model_override: str | None = None,
     ):
         """Load the diffusion pipeline.
 
         Args:
-            controlnet_model: Optional ControlNet model to load
+            controlnet_model: Optional ControlNet model(s) to load. Can be a single
+                model ID string or a list of model IDs for multi-ControlNet.
             model_override: Optional model ID to load instead of self.model_id
         """
         model_to_load = model_override or self.model_id
-        logger.info("loading_model", model=model_to_load, controlnet=controlnet_model)
+        is_sdxl = _is_sdxl_model(model_to_load)
+
+        logger.info(
+            "loading_model",
+            model=model_to_load,
+            controlnet=controlnet_model,
+            is_sdxl=is_sdxl,
+        )
 
         try:
             if controlnet_model:
-                logger.info("initializing_controlnet_pipeline")
-                controlnet = ControlNetModel.from_pretrained(
-                    controlnet_model, torch_dtype=self.dtype, use_safetensors=True
+                # Normalize to list for consistent handling
+                controlnet_models = (
+                    [controlnet_model]
+                    if isinstance(controlnet_model, str)
+                    else controlnet_model
                 )
-                # Note: This assumes SD 1.5 based models.
-                # For SDXL, we would need StableDiffusionXLControlNetPipeline
-                pipeline = StableDiffusionControlNetPipeline.from_pretrained(
-                    model_to_load,
-                    controlnet=controlnet,
-                    torch_dtype=self.dtype,
-                    variant="fp16" if self.dtype == torch.float16 else None,
-                    use_safetensors=True,
-                    safety_checker=None,
+
+                logger.info(
+                    "initializing_controlnet_pipeline",
+                    num_controlnets=len(controlnet_models),
+                )
+
+                # Load ControlNet model(s)
+                if len(controlnet_models) == 1:
+                    controlnet = ControlNetModel.from_pretrained(
+                        controlnet_models[0],
+                        torch_dtype=self.dtype,
+                        use_safetensors=True,
+                    )
+                else:
+                    # Multi-ControlNet: load all models
+                    controlnet = ControlNetLoader.load_multiple(
+                        controlnet_models, dtype=self.dtype
+                    )
+
+                # Determine if we should use SDXL pipeline
+                # Use SDXL if either the base model or ControlNet is SDXL
+                use_sdxl_pipeline = is_sdxl or any(
+                    _is_sdxl_controlnet(cn) for cn in controlnet_models
+                )
+
+                if use_sdxl_pipeline:
+                    logger.info("using_sdxl_controlnet_pipeline")
+                    pipeline = StableDiffusionXLControlNetPipeline.from_pretrained(
+                        model_to_load,
+                        controlnet=controlnet,
+                        torch_dtype=self.dtype,
+                        variant="fp16" if self.dtype == torch.float16 else None,
+                        use_safetensors=True,
+                    )
+                else:
+                    logger.info("using_sd15_controlnet_pipeline")
+                    pipeline = StableDiffusionControlNetPipeline.from_pretrained(
+                        model_to_load,
+                        controlnet=controlnet,
+                        torch_dtype=self.dtype,
+                        variant="fp16" if self.dtype == torch.float16 else None,
+                        use_safetensors=True,
+                        safety_checker=None,
+                    )
+
+                self._controlnet_loaded = True
+                self._controlnet_models = (
+                    controlnet if isinstance(controlnet, list) else [controlnet]
                 )
             else:
                 pipeline = DiffusionPipeline.from_pretrained(
@@ -156,6 +251,8 @@ class ImageGenerator:
                     variant="fp16" if self.dtype == torch.float16 else None,
                     use_safetensors=True,
                 )
+                self._controlnet_loaded = False
+                self._controlnet_models = None
 
             # Move pipeline to device
             pipeline = pipeline.to(self.device)
@@ -277,10 +374,47 @@ class ImageGenerator:
             self._model_cache[model_to_load] = pipeline
             self._current_model_id = model_to_load
 
-            logger.info("model_loaded", model=model_to_load, device=self.device)
+            logger.info(
+                "model_loaded",
+                model=model_to_load,
+                device=self.device,
+                controlnet_enabled=self._controlnet_loaded,
+            )
         except Exception as e:
             logger.error("model_load_failed", model=model_to_load, error=str(e))
             raise
+
+    def load_controlnet(
+        self,
+        controlnet_type: ControlNetType | str,
+        use_sdxl: bool = True,
+    ):
+        """Load a ControlNet model by type.
+
+        This is a convenience method to load a ControlNet with proper SDXL/SD1.5
+        model selection based on the controlnet_type.
+
+        Args:
+            controlnet_type: Type of ControlNet (canny, depth, pose, lineart, softedge)
+            use_sdxl: Whether to use SDXL ControlNet models (default: True)
+        """
+        if isinstance(controlnet_type, str):
+            controlnet_type = ControlNetType(controlnet_type.lower())
+
+        if use_sdxl:
+            model_id = ControlNetLoader.get_sdxl_model_id(controlnet_type)
+        else:
+            model_id = ControlNetLoader.get_sd15_model_id(controlnet_type)
+
+        logger.info(
+            "loading_controlnet_by_type",
+            type=controlnet_type.value,
+            model=model_id,
+            use_sdxl=use_sdxl,
+        )
+
+        # Reload the pipeline with ControlNet
+        self.load_model(controlnet_model=model_id)
 
     def load_refiner(
         self, refiner_id: str = "stabilityai/stable-diffusion-xl-refiner-1.0"
@@ -345,10 +479,12 @@ class ImageGenerator:
         num_images: int = 1,
         seed: int | None = None,
         use_refiner: bool = False,
-        control_image: Image.Image | None = None,
-        controlnet_conditioning_scale: float = 1.0,
+        control_image: Image.Image | list[Image.Image] | None = None,
+        controlnet_conditioning_scale: float | list[float] = 1.0,
         on_progress: "Callable[[int, int, str], None] | None" = None,
         avoid_people: bool = True,
+        reference_image: Image.Image | None = None,
+        ip_adapter_scale: float = 0.6,
     ) -> list[Image.Image]:
         """Generate images from prompt.
 
@@ -362,9 +498,18 @@ class ImageGenerator:
             num_images: Number of images to generate
             seed: Random seed for reproducibility
             use_refiner: Whether to use the refiner model (if loaded)
-            control_image: Optional PIL Image for ControlNet guidance (e.g. Canny edge map)
-            controlnet_conditioning_scale: Strength of ControlNet guidance (0.0-1.0)
-            on_progress: Optional callback(step, total_steps, message) for progress updates            avoid_people: If True, adds negative prompts to avoid generating people when not explicitly requested
+            control_image: Optional PIL Image(s) for ControlNet guidance.
+                For multi-ControlNet, pass a list of images matching the number
+                of loaded ControlNet models.
+            controlnet_conditioning_scale: Strength of ControlNet guidance (0.0-1.0).
+                For multi-ControlNet, pass a list of scales matching the number
+                of loaded ControlNet models.
+            on_progress: Optional callback(step, total_steps, message) for progress updates
+            avoid_people: If True, adds negative prompts to avoid generating people when not explicitly requested
+            reference_image: Optional reference image for IP-Adapter style transfer
+            ip_adapter_scale: Strength of reference image influence (0.0-1.0, default 0.6)
+                             0.3-0.6 recommended when combining with text prompts
+
         Returns:
             List of generated PIL images
         """
@@ -402,6 +547,8 @@ class ImageGenerator:
             steps=num_inference_steps,
             use_refiner=use_refiner,
             has_control_image=bool(control_image),
+            controlnet_enabled=self._controlnet_loaded,
+            has_reference_image=bool(reference_image),
             avoid_people=avoid_people,
         )
 
@@ -464,6 +611,32 @@ class ImageGenerator:
         # Refiner denoising end
         if use_refiner and self.refiner:
             call_kwargs["denoising_end"] = 0.8
+
+        # Add IP-Adapter for reference image conditioning
+        if reference_image is not None:
+            # Initialize IP-Adapter manager if needed
+            if self._ip_adapter_manager is None:
+                self._ip_adapter_manager = get_ip_adapter_manager()
+
+            # Load IP-Adapter if not already loaded
+            self._ip_adapter_manager.load_ip_adapter(self.pipeline)
+
+            # Set influence scale
+            self._ip_adapter_manager.set_ip_adapter_scale(
+                self.pipeline, ip_adapter_scale
+            )
+
+            # Prepare reference image
+            ref_image = self._ip_adapter_manager.prepare_reference_image(
+                reference_image
+            )
+            call_kwargs["ip_adapter_image"] = ref_image
+
+            logger.info(
+                "using_ip_adapter",
+                scale=ip_adapter_scale,
+                adapter=self._ip_adapter_manager._loaded_adapter,
+            )
 
         result = self.pipeline(**call_kwargs)
         print()  # New line after progress bar
@@ -540,6 +713,12 @@ class ImageGenerator:
             logger.info("unloading_refiner")
             del self.refiner
             self.refiner = None
+
+        # Clear ControlNet models
+        if self._controlnet_models:
+            logger.info("unloading_controlnets")
+            self._controlnet_models = None
+            self._controlnet_loaded = False
 
         # Clear model cache
         if self._model_cache:

@@ -20,8 +20,12 @@ services:
       - CORS_ORIGINS=${CORS_ORIGINS:-*}
       - UNSPLASH_ACCESS_KEY=${UNSPLASH_ACCESS_KEY:-}
       - UNSPLASH_SECRET_KEY=${UNSPLASH_SECRET_KEY:-}
+      - REDIS_URL=redis://redis:6379
     env_file:
       - .env
+    depends_on:
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -35,6 +39,69 @@ services:
           memory: 8G
         reservations:
           memory: 4G
+
+  # Redis for job queue
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Worker for image generation jobs
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ai-artist-worker
+    volumes:
+      - ./gallery:/app/gallery
+      - ./models:/app/models
+      - ./logs:/app/logs
+      - ./config:/app/config
+      - ./data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - HF_HOME=/app/models/cache
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - REDIS_URL=redis://redis:6379
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      replicas: 2  # Run 2 workers for parallel processing
+      resources:
+        limits:
+          memory: 12G  # Workers need more memory for model loading
+        reservations:
+          memory: 8G
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # Optional: RQ Dashboard for monitoring
+  rq-dashboard:
+    image: eoranged/rq-dashboard:latest
+    ports:
+      - "9181:9181"
+    environment:
+      - RQ_DASHBOARD_REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    restart: unless-stopped
+    profiles:
+      - monitoring  # Only starts with: docker-compose --profile monitoring up
 
   # Optional: PostgreSQL for production database
   # Uncomment if you want persistent database storage
@@ -50,5 +117,6 @@ services:
   #     - "5432:5432"
   #   restart: unless-stopped
 
-# volumes:
-#   postgres_data:
+volumes:
+  redis_data:
+  # postgres_data:
