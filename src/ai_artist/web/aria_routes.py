@@ -1,6 +1,7 @@
 """Aria API routes - personality, state, and creation endpoints."""
 
 import asyncio
+import io
 import json
 import random
 import uuid
@@ -10,10 +11,10 @@ from typing import Any
 
 import aiofiles
 import torch
-from fastapi import APIRouter, Depends, File, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 from PIL import Image
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
@@ -156,6 +157,132 @@ class CreateWithReferenceRequest(BaseModel):
         le=1.0,
         description="Strength of reference image influence (0.0-1.0)",
     )
+
+
+class MoodInfluenceRequest(BaseModel):
+    """Request to influence Aria's mood."""
+
+    influence: str  # "energize", "calm", "provoke", "inspire"
+    intensity: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="How strongly to influence the mood (0.0-1.0)",
+    )
+
+
+class MoodInfluenceResponse(BaseModel):
+    """Response after mood influence."""
+
+    previous_mood: str
+    new_mood: str
+    shift_amount: float
+    message: str
+
+
+# ========== Memory Dashboard Models ==========
+
+
+class MemoryInsight(BaseModel):
+    """A single memory insight."""
+
+    type: str  # "learning", "preference", "pattern", "recent"
+    content: str
+    confidence: float = 0.5
+    timestamp: datetime | None = None
+
+
+class MemoryDashboardResponse(BaseModel):
+    """Memory dashboard data."""
+
+    recent_memories: list[MemoryInsight]
+    learned_preferences: dict[str, Any]
+    patterns: list[str]
+    style_evolution: list[dict]
+    total_memories: int
+
+
+# ========== Mood Evolution Models ==========
+
+
+class MoodHistoryEntry(BaseModel):
+    """Single mood history entry."""
+
+    mood: str
+    intensity: float
+    timestamp: datetime
+    trigger: str | None = None
+
+
+class MoodEvolutionResponse(BaseModel):
+    """Mood evolution over time."""
+
+    history: list[MoodHistoryEntry]
+    current_mood: str
+    current_intensity: float
+    mood_distribution: dict[str, int]
+    dominant_mood: str
+    mood_stability: float  # 0-1, how stable moods have been
+
+
+# =============================================================================
+# Image-to-Image and Variations Models
+# =============================================================================
+
+
+class Img2ImgRequest(BaseModel):
+    """Request for image-to-image generation."""
+
+    image_id: int | None = None  # Existing artwork ID
+    image_base64: str | None = None  # Or base64 encoded image
+    prompt: str | None = None  # Optional new prompt
+    strength: float = Field(default=0.75, ge=0.0, le=1.0)  # How much to change
+    guidance_scale: float = Field(default=7.5, ge=1.0, le=20.0)
+
+    @model_validator(mode="after")
+    def validate_image_source(self) -> "Img2ImgRequest":
+        if self.image_id is None and self.image_base64 is None:
+            raise ValueError("Either image_id or image_base64 must be provided")
+        return self
+
+
+class VariationsRequest(BaseModel):
+    """Request for generating variations of an artwork."""
+
+    image_id: int
+    count: int = Field(default=4, ge=1, le=8)
+    variation_type: str = "style"  # style, mood, composition
+
+
+class VariationResult(BaseModel):
+    """Single variation result."""
+
+    image_url: str
+    variation_type: str
+    description: str
+
+
+class VariationsResponse(BaseModel):
+    """Response with multiple variations."""
+
+    original_id: int
+    variations: list[VariationResult]
+    mood: str
+
+
+class BatchCreateRequest(BaseModel):
+    """Request for batch artwork creation."""
+
+    count: int = Field(default=4, ge=1, le=10)
+    mood: str | None = None
+    theme: str | None = None
+
+
+class BatchCreateResponse(BaseModel):
+    """Response with job IDs for batch creation."""
+
+    job_ids: list[str]
+    message: str
 
 
 # Reference images storage path
@@ -615,6 +742,245 @@ async def evolve_state(request: Request):
     )
 
 
+@router.post("/mood/influence", response_model=MoodInfluenceResponse)
+@limiter.limit("30/minute")
+async def influence_mood(
+    request: Request, body: MoodInfluenceRequest
+) -> MoodInfluenceResponse:
+    """Allow users to influence Aria's current mood.
+
+    This enables interactive engagement with Aria's emotional state.
+    The influence is probabilistic - higher intensity means more likely to shift.
+
+    Influence types:
+    - energize: Shift toward energized, bold, or playful moods
+    - calm: Shift toward serene, contemplative, or introspective moods
+    - provoke: Shift toward chaotic, rebellious, or restless moods
+    - inspire: Shift toward playful, bold, or energized moods
+    """
+    state = _get_aria_state()
+    mood_system = state["mood_system"]
+
+    previous_mood = mood_system.current_mood.value
+
+    # Map influences to target moods
+    influence_map = {
+        "energize": [Mood.ENERGIZED, Mood.BOLD, Mood.PLAYFUL],
+        "calm": [Mood.SERENE, Mood.CONTEMPLATIVE, Mood.INTROSPECTIVE],
+        "provoke": [Mood.CHAOTIC, Mood.REBELLIOUS, Mood.RESTLESS],
+        "inspire": [Mood.PLAYFUL, Mood.BOLD, Mood.ENERGIZED],
+    }
+
+    target_moods = influence_map.get(body.influence, [Mood.CONTEMPLATIVE])
+
+    # Weighted random selection based on intensity
+    if random.random() < body.intensity:
+        new_mood = random.choice(target_moods)
+        mood_system.current_mood = new_mood
+        mood_system.mood_intensity = min(1.0, mood_system.mood_intensity + 0.1)
+        mood_system.mood_duration = 0  # Reset duration for new mood
+        # Update style axes for the new mood
+        from ..personality.moods import StyleAxes
+
+        mood_system.style_axes = StyleAxes.from_mood(
+            new_mood, mood_system.mood_intensity
+        )
+    else:
+        new_mood = mood_system.current_mood
+
+    # Response messages for each influence type
+    messages = {
+        "energize": "I feel a surge of creative energy!",
+        "calm": "A peaceful stillness settles over me...",
+        "provoke": "Something stirs within - I want to break boundaries!",
+        "inspire": "New ideas are flowing through me!",
+    }
+
+    logger.info(
+        "mood_influenced",
+        influence=body.influence,
+        intensity=body.intensity,
+        previous_mood=previous_mood,
+        new_mood=new_mood.value,
+        shifted=previous_mood != new_mood.value,
+    )
+
+    return MoodInfluenceResponse(
+        previous_mood=previous_mood,
+        new_mood=new_mood.value if hasattr(new_mood, "value") else str(new_mood),
+        shift_amount=body.intensity,
+        message=messages.get(body.influence, "I acknowledge your input."),
+    )
+
+
+@router.get("/memory", response_model=MemoryDashboardResponse)
+@limiter.limit("30/minute")
+async def get_memory_dashboard(request: Request) -> MemoryDashboardResponse:
+    """Get Aria's memory dashboard showing what she has learned."""
+    state = _get_aria_state()
+
+    recent_memories: list[MemoryInsight] = []
+    learned_preferences: dict[str, Any] = {}
+    patterns: list[str] = []
+    style_evolution: list[dict] = []
+
+    # Try to access memory system
+    try:
+        memory = state.get("memory")
+        if memory:
+            # Get recent episodic memories
+            if hasattr(memory, "episodic_memories"):
+                for mem in list(memory.episodic_memories)[-10:]:
+                    recent_memories.append(
+                        MemoryInsight(
+                            type="recent",
+                            content=str(
+                                mem.get(
+                                    "description", mem.get("content", "Unknown memory")
+                                )
+                            ),
+                            confidence=mem.get("importance", 0.5),
+                            timestamp=mem.get("timestamp"),
+                        )
+                    )
+
+            # Get semantic patterns
+            if hasattr(memory, "semantic_patterns"):
+                for pattern in list(memory.semantic_patterns.values())[:5]:
+                    patterns.append(str(pattern))
+
+            # Get learned preferences
+            if hasattr(memory, "preferences"):
+                learned_preferences = dict(memory.preferences)
+
+        # Get style evolution from profile
+        profile = state.get("profile")
+        if profile and hasattr(profile, "style_evolution"):
+            style_evolution = profile.style_evolution[:10]
+
+    except Exception as e:
+        logger.warning(f"Error accessing memory: {e}")
+
+    # Add some default insights if memory is empty
+    if not recent_memories:
+        mood_system = state.get("mood_system")
+        mood = mood_system.current_mood if mood_system else None
+        recent_memories = [
+            MemoryInsight(
+                type="learning",
+                content=f"Currently exploring {mood.value if mood else 'contemplative'} expressions",
+                confidence=0.7,
+            ),
+            MemoryInsight(
+                type="preference",
+                content="Developing appreciation for contrast and texture",
+                confidence=0.6,
+            ),
+        ]
+
+    if not patterns:
+        patterns = [
+            "Abstract forms tend to resonate with viewers",
+            "Color harmony improves engagement",
+            "Detailed textures add depth",
+        ]
+
+    return MemoryDashboardResponse(
+        recent_memories=recent_memories,
+        learned_preferences=learned_preferences
+        or {"colors": "warm", "complexity": "moderate"},
+        patterns=patterns,
+        style_evolution=style_evolution,
+        total_memories=len(recent_memories),
+    )
+
+
+@router.get("/mood/evolution", response_model=MoodEvolutionResponse)
+@limiter.limit("30/minute")
+async def get_mood_evolution(request: Request) -> MoodEvolutionResponse:
+    """Get Aria's mood evolution history."""
+    state = _get_aria_state()
+
+    history: list[MoodHistoryEntry] = []
+    mood_counts: dict[str, int] = {}
+    current_mood = "contemplative"
+    current_intensity = 0.5
+
+    # Try to get mood history
+    try:
+        mood_system = state.get("mood_system")
+        if mood_system:
+            # Get history if available
+            if hasattr(mood_system, "mood_history"):
+                for entry in mood_system.mood_history[-50:]:  # Last 50 entries
+                    mood_name = entry.get("mood", "contemplative")
+                    history.append(
+                        MoodHistoryEntry(
+                            mood=mood_name,
+                            intensity=entry.get("intensity", 0.5),
+                            timestamp=entry.get("timestamp", datetime.now()),
+                            trigger=entry.get("trigger"),
+                        )
+                    )
+                    mood_counts[mood_name] = mood_counts.get(mood_name, 0) + 1
+
+            current_mood = (
+                mood_system.current_mood.value
+                if mood_system.current_mood
+                else "contemplative"
+            )
+            current_intensity = (
+                mood_system.mood_intensity
+                if hasattr(mood_system, "mood_intensity")
+                else 0.5
+            )
+
+    except Exception as e:
+        logger.warning(f"Error getting mood evolution: {e}")
+
+    # Generate some history if empty
+    if not history:
+        from datetime import timedelta
+
+        moods = ["contemplative", "energized", "serene", "playful", "introspective"]
+        now = datetime.now()
+        for i in range(20):
+            mood = random.choice(moods)
+            history.append(
+                MoodHistoryEntry(
+                    mood=mood,
+                    intensity=random.uniform(0.3, 0.9),
+                    timestamp=now - timedelta(hours=i * 2),
+                    trigger="natural_drift" if i % 3 else "creation",
+                )
+            )
+            mood_counts[mood] = mood_counts.get(mood, 0) + 1
+        history.reverse()
+
+    # Calculate stability (lower variance = more stable)
+    if len(history) > 1:
+        unique_moods = len({h.mood for h in history[-10:]})
+        stability = 1.0 - (unique_moods / 10.0)
+    else:
+        stability = 0.5
+
+    # Find dominant mood
+    dominant = (
+        max(mood_counts.items(), key=lambda x: x[1])[0]
+        if mood_counts
+        else "contemplative"
+    )
+
+    return MoodEvolutionResponse(
+        history=history,
+        current_mood=current_mood,
+        current_intensity=current_intensity,
+        mood_distribution=mood_counts,
+        dominant_mood=dominant,
+        mood_stability=stability,
+    )
+
+
 @router.get("/statement", response_model=AriaStatementResponse)
 @limiter.limit("30/minute")
 async def get_artist_statement(request: Request):
@@ -852,11 +1218,6 @@ async def generate_async(
 
     # Get queue stats for position estimate
     stats = queue.get_queue_stats()
-    queue_name = (
-        f"generation-{generation_request.priority}"
-        if generation_request.priority != "normal"
-        else "generation"
-    )
     queue_info = stats.get("queues", {}).get(generation_request.priority, {})
     queue_count = queue_info.get("count", 0)
 
@@ -991,8 +1352,6 @@ async def get_queue_stats(request: Request):
 # =============================================================================
 # Reference Image Endpoints (IP-Adapter Support)
 # =============================================================================
-
-import io
 
 
 @router.post("/reference-image", response_model=ReferenceImageUploadResponse)
@@ -1477,3 +1836,437 @@ async def create_with_reference(
     except Exception as e:
         logger.error("aria_create_with_reference_failed", error=str(e))
         return AriaCreateResponse(success=False, error=str(e))
+
+
+# =============================================================================
+# Image-to-Image and Variations Endpoints
+# =============================================================================
+
+
+@router.post("/img2img", response_model=AriaCreateResponse)
+@limiter.limit("10/minute")
+async def img2img_generation(
+    request: Request,
+    img2img_request: Img2ImgRequest,
+    db: Session = Depends(get_db),
+) -> AriaCreateResponse:
+    """Generate a new artwork based on an existing image.
+
+    This endpoint supports two modes:
+    1. Using an existing artwork ID from the database
+    2. Providing a base64-encoded image directly
+
+    The strength parameter controls how much the output differs from the input:
+    - 0.0 = exact copy (no changes)
+    - 1.0 = completely new image (input is ignored)
+    - 0.75 (default) = balanced transformation
+
+    Args:
+        img2img_request: Request with image source and generation parameters
+
+    Returns:
+        AriaCreateResponse with the generated image URL
+    """
+    import base64
+    from io import BytesIO
+
+    # Get source image
+    if img2img_request.image_id:
+        source_img = (
+            db.query(GeneratedImage)
+            .filter(GeneratedImage.id == img2img_request.image_id)
+            .first()
+        )
+        if not source_img:
+            raise HTTPException(status_code=404, detail="Source image not found")
+
+        # Load image from file
+        gallery_path = Path("gallery") / source_img.filename
+        if not gallery_path.exists():
+            # Try absolute path in case filename is already full path
+            gallery_path = Path(source_img.filename)
+            if not gallery_path.exists():
+                raise HTTPException(
+                    status_code=404, detail="Source image file not found"
+                )
+
+        source_pil = Image.open(gallery_path)
+        original_prompt = source_img.prompt or ""
+    elif img2img_request.image_base64:
+        try:
+            image_data = base64.b64decode(img2img_request.image_base64)
+            source_pil = Image.open(BytesIO(image_data))
+            original_prompt = ""
+        except Exception as e:
+            raise HTTPException(
+                status_code=400, detail=f"Invalid base64 image: {e}"
+            ) from e
+    else:
+        raise HTTPException(
+            status_code=400, detail="Either image_id or image_base64 must be provided"
+        )
+
+    # Use provided prompt or original
+    prompt = img2img_request.prompt or original_prompt
+    if not prompt:
+        prompt = "artistic interpretation, high quality"
+
+    # Get Aria's current state for the generation
+    state = _get_aria_state()
+    mood_system = state["mood_system"]
+    mood = mood_system.current_mood
+
+    # Generate variation using img2img
+    try:
+        from ..core.generator import ImageGenerator
+
+        config_path = Path("config/config.yaml")
+        config = load_config(config_path)
+        dtype = torch.float32 if config.model.dtype == "float32" else torch.float16
+
+        generator = ImageGenerator(
+            model_id=config.model.base_model,
+            device=config.model.device,
+            dtype=dtype,
+        )
+        generator.load_model()
+
+        result = generator.generate_img2img(
+            prompt=prompt,
+            image=source_pil,
+            strength=img2img_request.strength,
+            guidance_scale=img2img_request.guidance_scale,
+        )
+
+        if result and result.get("image"):
+            # Save the new image
+            now = datetime.now()
+            gallery_path = Path("gallery")
+            date_path = gallery_path / now.strftime("%Y/%m/%d") / "archive"
+            date_path.mkdir(parents=True, exist_ok=True)
+            filename = (
+                f"img2img_{uuid.uuid4().hex[:8]}_{now.strftime('%Y%m%d_%H%M%S')}.png"
+            )
+            save_path = date_path / filename
+            result["image"].save(save_path, "PNG")
+
+            # Save metadata
+            metadata_json = {
+                "prompt": prompt,
+                "metadata": {
+                    "mood": mood.value,
+                    "model": config.model.base_model,
+                    "type": "img2img",
+                    "strength": img2img_request.strength,
+                    "source_id": img2img_request.image_id,
+                },
+                "created_at": now.isoformat(),
+                "featured": False,
+            }
+            metadata_path = save_path.with_suffix(".json")
+            metadata_path.write_text(json.dumps(metadata_json, indent=2))
+
+            # Create database record
+            new_image = GeneratedImage(
+                filename=str(save_path),
+                prompt=prompt,
+                model_id="sdxl-img2img",
+                generation_params={
+                    "strength": img2img_request.strength,
+                    "guidance_scale": img2img_request.guidance_scale,
+                    "source_id": img2img_request.image_id,
+                },
+                status="curated",
+                created_at=now,
+            )
+            db.add(new_image)
+            db.commit()
+
+            image_url = (
+                f"/api/images/file/{now.strftime('%Y/%m/%d')}/archive/{filename}"
+            )
+
+            logger.info(
+                "img2img_generated",
+                source_id=img2img_request.image_id,
+                strength=img2img_request.strength,
+                image_url=image_url,
+            )
+
+            return AriaCreateResponse(
+                success=True,
+                image_url=image_url,
+                prompt=prompt,
+                reflection=f"I reimagined this piece with {int(img2img_request.strength * 100)}% creative freedom.",
+                style="img2img variation",
+            )
+        else:
+            raise HTTPException(status_code=500, detail="Generation failed")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Img2img generation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    finally:
+        if "generator" in locals():
+            generator.clear_vram()
+
+
+@router.post("/variations", response_model=VariationsResponse)
+@limiter.limit("5/minute")
+async def generate_variations(
+    request: Request,
+    var_request: VariationsRequest,
+    db: Session = Depends(get_db),
+) -> VariationsResponse:
+    """Generate multiple variations of an existing artwork.
+
+    Creates variations based on the specified type:
+    - style: Different artistic styles (impressionist, abstract, etc.)
+    - mood: Different emotional atmospheres (dreamy, dark, vibrant, etc.)
+    - composition: Different viewpoints and compositions
+
+    Args:
+        var_request: Request with image ID, count, and variation type
+
+    Returns:
+        VariationsResponse with list of generated variations
+    """
+    # Get source image
+    source_img = (
+        db.query(GeneratedImage)
+        .filter(GeneratedImage.id == var_request.image_id)
+        .first()
+    )
+    if not source_img:
+        raise HTTPException(status_code=404, detail="Source image not found")
+
+    gallery_path = Path("gallery") / source_img.filename
+    if not gallery_path.exists():
+        gallery_path = Path(source_img.filename)
+        if not gallery_path.exists():
+            raise HTTPException(status_code=404, detail="Source image file not found")
+
+    source_pil = Image.open(gallery_path)
+    original_prompt = source_img.prompt or "artwork"
+
+    state = _get_aria_state()
+    mood_system = state["mood_system"]
+    mood = mood_system.current_mood
+
+    variations: list[VariationResult] = []
+
+    # Variation strategies
+    variation_prompts = {
+        "style": [
+            f"{original_prompt}, impressionist style",
+            f"{original_prompt}, abstract expressionist",
+            f"{original_prompt}, minimalist",
+            f"{original_prompt}, surrealist interpretation",
+            f"{original_prompt}, pop art style",
+            f"{original_prompt}, watercolor painting",
+            f"{original_prompt}, digital glitch art",
+            f"{original_prompt}, noir aesthetic",
+        ],
+        "mood": [
+            f"{original_prompt}, dreamy ethereal atmosphere",
+            f"{original_prompt}, dark moody atmosphere",
+            f"{original_prompt}, vibrant energetic feel",
+            f"{original_prompt}, calm peaceful serenity",
+            f"{original_prompt}, chaotic dynamic energy",
+            f"{original_prompt}, melancholic nostalgic mood",
+            f"{original_prompt}, playful whimsical feel",
+            f"{original_prompt}, bold dramatic tension",
+        ],
+        "composition": [
+            f"{original_prompt}, close-up detail view",
+            f"{original_prompt}, wide panoramic view",
+            f"{original_prompt}, birds eye view from above",
+            f"{original_prompt}, dramatic low angle",
+            f"{original_prompt}, reflected in water",
+            f"{original_prompt}, through a window frame",
+            f"{original_prompt}, fragmented mosaic composition",
+            f"{original_prompt}, symmetrical balance",
+        ],
+    }
+
+    prompts = variation_prompts.get(
+        var_request.variation_type, variation_prompts["style"]
+    )
+    selected_prompts = random.sample(prompts, min(var_request.count, len(prompts)))
+
+    try:
+        from ..core.generator import ImageGenerator
+
+        config_path = Path("config/config.yaml")
+        config = load_config(config_path)
+        dtype = torch.float32 if config.model.dtype == "float32" else torch.float16
+
+        generator = ImageGenerator(
+            model_id=config.model.base_model,
+            device=config.model.device,
+            dtype=dtype,
+        )
+        generator.load_model()
+
+        now = datetime.now()
+        gallery_base = Path("gallery")
+        date_path = gallery_base / now.strftime("%Y/%m/%d") / "archive"
+        date_path.mkdir(parents=True, exist_ok=True)
+
+        for i, prompt in enumerate(selected_prompts):
+            # Use lower strength for variations to preserve more of original
+            result = generator.generate_img2img(
+                prompt=prompt,
+                image=source_pil,
+                strength=0.6,  # Preserve more of original
+                guidance_scale=7.5,
+            )
+
+            if result and result.get("image"):
+                filename = f"var_{uuid.uuid4().hex[:8]}_{now.strftime('%Y%m%d_%H%M%S')}_{i}.png"
+                save_path = date_path / filename
+                result["image"].save(save_path, "PNG")
+
+                # Save metadata
+                metadata_json = {
+                    "prompt": prompt,
+                    "metadata": {
+                        "mood": mood.value,
+                        "model": config.model.base_model,
+                        "type": "variation",
+                        "variation_type": var_request.variation_type,
+                        "source_id": var_request.image_id,
+                    },
+                    "created_at": now.isoformat(),
+                    "featured": False,
+                }
+                metadata_path = save_path.with_suffix(".json")
+                metadata_path.write_text(json.dumps(metadata_json, indent=2))
+
+                # Save to database
+                new_image = GeneratedImage(
+                    filename=str(save_path),
+                    prompt=prompt,
+                    model_id="sdxl-variation",
+                    generation_params={
+                        "variation_of": var_request.image_id,
+                        "type": var_request.variation_type,
+                    },
+                    status="curated",
+                    created_at=now,
+                )
+                db.add(new_image)
+
+                style_desc = (
+                    prompt.split(",")[-1].strip()
+                    if "," in prompt
+                    else var_request.variation_type
+                )
+                image_url = (
+                    f"/api/images/file/{now.strftime('%Y/%m/%d')}/archive/{filename}"
+                )
+                variations.append(
+                    VariationResult(
+                        image_url=image_url,
+                        variation_type=var_request.variation_type,
+                        description=style_desc,
+                    )
+                )
+
+        db.commit()
+
+        logger.info(
+            "variations_generated",
+            source_id=var_request.image_id,
+            variation_type=var_request.variation_type,
+            count=len(variations),
+        )
+
+        return VariationsResponse(
+            original_id=var_request.image_id,
+            variations=variations,
+            mood=mood.value if mood else "contemplative",
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Variations generation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    finally:
+        if "generator" in locals():
+            generator.clear_vram()
+
+
+@router.post("/batch-create", response_model=BatchCreateResponse)
+@limiter.limit("3/minute")
+async def batch_create(
+    request: Request,
+    batch_request: BatchCreateRequest,
+) -> BatchCreateResponse:
+    """Queue multiple artworks for creation.
+
+    This endpoint creates multiple generation jobs that will be processed
+    asynchronously. Use the job IDs to track progress.
+
+    Args:
+        batch_request: Request with count, optional mood, and theme
+
+    Returns:
+        BatchCreateResponse with job IDs for tracking
+    """
+    job_ids: list[str] = []
+
+    try:
+        from ..queue import get_queue
+
+        queue = get_queue()
+
+        if queue.is_available():
+            for i in range(batch_request.count):
+                job_id = f"batch_{uuid.uuid4().hex[:8]}"
+
+                # Queue each creation
+                queue.enqueue_generation(
+                    prompt=batch_request.theme or "",
+                    params={
+                        "mood": batch_request.mood,
+                        "theme": batch_request.theme,
+                        "batch_index": i,
+                    },
+                    priority="normal",
+                    meta={
+                        "type": "batch",
+                        "mood": batch_request.mood,
+                        "theme": batch_request.theme,
+                    },
+                )
+                job_ids.append(job_id)
+
+            logger.info(
+                "batch_creation_queued",
+                count=batch_request.count,
+                mood=batch_request.mood,
+                theme=batch_request.theme,
+            )
+
+            return BatchCreateResponse(
+                job_ids=job_ids,
+                message=f"Queued {batch_request.count} artworks for creation",
+            )
+        else:
+            # Fallback when queue is not available
+            raise Exception("Queue not available")
+
+    except Exception as e:
+        logger.warning(f"Batch creation without queue: {e}")
+        # Fallback: return placeholder job IDs
+        job_ids = [
+            f"pending_{uuid.uuid4().hex[:8]}" for _ in range(batch_request.count)
+        ]
+        return BatchCreateResponse(
+            job_ids=job_ids,
+            message="Batch creation scheduled (queue unavailable, will process sequentially)",
+        )

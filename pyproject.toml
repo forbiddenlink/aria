@@ -103,7 +103,7 @@ line-length = 88
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "B", "C4", "UP", "SIM"]
-ignore = ["E501"]
+ignore = ["E501", "B008"]  # B008: FastAPI Depends() pattern is standard
 
 [tool.black]
 line-length = 88

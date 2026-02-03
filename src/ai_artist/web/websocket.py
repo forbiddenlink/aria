@@ -232,6 +232,60 @@ class ConnectionManager:
         }
         await self.broadcast(update)
 
+    async def broadcast_mood_drift(
+        self,
+        mood: str,
+        intensity: float,
+        reason: str = "natural_drift",
+    ):
+        """Broadcast mood drift to all connected clients.
+
+        Args:
+            mood: The new mood name
+            intensity: Mood intensity (0-1)
+            reason: What triggered the drift (natural_drift, creation, interaction)
+        """
+        message = {
+            "type": "mood_drift",
+            "mood": mood,
+            "intensity": intensity,
+            "reason": reason,
+            "timestamp": datetime.now().isoformat(),
+        }
+        await self.broadcast(message)
+
+    async def broadcast_memory_insight(
+        self,
+        insight: str,
+        insight_type: str = "learning",
+    ):
+        """Broadcast a memory insight to all connected clients.
+
+        Args:
+            insight: The insight content
+            insight_type: Type of insight (learning, preference, pattern)
+        """
+        message = {
+            "type": "memory_insight",
+            "insight": insight,
+            "insight_type": insight_type,
+            "timestamp": datetime.now().isoformat(),
+        }
+        await self.broadcast(message)
+
 
 # Global instance
 manager = ConnectionManager()
+
+
+# Convenience functions for module-level access
+async def broadcast_mood_drift(
+    mood: str, intensity: float, reason: str = "natural_drift"
+):
+    """Broadcast mood drift to all connected clients."""
+    await manager.broadcast_mood_drift(mood, intensity, reason)
+
+
+async def broadcast_memory_insight(insight: str, insight_type: str = "learning"):
+    """Broadcast a memory insight to all connected clients."""
+    await manager.broadcast_memory_insight(insight, insight_type)

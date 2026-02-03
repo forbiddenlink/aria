@@ -19,7 +19,7 @@ from PIL import Image
 
 from ..curation.curator import is_black_or_blank
 from ..utils.logging import get_logger
-from .controlnet import ControlNetLoader, ControlNetType, SDXL_CONTROLNET_MODELS
+from .controlnet import SDXL_CONTROLNET_MODELS, ControlNetLoader, ControlNetType
 from .ip_adapter import IPAdapterManager, get_ip_adapter_manager
 
 logger = get_logger(__name__)
@@ -692,6 +692,107 @@ class ImageGenerator:
         self.clear_vram()
 
         return images
+
+    def generate_img2img(
+        self,
+        prompt: str,
+        image: Image.Image,
+        strength: float = 0.75,
+        guidance_scale: float = 7.5,
+        negative_prompt: str = "",
+        num_inference_steps: int = 30,
+        seed: int | None = None,
+    ) -> dict:
+        """Generate an image based on an existing image (img2img).
+
+        This method transforms an existing image based on a text prompt,
+        allowing partial modifications while preserving the original structure.
+
+        Args:
+            prompt: The text prompt describing the desired output
+            image: Source PIL Image to transform
+            strength: How much to transform the image (0.0 = identical, 1.0 = completely different)
+                     0.75 is a good default for balanced transformation
+            guidance_scale: How closely to follow the prompt (7.5 is standard)
+            negative_prompt: What to avoid in the generation
+            num_inference_steps: Number of denoising steps
+            seed: Random seed for reproducibility
+
+        Returns:
+            Dict with 'image' key containing the generated PIL Image, or empty dict on failure
+        """
+        if not self.pipeline:
+            raise RuntimeError("Load model first using load_model()")
+
+        logger.info(
+            "generating_img2img",
+            prompt=prompt[:100],
+            strength=strength,
+            guidance_scale=guidance_scale,
+            steps=num_inference_steps,
+        )
+
+        try:
+            # Create img2img pipeline from the loaded base pipeline
+            img2img_pipeline = StableDiffusionXLImg2ImgPipeline.from_pipe(
+                self.pipeline,
+                torch_dtype=self.dtype,
+            )
+            img2img_pipeline.to(self.device)
+
+            # Set seed for reproducibility
+            generator = None
+            if seed is not None:
+                generator = torch.Generator(device=self.device).manual_seed(seed)
+
+            # Ensure image is in RGB mode and appropriate size
+            if image.mode != "RGB":
+                image = image.convert("RGB")
+
+            # Resize to standard dimensions if needed (maintaining aspect ratio)
+            max_dim = 1024
+            if image.width > max_dim or image.height > max_dim:
+                ratio = min(max_dim / image.width, max_dim / image.height)
+                new_size = (int(image.width * ratio), int(image.height * ratio))
+                # Ensure dimensions are multiples of 8
+                new_size = (
+                    new_size[0] - new_size[0] % 8,
+                    new_size[1] - new_size[1] % 8,
+                )
+                image = image.resize(new_size, Image.Resampling.LANCZOS)
+
+            # Generate
+            result = img2img_pipeline(
+                prompt=prompt,
+                image=image,
+                strength=strength,
+                guidance_scale=guidance_scale,
+                negative_prompt=negative_prompt
+                or "blurry, low quality, distorted, deformed",
+                num_inference_steps=num_inference_steps,
+                generator=generator,
+            )
+
+            if result.images and len(result.images) > 0:
+                generated_image = result.images[0]
+
+                # Validate output
+                if not is_black_or_blank(generated_image):
+                    logger.info("img2img_generation_complete")
+                    return {"image": generated_image}
+                else:
+                    logger.warning("img2img_produced_black_image")
+                    return {}
+
+            logger.error("img2img_no_output")
+            return {}
+
+        except Exception as e:
+            logger.error("img2img_generation_failed", error=str(e))
+            raise
+        finally:
+            # Cleanup
+            self.clear_vram()
 
     def clear_vram(self):
         """Clear GPU memory cache to prevent memory leaks in long-running sessions.

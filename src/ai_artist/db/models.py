@@ -12,6 +12,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -167,3 +168,54 @@ class GalleryShare(Base):  # type: ignore[misc, valid-type]
 
     # Relationship
     image = relationship("GeneratedImage", back_populates="shares")
+
+
+class GalleryCollection(Base):  # type: ignore[misc, valid-type]
+    """A curated collection of artworks."""
+
+    __tablename__ = "gallery_collections"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    theme = Column(String(100), nullable=True)  # e.g., "Abstract Blue Period"
+    cover_image_id = Column(Integer, ForeignKey("generated_images.id"), nullable=True)
+    is_public = Column(Boolean, default=True)
+    created_by_aria = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+
+    # Relationships
+    cover_image = relationship("GeneratedImage", foreign_keys=[cover_image_id])
+
+
+class CollectionArtwork(Base):  # type: ignore[misc, valid-type]
+    """Many-to-many relationship between collections and artworks."""
+
+    __tablename__ = "collection_artworks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    collection_id = Column(
+        Integer,
+        ForeignKey("gallery_collections.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    image_id = Column(
+        Integer,
+        ForeignKey("generated_images.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    position = Column(Integer, default=0)  # For ordering within collection
+    added_at = Column(DateTime, default=lambda: datetime.now(UTC))
+
+    # Relationships
+    collection = relationship("GalleryCollection", backref="artworks")
+    image = relationship("GeneratedImage")
+
+    __table_args__ = (
+        UniqueConstraint("collection_id", "image_id", name="unique_collection_artwork"),
+    )

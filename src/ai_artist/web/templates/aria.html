@@ -31,6 +31,40 @@
             --xp-bar: linear-gradient(90deg, #bb86fc, #6c63ff);
         }
 
+        /* Light theme */
+        [data-theme="light"] {
+            --bg-dark: #f5f5f5;
+            --bg-panel: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #666666;
+            --border: #e0e0e0;
+            --accent-glow: rgba(139, 92, 246, 0.15);
+        }
+
+        /* High Contrast Mode */
+        @media (prefers-contrast: high) {
+            :root {
+                --bg-dark: #000000;
+                --bg-panel: #0a0a0a;
+                --text-main: #ffffff;
+                --text-muted: #cccccc;
+                --border: #ffffff;
+                --accent: #ffff00;
+                --accent-hover: #ffffff;
+            }
+        }
+
+        /* Forced Colors Mode (Windows High Contrast) */
+        @media (forced-colors: active) {
+            .orb {
+                forced-color-adjust: none;
+                border: 2px solid CanvasText;
+            }
+            .btn, button {
+                border: 2px solid ButtonText;
+            }
+        }
+
         /* Accessibility: Reduced motion preference */
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
@@ -117,6 +151,28 @@
             font-size: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 2px;
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
         }
 
         /* Mood Orb */
@@ -288,9 +344,55 @@
             color: #ccc;
         }
 
+        /* Page Transitions */
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
+            from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .mind-panel {
+            animation: slideIn 0.4s ease-out;
+        }
+
+        .gallery-panel {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .art-card {
+            animation: fadeIn 0.3s ease-out;
+            animation-fill-mode: both;
+        }
+
+        /* Stagger animation for gallery cards */
+        .art-card:nth-child(1) { animation-delay: 0.05s; }
+        .art-card:nth-child(2) { animation-delay: 0.1s; }
+        .art-card:nth-child(3) { animation-delay: 0.15s; }
+        .art-card:nth-child(4) { animation-delay: 0.2s; }
+        .art-card:nth-child(5) { animation-delay: 0.25s; }
+        .art-card:nth-child(6) { animation-delay: 0.3s; }
+
+        /* Modal Transitions */
+        .modal, .lightbox {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal.active, .lightbox.active {
+            opacity: 1;
+        }
+
+        .modal-content, .lightbox-content {
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+
+        .modal.active .modal-content, .lightbox.active .lightbox-content {
+            transform: scale(1);
         }
 
         /* Controls */
@@ -429,6 +531,22 @@
             text-align: right;
         }
 
+        /* Skeleton Loading */
+        .skeleton {
+            background: linear-gradient(90deg, var(--bg-panel) 25%, rgba(255,255,255,0.1) 50%, var(--bg-panel) 75%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite;
+            border-radius: 8px;
+        }
+        @keyframes skeleton-loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .skeleton-card {
+            height: 250px;
+            margin-bottom: 1rem;
+        }
+
         /* Style Axes Visualization */
         .style-axes {
             display: grid;
@@ -483,6 +601,49 @@
 
         .low-intensity .intensity-ring { animation-duration: 4s; opacity: 0.3; }
         .high-intensity .intensity-ring { animation-duration: 1s; opacity: 0.9; }
+
+        /* Mood Influence */
+        .mood-influence {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .influence-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.75rem;
+        }
+        .influence-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .influence-btn {
+            flex: 1;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .influence-btn:hover {
+            background: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+        .influence-btn:active {
+            transform: translateY(0);
+        }
+        .influence-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
 
         /* === RIGHT PANEL: GALLERY === */
         .gallery-panel {
@@ -823,6 +984,72 @@
 
         .modal-close:hover { color: #fff; }
 
+        /* Lightbox Actions */
+        .lightbox-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin: 1.5rem 0;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .action-btn:hover {
+            background: var(--accent);
+            color: #000;
+            transform: translateY(-2px);
+        }
+
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Variations Modal */
+        .variations-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .variation-card {
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .variation-card:hover {
+            transform: scale(1.02);
+        }
+
+        .variation-card img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .variation-label {
+            padding: 0.5rem;
+            background: rgba(0, 0, 0, 0.7);
+            font-size: 0.75rem;
+            text-align: center;
+        }
+
         /* Responsive */
         @media (max-width: 1200px) {
             .masonry-grid { column-count: 2; }
@@ -860,6 +1087,9 @@
                 <h1>ARIA</h1>
             </a>
             <div class="subtitle" role="doc-subtitle">Autonomous AI Artist</div>
+            <button id="theme-toggle" class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+                <span class="theme-icon">☀️</span>
+            </button>
         </header>
 
         <!-- Mood Orb -->
@@ -871,6 +1101,17 @@
                 <div class="mood-label" id="mood-label">Current Mood</div>
                 <div id="mood-text" class="mood-value" aria-labelledby="mood-label">Awakening...</div>
                 <div id="intensity-text" style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem;"></div>
+            </div>
+        </div>
+
+        <!-- Mood Influence Buttons -->
+        <div class="mood-influence" role="group" aria-label="Influence Aria's mood">
+            <div class="influence-label">Influence Her Mood</div>
+            <div class="influence-buttons">
+                <button class="influence-btn" onclick="influenceMood('energize')" title="Energize" aria-label="Energize Aria's mood">&#9889;</button>
+                <button class="influence-btn" onclick="influenceMood('calm')" title="Calm" aria-label="Calm Aria's mood">&#127754;</button>
+                <button class="influence-btn" onclick="influenceMood('provoke')" title="Provoke" aria-label="Provoke Aria's mood">&#128293;</button>
+                <button class="influence-btn" onclick="influenceMood('inspire')" title="Inspire" aria-label="Inspire Aria's mood">&#10024;</button>
             </div>
         </div>
 
@@ -929,6 +1170,7 @@
         <nav class="controls" style="margin-top: 0.75rem;" role="group" aria-label="Secondary actions">
             <button class="btn-outline" onclick="forceEvolve()" aria-label="Evolve Aria's state">EVOLVE</button>
             <button class="btn-outline" onclick="showEvolution()" aria-label="View evolution timeline">TIMELINE</button>
+            <button class="btn-outline" onclick="showMemory()" aria-label="View memory dashboard">MEMORY</button>
             <button class="btn-outline" onclick="window.open('/', '_blank')" aria-label="Open full gallery in new tab">FULL GALLERY</button>
         </nav>
     </aside>
@@ -959,6 +1201,18 @@
                 <div class="lightbox-details">
                     <h2 id="lb-title"></h2>
                     <div class="tags" id="lb-tags" role="list" aria-label="Artwork tags"></div>
+                    <!-- Action Buttons -->
+                    <div class="lightbox-actions" id="lb-actions">
+                        <button class="action-btn" onclick="generateVariations()" title="Generate Variations">
+                            <span>&#127912;</span> Variations
+                        </button>
+                        <button class="action-btn" onclick="downloadArtwork()" title="Download">
+                            <span>&#11015;&#65039;</span> Download
+                        </button>
+                        <button class="action-btn" onclick="shareArtwork()" title="Share">
+                            <span>&#128279;</span> Share
+                        </button>
+                    </div>
                     <div class="lb-meta">
                         <div class="lb-label" id="reflection-label">Reflection</div>
                         <p id="lb-reflection" aria-labelledby="reflection-label"></p>
@@ -1050,6 +1304,7 @@
         // State
         let paintingsData = {};
         let ws = null;
+        let currentLightboxId = null;
 
         // WebSocket connection
         function connectWebSocket() {
@@ -1114,6 +1369,13 @@
                     break;
                 case 'error':
                     addLog('ERROR', data.error || data.message || 'Unknown error');
+                    break;
+                case 'mood_drift':
+                    addLog('MOOD', 'Mood naturally drifted to ' + data.mood);
+                    updateMoodDisplay({ mood: data.mood, intensity: data.intensity });
+                    break;
+                case 'memory_insight':
+                    addLog('INSIGHT', data.insight);
                     break;
             }
         }
@@ -1368,6 +1630,16 @@
             var div = document.createElement('div');
             div.className = 'art-card';
             div.onclick = function() { openLightbox(id); };
+            div.setAttribute('tabindex', '0');
+            div.setAttribute('role', 'button');
+            div.setAttribute('aria-label', (painting.subject || 'Untitled') + ' - ' + (painting.mood || 'artwork'));
+            // Add keyboard handler
+            div.onkeydown = function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    openLightbox(id);
+                }
+            };
 
             var imgSrc = painting.image_url || painting.full_url;
             if (!imgSrc) {
@@ -1421,6 +1693,8 @@
         }
 
         function openLightbox(id) {
+            currentGalleryIndex = id;
+            currentLightboxId = id;
             var painting = paintingsData[id];
             if (!painting) return;
 
@@ -1579,6 +1853,36 @@
                 .catch(function(e) {
                     addLog('ERROR', 'Evolution failed');
                 });
+        }
+
+        function influenceMood(influence) {
+            var btn = event.target;
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+
+            fetch('/api/aria/mood/influence', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ influence: influence, intensity: 0.7 })
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                addLog('INFLUENCE', data.message);
+                if (data.new_mood) {
+                    updateMoodDisplay({ mood: data.new_mood });
+                }
+                // Refresh full state to get updated intensity and style axes
+                fetchState(false);
+            })
+            .catch(function(err) {
+                addLog('ERROR', 'Could not influence mood');
+            })
+            .finally(function() {
+                setTimeout(function() {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                }, 1000);
+            });
         }
 
         function showStatement() {
@@ -1798,6 +2102,311 @@
                 });
         }
 
+        function showMemory() {
+            fetch('/api/aria/memory')
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    var modal = document.createElement('div');
+                    modal.className = 'modal active';
+                    modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+
+                    var content = document.createElement('div');
+                    content.className = 'modal-content';
+                    content.style.maxWidth = '700px';
+                    content.style.maxHeight = '90vh';
+                    content.style.overflow = 'auto';
+
+                    var closeBtn = document.createElement('button');
+                    closeBtn.className = 'modal-close';
+                    closeBtn.textContent = '\u00D7';
+                    closeBtn.onclick = function() { modal.remove(); };
+                    content.appendChild(closeBtn);
+
+                    var h2 = document.createElement('h2');
+                    h2.textContent = 'Memory & Learning';
+                    h2.style.marginBottom = '1.5rem';
+                    content.appendChild(h2);
+
+                    // Recent Memories Section
+                    var memoriesSection = document.createElement('div');
+                    memoriesSection.style.marginBottom = '2rem';
+
+                    var memoriesTitle = document.createElement('h3');
+                    memoriesTitle.textContent = 'Recent Insights';
+                    memoriesTitle.style.cssText = 'font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.1em;';
+                    memoriesSection.appendChild(memoriesTitle);
+
+                    if (data.recent_memories && data.recent_memories.length > 0) {
+                        data.recent_memories.forEach(function(mem) {
+                            var item = document.createElement('div');
+                            item.style.cssText = 'padding: 0.75rem 1rem; background: rgba(255,255,255,0.03); border-left: 3px solid var(--accent); margin-bottom: 0.5rem; border-radius: 0 4px 4px 0;';
+
+                            var badge = document.createElement('span');
+                            badge.style.cssText = 'font-size: 0.65rem; background: var(--accent); color: #000; padding: 0.15rem 0.5rem; border-radius: 10px; margin-right: 0.5rem;';
+                            badge.textContent = mem.type.toUpperCase();
+                            item.appendChild(badge);
+
+                            var text = document.createElement('span');
+                            text.style.fontSize = '0.9rem';
+                            text.textContent = mem.content;
+                            item.appendChild(text);
+
+                            memoriesSection.appendChild(item);
+                        });
+                    } else {
+                        var empty = document.createElement('p');
+                        empty.style.cssText = 'color: var(--text-muted); font-style: italic;';
+                        empty.textContent = 'Building memories through creation...';
+                        memoriesSection.appendChild(empty);
+                    }
+                    content.appendChild(memoriesSection);
+
+                    // Patterns Section
+                    if (data.patterns && data.patterns.length > 0) {
+                        var patternsSection = document.createElement('div');
+                        patternsSection.style.marginBottom = '2rem';
+
+                        var patternsTitle = document.createElement('h3');
+                        patternsTitle.textContent = 'Learned Patterns';
+                        patternsTitle.style.cssText = 'font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.1em;';
+                        patternsSection.appendChild(patternsTitle);
+
+                        var patternsList = document.createElement('ul');
+                        patternsList.style.cssText = 'list-style: none; padding: 0;';
+
+                        data.patterns.forEach(function(pattern) {
+                            var li = document.createElement('li');
+                            li.style.cssText = 'padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem;';
+                            li.textContent = '\u2726 ' + pattern;
+                            patternsList.appendChild(li);
+                        });
+
+                        patternsSection.appendChild(patternsList);
+                        content.appendChild(patternsSection);
+                    }
+
+                    // Preferences Section
+                    if (data.learned_preferences && Object.keys(data.learned_preferences).length > 0) {
+                        var prefsSection = document.createElement('div');
+
+                        var prefsTitle = document.createElement('h3');
+                        prefsTitle.textContent = 'Preferences';
+                        prefsTitle.style.cssText = 'font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.1em;';
+                        prefsSection.appendChild(prefsTitle);
+
+                        var prefsGrid = document.createElement('div');
+                        prefsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem;';
+
+                        Object.entries(data.learned_preferences).forEach(function(entry) {
+                            var key = entry[0];
+                            var value = entry[1];
+                            var pref = document.createElement('div');
+                            pref.style.cssText = 'background: rgba(139, 92, 246, 0.1); padding: 0.75rem; border-radius: 8px; text-align: center;';
+
+                            var label = document.createElement('div');
+                            label.style.cssText = 'font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.25rem;';
+                            label.textContent = key;
+                            pref.appendChild(label);
+
+                            var val = document.createElement('div');
+                            val.style.cssText = 'font-size: 0.9rem; color: var(--accent);';
+                            val.textContent = value;
+                            pref.appendChild(val);
+
+                            prefsGrid.appendChild(pref);
+                        });
+
+                        prefsSection.appendChild(prefsGrid);
+                        content.appendChild(prefsSection);
+                    }
+
+                    modal.appendChild(content);
+                    document.body.appendChild(modal);
+                })
+                .catch(function(e) {
+                    addLog('ERROR', 'Could not fetch memory data');
+                });
+        }
+
+        function showMoodGraph() {
+            fetch('/api/aria/mood/evolution')
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    var modal = document.createElement('div');
+                    modal.className = 'modal active';
+                    modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+
+                    var content = document.createElement('div');
+                    content.className = 'modal-content';
+                    content.style.maxWidth = '800px';
+
+                    var closeBtn = document.createElement('button');
+                    closeBtn.className = 'modal-close';
+                    closeBtn.textContent = '\u00D7';
+                    closeBtn.onclick = function() { modal.remove(); };
+                    content.appendChild(closeBtn);
+
+                    var h2 = document.createElement('h2');
+                    h2.textContent = 'Mood Evolution';
+                    h2.style.marginBottom = '1.5rem';
+                    content.appendChild(h2);
+
+                    // Current state
+                    var current = document.createElement('div');
+                    current.style.cssText = 'display: flex; gap: 2rem; margin-bottom: 2rem; padding: 1rem; background: rgba(255,255,255,0.03); border-radius: 12px;';
+
+                    var currentMood = document.createElement('div');
+                    currentMood.innerHTML = '<div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Current Mood</div><div style="font-size: 1.5rem; color: var(--accent); text-transform: capitalize;">' + (data.current_mood || 'unknown') + '</div>';
+                    current.appendChild(currentMood);
+
+                    var stability = document.createElement('div');
+                    var stabilityPct = Math.round((data.mood_stability || 0) * 100);
+                    stability.innerHTML = '<div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Stability</div><div style="font-size: 1.5rem;">' + stabilityPct + '%</div>';
+                    current.appendChild(stability);
+
+                    var dominant = document.createElement('div');
+                    dominant.innerHTML = '<div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Dominant</div><div style="font-size: 1.5rem; text-transform: capitalize;">' + (data.dominant_mood || 'unknown') + '</div>';
+                    current.appendChild(dominant);
+
+                    content.appendChild(current);
+
+                    // Mood Distribution bars
+                    if (data.mood_distribution && Object.keys(data.mood_distribution).length > 0) {
+                        var distSection = document.createElement('div');
+                        distSection.style.marginBottom = '2rem';
+
+                        var distTitle = document.createElement('h3');
+                        distTitle.textContent = 'Mood Distribution';
+                        distTitle.style.cssText = 'font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem;';
+                        distSection.appendChild(distTitle);
+
+                        var total = Object.values(data.mood_distribution).reduce(function(a, b) { return a + b; }, 0);
+                        var sorted = Object.entries(data.mood_distribution).sort(function(a, b) { return b[1] - a[1]; });
+
+                        sorted.forEach(function(entry) {
+                            var mood = entry[0];
+                            var count = entry[1];
+                            var pct = Math.round((count / total) * 100);
+                            var moodColor = MOOD_COLORS[mood] || '#888';
+
+                            var bar = document.createElement('div');
+                            bar.style.marginBottom = '0.5rem';
+
+                            var label = document.createElement('div');
+                            label.style.cssText = 'display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.25rem;';
+                            label.innerHTML = '<span style="text-transform: capitalize;">' + mood + '</span><span style="color: var(--text-muted);">' + pct + '%</span>';
+                            bar.appendChild(label);
+
+                            var track = document.createElement('div');
+                            track.style.cssText = 'height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;';
+
+                            var fill = document.createElement('div');
+                            fill.style.cssText = 'height: 100%; border-radius: 4px; transition: width 0.5s;';
+                            fill.style.width = pct + '%';
+                            fill.style.background = moodColor;
+                            track.appendChild(fill);
+                            bar.appendChild(track);
+
+                            distSection.appendChild(bar);
+                        });
+
+                        content.appendChild(distSection);
+                    }
+
+                    // Recent History Timeline
+                    if (data.history && data.history.length > 0) {
+                        var histSection = document.createElement('div');
+
+                        var histTitle = document.createElement('h3');
+                        histTitle.textContent = 'Recent History';
+                        histTitle.style.cssText = 'font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem;';
+                        histSection.appendChild(histTitle);
+
+                        var timeline = document.createElement('div');
+                        timeline.style.cssText = 'display: flex; gap: 4px; flex-wrap: wrap;';
+
+                        data.history.slice(-30).forEach(function(entry) {
+                            var dot = document.createElement('div');
+                            var moodColor = MOOD_COLORS[entry.mood] || '#888';
+                            dot.style.cssText = 'width: 20px; height: 20px; border-radius: 4px; cursor: pointer;';
+                            dot.style.background = moodColor;
+                            dot.style.opacity = entry.intensity;
+                            dot.title = entry.mood + ' (' + Math.round(entry.intensity * 100) + '%)';
+                            timeline.appendChild(dot);
+                        });
+
+                        histSection.appendChild(timeline);
+
+                        var legend = document.createElement('div');
+                        legend.style.cssText = 'margin-top: 0.5rem; font-size: 0.7rem; color: var(--text-muted);';
+                        legend.textContent = 'Each square represents a mood state. Opacity indicates intensity.';
+                        histSection.appendChild(legend);
+
+                        content.appendChild(histSection);
+                    }
+
+                    modal.appendChild(content);
+                    document.body.appendChild(modal);
+                })
+                .catch(function(e) {
+                    addLog('ERROR', 'Could not fetch mood evolution');
+                });
+        }
+
+        // Theme toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('aria-theme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+
+        function updateThemeIcon(theme) {
+            const icon = document.querySelector('.theme-icon');
+            if (icon) {
+                icon.textContent = theme === 'light' ? '🌙' : '☀️';
+            }
+        }
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem('aria-theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = savedTheme || (prefersDark ? 'dark' : 'dark');
+            document.documentElement.setAttribute('data-theme', theme);
+            updateThemeIcon(theme);
+        }
+
+        // Gallery keyboard navigation
+        let currentGalleryIndex = -1;
+        const galleryCards = () => document.querySelectorAll('.art-card');
+
+        document.addEventListener('keydown', function(e) {
+            const lightbox = document.getElementById('lightbox');
+            const isLightboxOpen = lightbox && lightbox.classList.contains('active');
+
+            if (isLightboxOpen) {
+                // Navigate between images in lightbox
+                if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    const cards = galleryCards();
+                    const direction = e.key === 'ArrowLeft' ? -1 : 1;
+                    currentGalleryIndex = Math.max(0, Math.min(cards.length - 1, currentGalleryIndex + direction));
+                    openLightbox(currentGalleryIndex);
+                }
+            } else {
+                // Focus gallery with 'g' key
+                if (e.key === 'g' && !e.ctrlKey && !e.metaKey) {
+                    const firstCard = document.querySelector('.art-card');
+                    if (firstCard) {
+                        firstCard.focus();
+                        currentGalleryIndex = 0;
+                    }
+                }
+            }
+        });
+
         // Keyboard shortcuts
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
@@ -1807,8 +2416,171 @@
             }
         });
 
+        // Variations, Download, Share functions
+        function generateVariations() {
+            if (currentLightboxId === null) return;
+
+            var painting = paintingsData[currentLightboxId];
+            if (!painting || !painting.id) {
+                addLog('ERROR', 'Cannot generate variations - no image ID');
+                return;
+            }
+
+            var btn = event.target.closest('.action-btn');
+            btn.disabled = true;
+            btn.textContent = '';
+            var loadingSpan = document.createElement('span');
+            loadingSpan.textContent = '\u23F3';
+            btn.appendChild(loadingSpan);
+            btn.appendChild(document.createTextNode(' Generating...'));
+
+            fetch('/api/aria/variations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    image_id: painting.id,
+                    count: 4,
+                    variation_type: 'style'
+                })
+            })
+            .then(function(res) {
+                if (!res.ok) throw new Error('Failed to generate variations');
+                return res.json();
+            })
+            .then(function(data) {
+                addLog('ARIA', 'Generated ' + data.variations.length + ' variations');
+                showVariationsModal(data.variations);
+                fetchState(true); // Refresh gallery
+            })
+            .catch(function(err) {
+                addLog('ERROR', err.message);
+            })
+            .finally(function() {
+                btn.disabled = false;
+                btn.textContent = '';
+                var iconSpan = document.createElement('span');
+                iconSpan.textContent = '\uD83C\uDFA8';
+                btn.appendChild(iconSpan);
+                btn.appendChild(document.createTextNode(' Variations'));
+            });
+        }
+
+        function showVariationsModal(variations) {
+            var modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.onclick = function(e) { if (e.target === modal) modal.remove(); };
+
+            var content = document.createElement('div');
+            content.className = 'modal-content';
+            content.style.maxWidth = '700px';
+
+            var closeBtn = document.createElement('button');
+            closeBtn.className = 'modal-close';
+            closeBtn.textContent = '\u00D7';
+            closeBtn.onclick = function() { modal.remove(); };
+            content.appendChild(closeBtn);
+
+            var h2 = document.createElement('h2');
+            h2.textContent = 'Style Variations';
+            h2.style.marginBottom = '1rem';
+            content.appendChild(h2);
+
+            var grid = document.createElement('div');
+            grid.className = 'variations-grid';
+
+            variations.forEach(function(v) {
+                var card = document.createElement('div');
+                card.className = 'variation-card';
+
+                var img = document.createElement('img');
+                img.src = v.image_url;
+                img.alt = v.description;
+                card.appendChild(img);
+
+                var label = document.createElement('div');
+                label.className = 'variation-label';
+                label.textContent = v.description;
+                card.appendChild(label);
+
+                card.onclick = function() {
+                    window.open(v.image_url, '_blank');
+                };
+
+                grid.appendChild(card);
+            });
+
+            content.appendChild(grid);
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+        }
+
+        function downloadArtwork() {
+            if (currentLightboxId === null) return;
+
+            var painting = paintingsData[currentLightboxId];
+            var imgSrc = painting.image_url || painting.full_url;
+
+            if (imgSrc) {
+                var link = document.createElement('a');
+                link.href = imgSrc.indexOf('/') === 0 ? imgSrc : '/' + imgSrc;
+                link.download = (painting.subject || 'aria-artwork') + '.png';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                addLog('SYSTEM', 'Download started');
+            }
+        }
+
+        function shareArtwork() {
+            if (currentLightboxId === null) return;
+
+            var painting = paintingsData[currentLightboxId];
+            var shareUrl = window.location.origin + '/gallery/' + (painting.share_id || painting.id);
+
+            if (navigator.share) {
+                navigator.share({
+                    title: painting.subject || 'Aria Artwork',
+                    text: painting.reflection || 'Created by Aria, an autonomous AI artist',
+                    url: shareUrl
+                }).catch(function() {});
+            } else {
+                navigator.clipboard.writeText(shareUrl).then(function() {
+                    addLog('SYSTEM', 'Share link copied to clipboard');
+                });
+            }
+        }
+
+        // Mobile touch gestures for lightbox
+        var touchStartX = 0;
+        var touchEndX = 0;
+
+        document.addEventListener('touchstart', function(e) {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        document.addEventListener('touchend', function(e) {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, { passive: true });
+
+        function handleSwipe() {
+            var lightbox = document.getElementById('lightbox');
+            if (!lightbox || !lightbox.classList.contains('active')) return;
+
+            var swipeThreshold = 50;
+            var diff = touchStartX - touchEndX;
+
+            if (Math.abs(diff) > swipeThreshold) {
+                var cards = galleryCards();
+                var direction = diff > 0 ? 1 : -1; // Swipe left = next, swipe right = prev
+                currentGalleryIndex = Math.max(0, Math.min(cards.length - 1, currentGalleryIndex + direction));
+                openLightbox(currentGalleryIndex);
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
+            initTheme();
             fetchState(true);
             connectWebSocket();
             setInterval(function() { fetchState(false); }, 10000);

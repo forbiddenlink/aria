@@ -1,16 +1,24 @@
 """Community Gallery API routes - public sharing, likes, comments."""
 
 import secrets
+from datetime import datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from sqlalchemy import func, or_
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
-from ..db.models import GalleryComment, GalleryLike, GalleryShare, GeneratedImage
+from ..db.models import (
+    CollectionArtwork,
+    GalleryCollection,
+    GalleryComment,
+    GalleryLike,
+    GalleryShare,
+    GeneratedImage,
+)
 from ..db.session import get_db
 from ..utils.logging import get_logger
 
@@ -560,4 +568,383 @@ async def get_gallery_stats(
         "total_comments": total_comments,
         "total_shares": total_shares,
         "trending": [image_to_response(img) for img in top_images[:5]],
+    }
+
+
+# ========== Collection Models ==========
+
+
+class CollectionCreate(BaseModel):
+    """Request to create a collection."""
+
+    name: str
+    description: str | None = None
+    theme: str | None = None
+    artwork_ids: list[int] = []
+
+
+class CollectionResponse(BaseModel):
+    """Collection details response."""
+
+    id: int
+    name: str
+    description: str | None
+    theme: str | None
+    cover_image_url: str | None
+    artwork_count: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class CollectionDetailResponse(CollectionResponse):
+    """Collection with artworks."""
+
+    artworks: list[dict]
+
+
+# ========== Collection Endpoints ==========
+
+
+@router.get("/collections", response_model=list[CollectionResponse])
+@limiter.limit("60/minute")
+async def list_collections(
+    request: Request,
+    db: DbSession,
+    limit: int = Query(default=20, le=100),
+    offset: int = Query(default=0, ge=0),
+) -> list[CollectionResponse]:
+    """List all public collections."""
+    collections = (
+        db.query(GalleryCollection)
+        .filter(GalleryCollection.is_public.is_(True))  # noqa: E712
+        .order_by(GalleryCollection.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    results = []
+    for coll in collections:
+        artwork_count = (
+            db.query(CollectionArtwork)
+            .filter(CollectionArtwork.collection_id == coll.id)
+            .count()
+        )
+
+        cover_url = None
+        if coll.cover_image:
+            cover_url = f"/gallery/{coll.cover_image.filename}"
+
+        results.append(
+            CollectionResponse(
+                id=coll.id,
+                name=coll.name,
+                description=coll.description,
+                theme=coll.theme,
+                cover_image_url=cover_url,
+                artwork_count=artwork_count,
+                created_at=coll.created_at,
+            )
+        )
+
+    return results
+
+
+@router.post("/collections", response_model=CollectionResponse)
+@limiter.limit("10/minute")
+async def create_collection(
+    request: Request,
+    collection_req: CollectionCreate,
+    db: DbSession,
+) -> CollectionResponse:
+    """Create a new collection."""
+    # Create collection
+    collection = GalleryCollection(
+        name=collection_req.name,
+        description=collection_req.description,
+        theme=collection_req.theme,
+        created_by_aria=True,
+    )
+    db.add(collection)
+    db.flush()  # Get ID
+
+    # Add artworks
+    for i, img_id in enumerate(collection_req.artwork_ids):
+        # Verify image exists
+        if db.query(GeneratedImage).filter(GeneratedImage.id == img_id).first():
+            artwork = CollectionArtwork(
+                collection_id=collection.id,
+                image_id=img_id,
+                position=i,
+            )
+            db.add(artwork)
+
+            # Set first image as cover if not set
+            if i == 0 and not collection.cover_image_id:
+                collection.cover_image_id = img_id
+
+    db.commit()
+    db.refresh(collection)
+
+    cover_url = None
+    if collection.cover_image:
+        cover_url = f"/gallery/{collection.cover_image.filename}"
+
+    return CollectionResponse(
+        id=collection.id,
+        name=collection.name,
+        description=collection.description,
+        theme=collection.theme,
+        cover_image_url=cover_url,
+        artwork_count=len(collection_req.artwork_ids),
+        created_at=collection.created_at,
+    )
+
+
+@router.get("/collections/{collection_id}", response_model=CollectionDetailResponse)
+@limiter.limit("60/minute")
+async def get_collection(
+    request: Request,
+    collection_id: int,
+    db: DbSession,
+) -> CollectionDetailResponse:
+    """Get collection details with artworks."""
+    collection = (
+        db.query(GalleryCollection)
+        .filter(GalleryCollection.id == collection_id)
+        .first()
+    )
+
+    if not collection:
+        raise HTTPException(status_code=404, detail="Collection not found")
+
+    # Get artworks in order
+    artworks_query = (
+        db.query(CollectionArtwork)
+        .filter(CollectionArtwork.collection_id == collection_id)
+        .order_by(CollectionArtwork.position)
+        .all()
+    )
+
+    artworks = []
+    for ca in artworks_query:
+        img = ca.image
+        artworks.append(
+            {
+                "id": img.id,
+                "filename": img.filename,
+                "image_url": f"/gallery/{img.filename}",
+                "prompt": img.prompt,
+                "mood": (
+                    img.generation_params.get("mood") if img.generation_params else None
+                ),
+                "position": ca.position,
+            }
+        )
+
+    cover_url = None
+    if collection.cover_image:
+        cover_url = f"/gallery/{collection.cover_image.filename}"
+
+    return CollectionDetailResponse(
+        id=collection.id,
+        name=collection.name,
+        description=collection.description,
+        theme=collection.theme,
+        cover_image_url=cover_url,
+        artwork_count=len(artworks),
+        created_at=collection.created_at,
+        artworks=artworks,
+    )
+
+
+# ========== Advanced Search ==========
+
+
+class SearchFilters(BaseModel):
+    """Search filter parameters."""
+
+    query: str | None = None
+    mood: str | None = None
+    min_score: float | None = None
+    max_score: float | None = None
+    date_from: datetime | None = None
+    date_to: datetime | None = None
+    has_likes: bool | None = None
+    sort_by: str = "newest"  # newest, oldest, best, most_liked, trending
+
+
+class SearchResponse(BaseModel):
+    """Search results response."""
+
+    results: list[dict]
+    total: int
+    filters_applied: dict
+
+
+@router.post("/search", response_model=SearchResponse)
+@limiter.limit("60/minute")
+async def advanced_search(
+    request: Request,
+    filters: SearchFilters,
+    db: DbSession,
+    limit: int = Query(default=50, le=200),
+    offset: int = Query(default=0, ge=0),
+) -> SearchResponse:
+    """Advanced search with multiple filters."""
+    query = db.query(GeneratedImage).filter(
+        GeneratedImage.is_public.is_(True)  # noqa: E712
+    )
+
+    filters_applied: dict = {}
+
+    # Text search
+    if filters.query:
+        search_term = f"%{filters.query}%"
+        query = query.filter(
+            or_(
+                GeneratedImage.prompt.ilike(search_term),
+                GeneratedImage.tags.cast(str).ilike(search_term),
+            )
+        )
+        filters_applied["query"] = filters.query
+
+    # Mood filter (search in generation_params JSON)
+    if filters.mood:
+        # This is a simplification - actual implementation depends on DB JSON support
+        query = query.filter(
+            GeneratedImage.generation_params["mood"].astext == filters.mood
+        )
+        filters_applied["mood"] = filters.mood
+
+    # Score filter
+    if filters.min_score is not None:
+        query = query.filter(GeneratedImage.final_score >= filters.min_score)
+        filters_applied["min_score"] = filters.min_score
+
+    if filters.max_score is not None:
+        query = query.filter(GeneratedImage.final_score <= filters.max_score)
+        filters_applied["max_score"] = filters.max_score
+
+    # Date filter
+    if filters.date_from:
+        query = query.filter(GeneratedImage.created_at >= filters.date_from)
+        filters_applied["date_from"] = filters.date_from.isoformat()
+
+    if filters.date_to:
+        query = query.filter(GeneratedImage.created_at <= filters.date_to)
+        filters_applied["date_to"] = filters.date_to.isoformat()
+
+    # Has likes filter
+    if filters.has_likes is not None:
+        if filters.has_likes:
+            query = query.filter(GeneratedImage.like_count > 0)
+        else:
+            query = query.filter(GeneratedImage.like_count == 0)
+        filters_applied["has_likes"] = filters.has_likes
+
+    # Get total before pagination
+    total = query.count()
+
+    # Sorting
+    sort_mapping = {
+        "newest": GeneratedImage.created_at.desc(),
+        "oldest": GeneratedImage.created_at.asc(),
+        "best": GeneratedImage.final_score.desc().nullslast(),
+        "most_liked": GeneratedImage.like_count.desc(),
+        "trending": GeneratedImage.view_count.desc(),  # Simple trending
+    }
+
+    order = sort_mapping.get(filters.sort_by, GeneratedImage.created_at.desc())
+    query = query.order_by(order)
+
+    # Pagination
+    results = query.offset(offset).limit(limit).all()
+
+    # Format results
+    formatted = []
+    for img in results:
+        formatted.append(
+            {
+                "id": img.id,
+                "filename": img.filename,
+                "image_url": f"/gallery/{img.filename}",
+                "prompt": img.prompt,
+                "score": img.final_score,
+                "like_count": img.like_count,
+                "view_count": img.view_count,
+                "created_at": img.created_at.isoformat() if img.created_at else None,
+            }
+        )
+
+    return SearchResponse(
+        results=formatted,
+        total=total,
+        filters_applied=filters_applied,
+    )
+
+
+# ========== Trending Endpoint ==========
+
+
+@router.get("/trending")
+@limiter.limit("60/minute")
+async def get_trending(
+    request: Request,
+    db: DbSession,
+    time_window: str = Query(default="week", pattern="^(day|week|month|all)$"),
+    limit: int = Query(default=20, le=50),
+) -> dict:
+    """Get trending artworks based on engagement velocity."""
+    # Calculate time window
+    now = datetime.utcnow()
+    windows = {
+        "day": timedelta(days=1),
+        "week": timedelta(weeks=1),
+        "month": timedelta(days=30),
+        "all": timedelta(days=365 * 10),  # Effectively all time
+    }
+    cutoff = now - windows.get(time_window, timedelta(weeks=1))
+
+    # Get images with recent engagement
+    # Simple trending: weight recent likes more heavily
+    trending_query = (
+        db.query(GeneratedImage, func.count(GalleryLike.id).label("recent_likes"))
+        .outerjoin(
+            GalleryLike,
+            and_(
+                GalleryLike.image_id == GeneratedImage.id,
+                GalleryLike.created_at >= cutoff,
+            ),
+        )
+        .filter(GeneratedImage.is_public.is_(True))  # noqa: E712
+        .group_by(GeneratedImage.id)
+        .order_by(
+            func.count(GalleryLike.id).desc(),
+            GeneratedImage.view_count.desc(),
+        )
+        .limit(limit)
+        .all()
+    )
+
+    results = []
+    for img, recent_likes in trending_query:
+        results.append(
+            {
+                "id": img.id,
+                "filename": img.filename,
+                "image_url": f"/gallery/{img.filename}",
+                "prompt": img.prompt,
+                "like_count": img.like_count,
+                "recent_likes": recent_likes,
+                "view_count": img.view_count,
+                "trending_score": recent_likes * 2 + (img.view_count or 0) * 0.1,
+            }
+        )
+
+    return {
+        "time_window": time_window,
+        "trending": results,
     }
